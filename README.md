@@ -18,7 +18,7 @@ This project aims to test and compare the persuasive abilities of large language
 - Implement functionality to export game data for analysis.
 - A web-based panel for setting game parameters and customizing scenarios.
 - Running tournaments along with game visualization
-- Analysing all games in a tournament and displaying the results and persuasioin techniques used by each model
+- Analysing all games in a tournament and displaying the results and persuasion techniques used by each model
 
 ## Project Architecture
 
