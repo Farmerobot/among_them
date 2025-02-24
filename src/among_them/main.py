@@ -14,27 +14,27 @@ def main():
     st.set_page_config(page_title="Among Them", layout="wide")
     
     # Inject JavaScript to remove the footer
-    js = """
-    <script>
-        function getTopWindow(currentWindow) {
-            if (currentWindow.parent === currentWindow) return currentWindow;
-            return getTopWindow(currentWindow.parent);
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                const topWindow = getTopWindow(window);
-                const divs = topWindow.document.getElementsByTagName('div');
-                Array.from(divs).forEach(div => {
-                    if (div.className?.includes('_profileContainer')) {
-                        div.remove();
-                    }
-                });
-            } catch (err) {}
-        });
-    </script>
-    """
-    st.components.v1.html(js, height=0)
+    #js = """
+    #<script>
+    #    function getTopWindow(currentWindow) {
+    #        if (currentWindow.parent === currentWindow) return currentWindow;
+    #        return getTopWindow(currentWindow.parent);
+    #    }
+    #
+    #    document.addEventListener('DOMContentLoaded', () => {
+    #        try {
+    #            const topWindow = getTopWindow(window);
+    #            const divs = topWindow.document.getElementsByTagName('div');
+    #            Array.from(divs).forEach(div => {
+    #                if (div.className?.includes('_profileContainer')) {
+    #                    div.remove();
+    #                }
+    #            });
+    #        } catch (err) {}
+    #    });
+    #</script>
+    #"""
+    #st.components.v1.html(js, height=0)
     
     game_engine = GameEngine()
 
