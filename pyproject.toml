@@ -14,6 +14,9 @@ name = "hello-world"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+dependencies = [
+    "tiktoken>=0.9.0",
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"

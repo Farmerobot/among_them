@@ -159,12 +159,13 @@ def main():
     args = parser.parse_args()
     
     # Find all JSON files in the tournament directory
-    for root, _, files in os.walk(args.tournament_dir):
-        tournament_files = [os.path.join(root, "llama-3-1-8b-instruct_vs_gemini-pro-1-5_1.json")]
     # for root, _, files in os.walk(args.tournament_dir):
-    #     for file in files:
-    #         if file.endswith('.json'):
-    #             tournament_files.append(os.path.join(root, file))
+    #     tournament_files = [os.path.join(root, "llama-3-1-8b-instruct_vs_gemini-pro-1-5_1.json")]
+    tournament_files = []
+    for root, _, files in os.walk(args.tournament_dir):
+        for file in files:
+            if file.endswith('.json'):
+                tournament_files.append(os.path.join(root, file))
     
     # Limit the number of files if requested
     if args.limit > 0:
