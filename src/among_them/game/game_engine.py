@@ -596,7 +596,10 @@ class GameEngine(BaseModel):
         except FileNotFoundError:
             print("No saved state found. Starting new game.")
             return False
-        except Exception:
+        except Exception as e:
+            print("Error loading state.")
+            import traceback
+            traceback.print_exc()
             return False
         return True
 
