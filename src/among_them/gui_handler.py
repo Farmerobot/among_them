@@ -83,8 +83,8 @@ def install_monitor():
 
 class GUIHandler(BaseModel):
     def display_gui(self, game_engine: GameEngine):
-        # if OPENROUTER_API_KEY != "None":
-        #     install_monitor()
+        if OPENROUTER_API_KEY != "None":
+            install_monitor()
         game_overview, tournaments, techniques = st.tabs([
             "Game Overview",
             "Tournaments",
@@ -177,7 +177,7 @@ class GUIHandler(BaseModel):
         if game_engine.state.round_number >= 1:
             estimated_cost_data = self.estimate_future_cost(cost_data, 5)
             combined_cost_data = self.combine_data(cost_data, estimated_cost_data)
-            self.plot_cost(combined_cost_data, 5)
+            # self.plot_cost(combined_cost_data, 5)
 
         st.text("Cost Breakdown:")
         st.json(game_engine.state.get_total_cost(), expanded=False)
