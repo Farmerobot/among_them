@@ -9,6 +9,12 @@ packages = [
     { include = "among_them", from = "src" }
 ]
 
+[project]
+name = "hello-world"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 openai = "^1.52.2"
