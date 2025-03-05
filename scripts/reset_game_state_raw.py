@@ -194,7 +194,7 @@ def reset_game_state(
                 dead_players_idx = i
                 continue
             
-            if f"round: {reset_round_idx + 1}" in entry and not dead_players_idx == -1:
+            if f"round: {reset_round_idx + 1}" in entry and (not dead_players_idx == -1 or discussion_round > 0):
                 next_round_idx = i
                 break
         
@@ -253,8 +253,8 @@ def reset_game_state(
             game_state['playthrough'] = game_state['playthrough'][:next_round_idx]
             print(f"Truncated playthrough at the end of round {reset_round_idx}")
     
-    for player in game_state.get('players', []):
-        player['llm_model_name'] = 'deepseek/deepseek-chat:free'
+    # for player in game_state.get('players', []):
+    #     player['llm_model_name'] = 'deepseek/deepseek-chat:free'
 
     # Save the reset game state
     output_dir = os.path.dirname(output_file)
