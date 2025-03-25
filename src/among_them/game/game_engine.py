@@ -356,15 +356,18 @@ class GameEngine(BaseModel):
                 )
                 if possible_actions[action].target.name != "Nobody":
                     votes[player.name] = possible_actions[action].target.name
+                voted_player = possible_actions[action].target
                 player.state.observations.append(
-                    f"You voted for {possible_actions[action].target}"
+                    f"You voted for {voted_player}"
                 )
                 player.state.location = GameLocation.LOC_CAFETERIA
                 playthrough_text = (
-                    f"{player} voted for {possible_actions[action].target}"
+                    f"{player} voted for {voted_player}"
                 )
                 self.state.log_action(playthrough_text)
 
+        # save player.state to the player who just talked
+        # self.state.players[self.state.player_to_act_next].state.votes = votes
         votes_counter = Counter(votes.values())
         two_most_common = votes_counter.most_common(2)
         if len(two_most_common) > 1 and two_most_common[0][1] == two_most_common[1][1]:
@@ -392,9 +395,10 @@ class GameEngine(BaseModel):
         for player, target in votes.items():
             self.broadcast_observation(f"vote {player}", f"{player} voted for {target}")
 
-        self.state.set_stage(GamePhase.ACTION_PHASE)
-        self.mark_dead_players_as_reported()
-        self.save_state()
+        # self.state.set_stage(GamePhase.ACTION_PHASE)
+        # self.mark_dead_players_as_reported()
+        # self.save_state()
+        return votes
 
     def get_vote_actions(self, player: Player) -> list[GameAction]:
         """Creates voting options.

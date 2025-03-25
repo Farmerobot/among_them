@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +29,7 @@ class RoundData(BaseModel):
     player_in_room: str = ""
     observations: List[str] = Field(default_factory=list)
     chat_messages: List[str] = Field(default_factory=list)
+    votes: Dict[str, str] = Field(default_factory=dict)
 
     def to_dict(self):
         return {
