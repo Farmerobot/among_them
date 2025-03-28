@@ -7,6 +7,7 @@ load_dotenv(override=True)
 
 # Retrieve API keys and raise an error if they are missing
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+RUN_LOCALLY = os.getenv("RUN_LOCALLY", "True").lower() in ["true", "1", "t"]
 
 if not OPENROUTER_API_KEY:
     OPENROUTER_API_KEY = "None"

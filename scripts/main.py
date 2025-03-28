@@ -14,7 +14,7 @@ def main():
 
     # Run the Streamlit app with the correct path
     subprocess.run(
-        ["poetry", "run", "streamlit", "run", "--server.runOnSave", "True", main_path],
+        ["poetry", "run", main_path],
         check=True,
     )
 

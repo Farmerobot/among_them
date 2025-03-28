@@ -1,7 +1,8 @@
-import streamlit as st
-
-from among_them.game.game_engine import GameEngine
-from among_them.gui_handler import GUIHandler
+import os
+from among_them.consts import STATE_FILE
+from among_them.game_engine import GameEngine
+from among_them.players.ai import AIPlayer
+from among_them.agents.unified_agent import UnifiedAgent
 
 # To run this script, you need to
 # `poetry install`
@@ -10,39 +11,27 @@ from among_them.gui_handler import GUIHandler
 
 
 def main():
-    gui_handler = GUIHandler()
-    st.set_page_config(page_title="Among Them", layout="wide")
-    
-    # Inject JavaScript to remove the footer
-    #js = """
-    #<script>
-    #    function getTopWindow(currentWindow) {
-    #        if (currentWindow.parent === currentWindow) return currentWindow;
-    #        return getTopWindow(currentWindow.parent);
-    #    }
-    #
-    #    document.addEventListener('DOMContentLoaded', () => {
-    #        try {
-    #            const topWindow = getTopWindow(window);
-    #            const divs = topWindow.document.getElementsByTagName('div');
-    #            Array.from(divs).forEach(div => {
-    #                if (div.className?.includes('_profileContainer')) {
-    #                    div.remove();
-    #                }
-    #            });
-    #        } catch (err) {}
-    #    });
-    #</script>
-    #"""
-    #st.components.v1.html(js, height=0)
-    
-    game_engine = GameEngine()
+    agent = UnifiedAgent()
+    players = [
+        AIPlayer(name="Alice", agent=agent),
+        AIPlayer(name="Bob", agent=agent),
+        AIPlayer(name="Charlie", agent=agent),
+        AIPlayer(name="David", agent=agent),
+        AIPlayer(name="Eve", agent=agent),
+    ]
+    game_engine = GameEngine(players, 2)
+    if os.path.exists(STATE_FILE):
+        game_engine.load_state()
+        print(f"Game loaded from state file with {len(game_engine.history)} history entries")
 
-    game_engine.state.DEBUG = True
-    game_engine.load_game()
-
-    gui_handler.display_gui(game_engine)
-
+    for history_item in game_engine.history:
+        print(history_item)
+    game_ended, reason = game_engine.perform_step()
+    print(game_engine.history[-1])
+    if game_ended:
+        print("Game ended with reason:", reason)
+    else:
+        print("Game is still in progress")
 
 if __name__ == "__main__":
     main()

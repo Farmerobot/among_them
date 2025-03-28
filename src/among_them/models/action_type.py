@@ -1,0 +1,16 @@
+from enum import Enum
+
+
+class ActionType(str, Enum):
+    VOTE = "Vote"
+    SPEAK = "Speak"
+    WAIT = "Wait"
+    MOVE = "Move"
+    TASK = "Task"
+    KILL = "Kill"
+    REPORT = "Report"
+    PRETEND = "Pretend"
+        
+    def __repr__(self):
+        return self.value
+        

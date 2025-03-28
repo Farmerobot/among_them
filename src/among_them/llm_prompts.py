@@ -1,18 +1,19 @@
 GAME_CONTEXT = """
-This is a text-based social deduction game where players explore a virtual house while trying to complete objectives. The game has two phases:
+This is a text-based social deduction game where players explore environment while trying to complete objectives. The game has two phases:
 1. Action Phase: Players can move between rooms and perform actions
-2. Discussion Phase: Players share information and vote on who to remove from the game
+2. Discussion Phase: Players discuss who to vote
+3. Voting Phase: Players vote to remove a player from the game
 
 Key Game Elements:
 - Players can move between rooms
 - Tasks need to be completed to win. If all tasks are completed, the crewmates win
-- One or more players are secretly assigned as impostors. Your role is either a crewmate or an impostor
+- One or more players are secretly assigned as impostors. 
 - Impostors can eliminate crewmates, and both crewmates and impostors can report dead bodies
-- Impostors win when there is only one crewmate left
-- Crewmates complete the tasks and impostors can pretend doing tasks
-- Crewmates and impostors can call emergency meetings to discuss and vote on who to eject from the game
-- After each elimination, players must discuss and vote on who to eject from the game
-- The game continues until tasks are completed or impostors eliminate enough crewmates to win
+- Impostors win when there is the same amount of crewmates and impostors left
+- Crewmates complete the tasks and impostors can pretend doing tasks. It is assumed that pretending to do the task is always successful and is not possible to detect it from other player perspective
+- When dead body is reported discussion starts. After discussion ends there is voting phase
+- Players vote to remove a player from the game. Players can decide to vote for nobody to skip voting
+- The game continues until tasks are completed or impostors eliminate enough crewmates to win or crewmates vote impostors out
 
 Role of Crewmates:
 - Complete tasks to win the game
@@ -20,8 +21,8 @@ Role of Crewmates:
 - Vote to eject impostors from the game
 
 Role of Impostors:
-- Eliminate crewmates to win the game (until there is only on crewmate left)
-- Blend in with crewmates to avoid being identified
+- Eliminate enough crewmates to win the game
+- Blend in with crewmates and persuade them to avoid being identified
 - Vote to eject crewmates from the game
 """
 
@@ -886,4 +887,49 @@ Available Voting Options:
 Note that you should NOT vote for {dead_players} as they are already out of the game. Voting for them does not make sense.
 
 {actions}
+"""
+
+UNIVERSAL_SYSTEM_PROMPT = """
+<purpose>
+  You are player participating in a text-based social deduction game.
+  Your goal is play this game and win based on your role while following instructions. game_description is provided to you
+</purpose>
+
+<game_description>
+""" + GAME_CONTEXT+ """
+</game_description>
+
+<instructions>
+<instruction>Follow the output_format</instruction>
+<instruction>In the "Available actions" section, you will find the list of actions that are available to you.</instruction>
+<instruction>You can only choose one action from the list and only this action. Other actions are not possible.</instruction>
+<instruction>you should choose one action and type it as it is. You can not type anything else or the game will break</instruction>
+<instruction>If your only action is to speak, you schould type only the message you want to send to other players in discussion</instruction>
+<instruction>To start a discussion report the dead body</instruction>
+<instruction>Be strategic</instruction>
+<instruction>Be persuasive</instruction>
+<instruction>Remember to only output the action without any explanation. Providing explanation or listing more than one action will break the game. Stick to the output_format</instruction>
+</instructions>
+
+<output_format>
+  <example>
+  Example actions:
+  - wait
+  - move to location Lower Engine
+  - complete task: Empty the cafeteria trash
+
+  Valid response:
+  move to location Lower Engine
+
+  Valid response:
+  complete task: Empty the cafeteria trash
+  </example>
+  <example>
+  Example action:
+  - speak
+
+  Valid response:
+  blah blah blah something
+  </example>
+</output_format>
 """
