@@ -31,11 +31,11 @@ class Action:
 
     def set_stories(self):
         if self.type == ActionType.MOVE:
-            self.text = f"move to {self.target_location.value}"
+            self.text = f"move to location {self.target_location.value}"
             self.result = (
-                f"You [{self.player_name}] moved to {self.target_location.value}"
+                f"You [{self.player_name}] moved to location {self.target_location.value}"
             )
-            self.spectator = f"{self.player_name} moved to {self.target_location.value}"
+            self.spectator = f"{self.player_name} moved to location {self.target_location.value}"
         elif self.type == ActionType.WAIT:
             self.text = f"wait"
             self.result = f"You [{self.player_name}] are waiting"
@@ -78,10 +78,11 @@ class Action:
 def normalize_and_check_action_valid(
     available_actions: List[str], chosen_action: str, player_name: str = ""
 ) -> tuple[int, str]:
-    for action in [a for a in available_actions if a != "wait"]:
-        if re.search(rf"\b{re.escape(action)}\b", chosen_action):
+    chosen_action = chosen_action.strip().lower()
+    for action in [a.lower() for a in available_actions if a != "wait"]:
+        if re.search(rf"\b{re.escape(action)}\b", chosen_action, re.IGNORECASE):
             return available_actions.index(action), action
-    if re.search(r"\bwait\b", chosen_action):
+    if re.search(r"\bwait\b", chosen_action, re.IGNORECASE):
         return 0, "wait"
 
     warning_str = (

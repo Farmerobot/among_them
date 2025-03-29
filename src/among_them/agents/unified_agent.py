@@ -54,10 +54,10 @@ class UnifiedAgent:
         # Add available actions to prompt if needed
         if actions:
             actions_text = "\n".join(f"- {action.text}" for action in actions)
-            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\n"
+            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\nChoose action:"
 
         # Print prompts for debugging
-        # print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
+        print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
         print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
 
         # Invoke LLM
@@ -90,7 +90,29 @@ class UnifiedAgent:
         # Determine the chosen action index
         action_idx = None
         if actions and not actions[0].type == ActionType.SPEAK:
-            action_idx, _ = normalize_and_check_action_valid([action.text for action in actions], response_text)
+            try:
+                action_idx, _ = normalize_and_check_action_valid([action.text for action in actions], response_text)
+            except ValueError as e:
+                stream = chat(
+                    model=self.llm_model_name,
+                    messages=[
+                        {'role': 'system', 'content': system_prompt},
+                        {'role': 'user', 'content': prompt},
+                        {'role': 'assistant', 'content': f"<think>{cot}</think>\n{response_text}"},
+                        {'role': 'assistant', 'content': f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be "}
+                    ],
+                    stream=True
+                )
+
+                # Process the response
+                response_text = ""
+                for chunk in stream:
+                    print("\033[94m" + chunk['message']['content'] + "\033[0m", end='', flush=True)
+                    response_text += chunk['message']['content']
+
+                # Clean up the response
+                response_text = response_text.strip()
+                action_idx, _ = normalize_and_check_action_valid([action.text for action in actions], response_text)
         elif actions[0].type == ActionType.SPEAK:
             action_idx = 0
     

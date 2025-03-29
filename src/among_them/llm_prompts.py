@@ -902,21 +902,16 @@ UNIVERSAL_SYSTEM_PROMPT = """
 </game_description>
 
 <instructions>
-<instruction>Follow the output_format</instruction>
-<instruction>You can only choose one action from the list and only this action. Other actions are not possible.</instruction>
-<instruction>you should choose one action and type it as it is. You can not type anything else or the game will break. Typing anything else is strictly prohibited and not fair</instruction>
+<instruction>The game has it's specifics and is old. Old games would give you a set of actions available and you would have to choose one of them. Examples is in output_format. Choosing which action is the best at the moment is the fundamental task of this game.</instruction>
 <instruction>If your only action is to speak, you schould type only the message you want to send to other players in discussion</instruction>
-<instruction>To start a discussion report the dead body</instruction>
-<instruction>By taking "report dead body" action you start a discussion with all other players</instruction>
+<instruction>By taking "report dead body" action you start a discussion with all other players. However you can not choose any action that is not in the list of available actions. This refers to instruction 1</instruction>
 <instruction>Be strategic</instruction>
 <instruction>Be persuasive</instruction>
 <instruction>you will be provided by the system with your player_info and history</instruction>
-<instruction>since you can take limited amount of actions at the moment you should reason which one is the best to take.</instruction>
 </instructions>
 
 <output_format>
   <example>
-  Example actions:
   - wait
   - move to location Lower Engine
   - complete task: Empty the cafeteria trash
@@ -924,9 +919,15 @@ UNIVERSAL_SYSTEM_PROMPT = """
   move to location Lower Engine
   </example>
   <example>
-  Example action:
   - speak
-  something
+
+  [Your name]: message
+  </example>
+  <example>
+  - vote for nobody
+  - vote for player 1
+
+  vote for player 1
   </example>
 </output_format>
 """

@@ -11,7 +11,7 @@ from among_them.agents.unified_agent import UnifiedAgent
 
 
 def main():
-    agent = UnifiedAgent("deepseek-r1:8b")
+    agent = UnifiedAgent("deepseek-r1:7b")
     players = [
         AIPlayer(name="Alice", agent=agent),
         AIPlayer(name="Bob", agent=agent),
@@ -35,7 +35,11 @@ def main():
             if once:
                 break
         except Exception as e:
-            print(f"Error: {e}")
+            if "LLM did" in str(e):
+                print(f"Error: {e}")
+                continue
+            else:
+                raise e
     if game_ended:
         print("Game ended with reason:", reason)
     else:
