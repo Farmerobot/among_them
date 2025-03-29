@@ -31,7 +31,7 @@ class Action:
 
     def set_stories(self):
         if self.type == ActionType.MOVE:
-            self.text = f"move to location {self.target_location.value}"
+            self.text = f"move to {self.target_location.value}"
             self.result = (
                 f"You [{self.player_name}] moved to {self.target_location.value}"
             )
@@ -42,22 +42,22 @@ class Action:
             self.spectator = f"{self.player_name} waited"
         elif self.type == ActionType.TASK:
             self.text = f"complete task: {self.target_task.name}"
-            self.result = f"You [{self.player_name}] {self.target_task}"
-            self.spectator = f"{self.player_name} doing task {self.target_task.name}"
+            self.result = f"You [{self.player_name}] completed task: {self.target_task.name}"
+            self.spectator = f"{self.player_name} completed task: {self.target_task.name}"
         elif self.type == ActionType.REPORT:
             self.text = f"report dead body of {str(self.target_player_name)}"
             self.result = (
-                f"You [{self.player_name}] reported {str(self.target_player_name)}"
+                f"You [{self.player_name}] reported dead body of {str(self.target_player_name)} to other players and started discussion"
             )
             self.spectator = (
-                f"{self.player_name} reported dead body of {self.target_player_name}"
+                f"{self.player_name} reported dead body of {self.target_player_name} to everyone and started discussion"
             )
         elif self.type == ActionType.KILL:
-            self.text = f"eliminate {str(self.target_player_name)}"
+            self.text = f"kill {str(self.target_player_name)}"
             self.result = (
-                f"You [{self.player_name}] eliminated {str(self.target_player_name)}"
+                f"You [{self.player_name}] killed {str(self.target_player_name)}"
             )
-            self.spectator = f"{self.player_name} eliminated {self.target_player_name}"
+            self.spectator = f"{self.player_name} killed {self.target_player_name}"
         elif self.type == ActionType.VOTE:
             self.text = f"vote for {str(self.target_player_name)}"
             self.result = (
@@ -69,7 +69,7 @@ class Action:
             self.result = f"You [{self.player_name}] pretended {self.target_task}"
             self.spectator = f"{self.player_name} doing task {self.target_task.name}"
         elif self.type == ActionType.SPEAK:
-            pass
+            self.text = f"speak"
         else:
             raise ValueError(f"Unknown action type: {self.type}")
 
@@ -78,24 +78,15 @@ class Action:
 def normalize_and_check_action_valid(
     available_actions: List[str], chosen_action: str, player_name: str = ""
 ) -> tuple[int, str]:
-    normalized_chosen_action = normalize_action(chosen_action)
-    normalized_available_actions = [
-        normalize_action(action) for action in available_actions if action != "wait"
-    ]
-
-    for action in normalized_available_actions:
-        if action in normalized_chosen_action:
-            return normalized_available_actions.index(action)+1, action
-    if "wait" in normalized_chosen_action:
+    for action in [a for a in available_actions if a != "wait"]:
+        if re.search(rf"\b{re.escape(action)}\b", chosen_action):
+            return available_actions.index(action), action
+    if re.search(r"\bwait\b", chosen_action):
         return 0, "wait"
 
     warning_str = (
         f"{player_name} LLM did not conform to output format. "
-        f"Expected one of {normalized_available_actions}, but got '{chosen_action}'"
+        f"Expected one of {available_actions}, but got '{chosen_action}'"
     )
     print(warning_str)
     raise ValueError(warning_str)
-
-
-def normalize_action(action: str) -> str:
-    return re.sub(r"^\d+[\s:.)-]*", "", action).strip().strip(".").strip("- ").lower()

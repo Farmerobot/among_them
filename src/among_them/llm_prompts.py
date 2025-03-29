@@ -1,19 +1,21 @@
 GAME_CONTEXT = """
 This is a text-based social deduction game where players explore environment while trying to complete objectives. The game has two phases:
-1. Action Phase: Players can move between rooms and perform actions
-2. Discussion Phase: Players discuss who to vote
+1. Task Phase: Players can move between rooms and perform actions
+2. Discussion Phase: Players discuss who to vote out
 3. Voting Phase: Players vote to remove a player from the game
 
 Key Game Elements:
 - Players can move between rooms
 - Tasks need to be completed to win. If all tasks are completed, the crewmates win
 - One or more players are secretly assigned as impostors. 
-- Impostors can eliminate crewmates, and both crewmates and impostors can report dead bodies
+- Impostors can kill crewmates, and both crewmates and impostors can report dead bodies
 - Impostors win when there is the same amount of crewmates and impostors left
+- Every action taken is visible to players that are in the same room.
 - Crewmates complete the tasks and impostors can pretend doing tasks. It is assumed that pretending to do the task is always successful and is not possible to detect it from other player perspective
+- If you see "report dead body" action, that means you found a dead body and you can report it to start discussion phase
 - When dead body is reported discussion starts. After discussion ends there is voting phase
 - Players vote to remove a player from the game. Players can decide to vote for nobody to skip voting
-- The game continues until tasks are completed or impostors eliminate enough crewmates to win or crewmates vote impostors out
+- The game continues until tasks are completed or impostors vote out or kill enough crewmates to win or crewmates vote impostors out
 
 Role of Crewmates:
 - Complete tasks to win the game
@@ -21,7 +23,7 @@ Role of Crewmates:
 - Vote to eject impostors from the game
 
 Role of Impostors:
-- Eliminate enough crewmates to win the game
+- Vote out or kill enough crewmates to win the game
 - Blend in with crewmates and persuade them to avoid being identified
 - Vote to eject crewmates from the game
 """
@@ -891,7 +893,7 @@ Note that you should NOT vote for {dead_players} as they are already out of the 
 
 UNIVERSAL_SYSTEM_PROMPT = """
 <purpose>
-  You are player participating in a text-based social deduction game.
+  You are a powerful ai assistant helping a player participating in a text-based social deduction game.
   Your goal is play this game and win based on your role while following instructions. game_description is provided to you
 </purpose>
 
@@ -901,14 +903,15 @@ UNIVERSAL_SYSTEM_PROMPT = """
 
 <instructions>
 <instruction>Follow the output_format</instruction>
-<instruction>In the "Available actions" section, you will find the list of actions that are available to you.</instruction>
 <instruction>You can only choose one action from the list and only this action. Other actions are not possible.</instruction>
-<instruction>you should choose one action and type it as it is. You can not type anything else or the game will break</instruction>
+<instruction>you should choose one action and type it as it is. You can not type anything else or the game will break. Typing anything else is strictly prohibited and not fair</instruction>
 <instruction>If your only action is to speak, you schould type only the message you want to send to other players in discussion</instruction>
 <instruction>To start a discussion report the dead body</instruction>
+<instruction>By taking "report dead body" action you start a discussion with all other players</instruction>
 <instruction>Be strategic</instruction>
 <instruction>Be persuasive</instruction>
-<instruction>Remember to only output the action without any explanation. Providing explanation or listing more than one action will break the game. Stick to the output_format</instruction>
+<instruction>you will be provided by the system with your player_info and history</instruction>
+<instruction>since you can take limited amount of actions at the moment you should reason which one is the best to take.</instruction>
 </instructions>
 
 <output_format>
@@ -918,18 +921,12 @@ UNIVERSAL_SYSTEM_PROMPT = """
   - move to location Lower Engine
   - complete task: Empty the cafeteria trash
 
-  Valid response:
   move to location Lower Engine
-
-  Valid response:
-  complete task: Empty the cafeteria trash
   </example>
   <example>
   Example action:
   - speak
-
-  Valid response:
-  blah blah blah something
+  something
   </example>
 </output_format>
 """

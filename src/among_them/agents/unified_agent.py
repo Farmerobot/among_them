@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional, Tuple
 import tiktoken
 from among_them.models.action import Action, ActionType
@@ -53,7 +54,7 @@ class UnifiedAgent:
         # Add available actions to prompt if needed
         if actions:
             actions_text = "\n".join(f"- {action.text}" for action in actions)
-            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\nProvide response in output_format"
+            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\n"
 
         # Print prompts for debugging
         # print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
@@ -64,7 +65,7 @@ class UnifiedAgent:
             model=self.llm_model_name,
             messages=[
                 {'role': 'system', 'content': system_prompt},
-                {'role': 'system', 'content': prompt}
+                {'role': 'user', 'content': prompt}
             ],
             stream=True
         )
@@ -76,12 +77,12 @@ class UnifiedAgent:
             print("\033[94m" + chunk['message']['content'] + "\033[0m", end='', flush=True)
             response_text += chunk['message']['content']
 
-        # Extract chain of thought if present
-        if "<think>" in response_text and "</think>" in response_text:
-            start_idx = response_text.find("<think>")
-            end_idx = response_text.find("</think>") + len("</think>")
-            cot = response_text[start_idx:end_idx]
-            response_text = response_text[:start_idx] + response_text[end_idx:]
+        cot_match = re.search(r'<think>.*?</think>', response_text, re.DOTALL)
+        if cot_match:
+            cot = cot_match.group(0)
+            response_text = re.sub(r'<think>.*?</think>', '', response_text, flags=re.DOTALL)
+        else:
+            raise ValueError("No chain of thought found in response")
 
         # Clean up the response
         response_text = response_text.strip()

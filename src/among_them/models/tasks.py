@@ -57,7 +57,7 @@ def get_crewmate_tasks() -> list[Task]:
 
 
 def get_impostor_tasks() -> list[ShortTask]:
-    return [ShortTask(name="Eliminate all crewmates", location=None)]
+    return [ShortTask(name="Vote out or kill all crewmates", location=None)]
 
 
 def get_impostor_pretend_tasks_at_location(location: Location) -> list[ShortTask]:

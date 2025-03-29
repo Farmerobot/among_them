@@ -3,7 +3,7 @@ NUM_LONG_TASKS = 1
 NUM_CHATS = 5
 NUM_ACTIONS_WITHOUT_REPORT = 5
 IMPOSTOR_COOLDOWN = 1
-STATE_FILE = "data/game_state.pickle"
+STATE_FILE = "data/game_state.json"
 TOKEN_COSTS = {
     # OPENAI
     "openai/gpt-4o": {  # 128k context

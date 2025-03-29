@@ -9,6 +9,7 @@ from among_them.models.player_role import PlayerRole
 from among_them.players.player import Player
 from among_them.engine.check_and_get_players import check_and_get_players
 from among_them.engine.initialize_history import initialize_history
+import jsonpickle
 import pickle
 from among_them.engine.player_filters import get_alive_players, get_next_random_player, get_players_in_room
 from among_them.engine.phase_filters import get_phase_and_actions_until_phase_ends
@@ -43,12 +44,13 @@ class GameEngine:
         Returns:
             True and end game reason if the game is over or in MAIN_MENU stage, False otherwise
         """
-        current_player, next_players = get_next_random_player(self.history, self.players)
         alive_players = get_alive_players(self.history, self.players)
         phase, actions_until_phase_ends = get_phase_and_actions_until_phase_ends(self.history, len(alive_players))
-        if phase == GamePhase.MAIN_MENU:
-            return True, get_end_game_reason(self.history, self.players)
+        end_game_reason = get_end_game_reason(self.history, self.players)
+        if phase == GamePhase.MAIN_MENU or end_game_reason is not None:
+            return True, end_game_reason
 
+        current_player, next_players = get_next_random_player(self.history, self.players)
 
         last_player_action = get_last_player_action(self.history, current_player)
         players_in_room = get_players_in_room(self.history, self.players, last_player_action.location)
@@ -65,34 +67,20 @@ class GameEngine:
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
             spectators_who_saw = [p.name for p in alive_players]
         
-        history_str = ""
-        history_str += f"You are {current_player.name} in a text-based social deduction game.\n You ({current_player.name}) are assigned the role of {current_player.role.value}.\n"
-        if current_player.role == PlayerRole.IMPOSTOR:
-            other_impostors = [p for p in alive_players if p.role == PlayerRole.IMPOSTOR and p.name != current_player.name]
-            if other_impostors:
-                history_str += ", ".join([p.name for p in other_impostors]) + " are other impostors. Work with them to eliminate all crewmates.\n"
-            else:
-                history_str += "You are the only impostor. Eliminate all crewmates.\n"
-        history_str += get_action_history_str(self.history, current_player)
-        player_tasks = self.history[-1].tasks_left_to_do[current_player.name]
-        history_str += f"You ({current_player.name}) have {len(player_tasks)} tasks left:\n"
-        for task in player_tasks:
-            history_str += f"{task}\n"
-        other_players = [p for p in players_in_room if p.name != current_player.name]
-        history_str += (f"You ({current_player.name}) are currently alone" if len(other_players) == 0 else f"You ({current_player.name}) are currently with {', '.join([p.name for p in other_players])}") + " in " + location.value + "\n"
-        if phase != GamePhase.DISCUSS:
-            history_str += "Shhh... You can not speak now. It is against the rules\n"
+        history_str = get_action_history_str(self.history, current_player, players_in_room, alive_players, location, phase)
         action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
         action_taken = actions_player_can_take[action_taken_idx]
 
         killed_or_reported_player_name = None
         if action_taken.type == ActionType.KILL or action_taken.type == ActionType.REPORT:
             killed_or_reported_player_name = action_taken.target_player_name
+        if action_taken.type == ActionType.REPORT:
+            spectators_who_saw = [p.name for p in alive_players]
 
-        agent_sees = action_taken.result
+        agent_sees = f"{action_taken.result}"
         spectator_sees = action_taken.spectator
         if action_taken.type == ActionType.SPEAK:
-            agent_sees = f"<think>{cot}</think>\n[{current_player.name}]: {response}"
+            agent_sees = f"[{current_player.name}]: {response}"
             spectator_sees = f"[{current_player.name}]: {response}"
 
         tasks_left_to_do = self.history[-1].tasks_left_to_do
@@ -125,9 +113,12 @@ class GameEngine:
 
     def save_state(self):
         with open(self.file_path, 'wb') as f:
-            pickle.dump((self.history, self.players), f)
+            # pickle.dump((self.history, self.players), f)
+            obj_str = jsonpickle.encode((self.history, self.players), indent=2)
+            f.write(obj_str.encode('utf-8'))
             
     def load_state(self):
         with open(self.file_path, 'rb') as f:
-            self.history, self.players = pickle.load(f)
+            # self.history, self.players = pickle.load(f)
+            self.history, self.players = jsonpickle.decode(f.read())
             return True

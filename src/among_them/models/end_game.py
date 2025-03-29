@@ -32,5 +32,5 @@ def get_end_game_reason(history: List[History], players: List[Player]) -> EndGam
 
     if [len(history[-1].tasks_left_to_do[p.name]) for p in crewmates] == [0] * len(crewmates):
         return EndGameReason.ALL_TASKS_DONE
-    raise Exception("The game did not end")
+    return None
         

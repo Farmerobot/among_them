@@ -19,10 +19,13 @@ def get_next_random_player(history: List[History], players: List[Player]) -> tup
     """
     if not history:
         return random.choice(players), players
-    
+    alive_players = get_alive_players(history, players)
     players_to_play_next = history[-1].player_names_to_play_next
+        
+    # Remove any player who is not alive from players_to_play_next
+    players_to_play_next = [p for p in players_to_play_next if p in [player.name for player in alive_players]]
     if not players_to_play_next or history[-1].action_type == ActionType.REPORT:
-        players_to_play_next = [p.name for p in get_alive_players(history, players)]
+        players_to_play_next = [p.name for p in alive_players]
     
     next_player_name = random.choice(players_to_play_next)
     next_player = [player for player in players if player.name == next_player_name][0]
