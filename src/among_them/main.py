@@ -11,7 +11,7 @@ from among_them.agents.unified_agent import UnifiedAgent
 
 
 def main():
-    agent = UnifiedAgent("deepseek-r1:7b")
+    agent = UnifiedAgent("deepseek-r1:14b")
     players = [
         AIPlayer(name="Alice", agent=agent),
         AIPlayer(name="Bob", agent=agent),
@@ -42,8 +42,17 @@ def main():
                 raise e
     if game_ended:
         print("Game ended with reason:", reason)
+        # Archive the state file with timestamp and start new game
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_path = f"data/{timestamp}.json"
+        if os.path.exists(STATE_FILE):
+            os.makedirs(os.path.dirname(archive_path), exist_ok=True)
+            os.rename(STATE_FILE, archive_path)
+            print(f"Archived game state to {archive_path}")
+            main()  # Start a new game
     else:
-        print("Game is still in progress")
+        print("Game is still ongoing")
 
 if __name__ == "__main__":
     main()
