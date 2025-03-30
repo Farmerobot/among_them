@@ -52,9 +52,11 @@ class UnifiedAgent:
         system_prompt = UNIVERSAL_SYSTEM_PROMPT
 
         # Add available actions to prompt if needed
-        if actions:
+        if actions and actions[0].type != ActionType.SPEAK:
             actions_text = "\n".join(f"- {action.text}" for action in actions)
-            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\nChoose action:"
+            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\nChosen action:"
+        elif actions and actions[0].type == ActionType.SPEAK:
+            prompt += "\n\nRespond in the following format: [Your name]: message"
 
         # Print prompts for debugging
         print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
@@ -103,6 +105,7 @@ class UnifiedAgent:
                     ],
                     stream=True
                 )
+                print(f"\033[91m<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be \033[0m")
 
                 # Process the response
                 response_text = ""

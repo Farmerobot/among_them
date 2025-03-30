@@ -138,6 +138,6 @@ def get_action_history_str(history: List[History], player: Player, players_in_ro
     elif phase == GamePhase.VOTE:
         history_str += "It is voting phase now. Vote out all impostors.\n"
     else:
-        history_str += "It is discussion phase now. Respond to the crewmates.\n"
+        history_str += "It is discussion phase now. You can speak now. Respond to the crewmates.\n"
     return history_str
     

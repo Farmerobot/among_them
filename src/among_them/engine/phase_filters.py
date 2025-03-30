@@ -47,8 +47,8 @@ def handle_phase_change(previous_phase: GamePhase, players_number: int, history:
         most_voted = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
         is_tie = len(most_voted) >= 2 and most_voted[0][1] == most_voted[1][1]
         is_tie = is_tie or (len(most_voted) >= 3 and most_voted[0][1] == most_voted[2][1])
-        action_type = ActionType.WAIT if not most_voted or is_tie else ActionType.KILL
         ejected_player = None if not most_voted or is_tie else most_voted[0][0]
+        action_type = ActionType.WAIT if not most_voted or is_tie or ejected_player == "nobody" else ActionType.KILL
         
         # Result message
         if not vote_counts:

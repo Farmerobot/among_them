@@ -79,9 +79,11 @@ def normalize_and_check_action_valid(
     available_actions: List[str], chosen_action: str, player_name: str = ""
 ) -> tuple[int, str]:
     chosen_action = chosen_action.strip().lower()
-    for action in [a.lower() for a in available_actions if a != "wait"]:
+    available_actions = [a.lower() for a in available_actions if a != "wait"]
+    add1 = 1 if "wait" in available_actions else 0
+    for action in available_actions:
         if re.search(rf"\b{re.escape(action)}\b", chosen_action, re.IGNORECASE):
-            return available_actions.index(action), action
+            return available_actions.index(action)+add1, action
     if re.search(r"\bwait\b", chosen_action, re.IGNORECASE):
         return 0, "wait"
 
