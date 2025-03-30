@@ -88,6 +88,8 @@ class GameEngine:
             tasks_left_to_do[current_player.name].remove(action_taken.target_task)
         elif action_taken.type == ActionType.MOVE:
             location = action_taken.target_location
+            new_players_in_room = get_players_in_room(self.history, self.players, location)
+            spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
 
         new_history_item = History(
             player_names_to_play_next=next_players,
