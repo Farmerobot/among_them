@@ -70,4 +70,4 @@ class History:
         actions_available = "\n    - ".join(self.actions_agent_could_take)
             
         # Build the full representation with clear sections
-        return f"""{self.phase}({self.actions_until_phase_ends}) [{self.action_result_spectator_sees}{"- "+self.killed_or_reported_player_name if self.action_type == ActionType.KILL else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
+        return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_result_spectator_sees}\033[0m{"- "+self.killed_or_reported_player_name if self.action_type == ActionType.KILL else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
