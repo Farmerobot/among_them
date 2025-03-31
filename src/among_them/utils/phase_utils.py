@@ -1,0 +1,76 @@
+from typing import List
+from among_them.models.history import History, create_vote_history_entry
+from among_them.models.action_type import ActionType
+from among_them.consts import NUM_ACTIONS_WITHOUT_REPORT, NUM_CHATS
+from among_them.models.phase import GamePhase
+from among_them.models.player import Player
+
+def get_last_discussion_action_idx(history: List[History]) -> int:
+    for i in range(len(history) - 1, -1, -1):
+        if history[i].phase == GamePhase.DISCUSS:
+            return i
+    return 0
+
+
+def get_phase_and_when_it_ends(history: List[History], alive_players: List[Player]) -> tuple[GamePhase, int]:
+    """
+    Handles sudden phase changes - first phase, report - and automatic phase change using actions_until_phase_ends.
+    Returns the next phase and the number of actions until the phase ends.
+    """
+    if len(history) == 1: # First phase
+        return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
+    previous_phase = history[-1].phase
+    if history[-1].action_type == ActionType.REPORT: # if report start discussion
+        return GamePhase.DISCUSS, (NUM_CHATS * len(alive_players)) - 1
+    if history[-1].actions_until_phase_ends == 0:
+        return handle_phase_change(history, alive_players, previous_phase)
+    return previous_phase, history[-1].actions_until_phase_ends - 1
+
+
+def handle_phase_change(history: List[History], alive_players: List[Player], previous_phase: GamePhase) -> tuple[GamePhase, int]:
+    """
+    This is for automatic phase change when actions_until_phase_ends is 0.
+    Returns the next phase and the number of actions until the phase ends.
+    """
+    if previous_phase == GamePhase.TASK:
+        return GamePhase.MAIN_MENU, 0
+    elif previous_phase == GamePhase.DISCUSS:
+        return GamePhase.VOTE, len(alive_players) - 1
+    elif previous_phase == GamePhase.VOTE:
+        vote_counts = count_votes(history)
+        ejected_player, action_type = determine_ejection_result(vote_counts)
+
+        history.append(create_vote_history_entry(
+            history=history,
+            alive_players=alive_players,
+            ejected_player=ejected_player,
+            action_result=f"{ejected_player} was voted out.",
+            action_type=action_type
+        ))
+        return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
+    elif previous_phase == GamePhase.MAIN_MENU:
+        return GamePhase.MAIN_MENU, 0
+
+
+def count_votes(history: List[History]) -> dict:
+    """Count votes from the history."""
+    vote_counts = {}
+    for item in range(len(history) - 1, -1, -1):
+        if history[item].action_type == ActionType.VOTE:
+            voted_for = history[item].action_result_spectator_sees.split(" voted for ")[-1]
+            vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
+        else:
+            break
+    return vote_counts
+
+
+def determine_ejection_result(vote_counts: dict) -> tuple:
+    """Determine the ejected player and action type based on vote counts."""
+    most_voted = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
+
+    is_tie = len(most_voted) >= 2 and most_voted[0][1] == most_voted[1][1]
+    is_tie = is_tie or (len(most_voted) >= 3 and most_voted[0][1] == most_voted[1][1] == most_voted[2][1])
+
+    ejected_player = "nobody" if is_tie else most_voted[0][0]
+    action_type = ActionType.WAIT if ejected_player == "nobody" else ActionType.KILL
+    return ejected_player, action_type

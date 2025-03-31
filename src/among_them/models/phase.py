@@ -6,6 +6,6 @@ class GamePhase(str, Enum):
     TASK = "Task"
     DISCUSS = "Discuss"
     VOTE = "Vote"
-        
+
     def __repr__(self):
         return self.value

@@ -1,22 +1,19 @@
 from typing import List
 
 from among_them.consts import STATE_FILE
-from among_them.models.history import History
+from among_them.models.history import History, get_action_history_str, initialize_history
 from among_them.models.location import Location
-from among_them.models.game_phase import GamePhase
+from among_them.models.phase import GamePhase
+from among_them.utils.phase_utils import get_phase_and_when_it_ends
 from among_them.models.action_type import ActionType
 from among_them.models.player_role import PlayerRole
-from among_them.players.player import Player
-from among_them.engine.check_and_get_players import check_and_get_players
-from among_them.engine.initialize_history import initialize_history
+from among_them.utils.player_utils import get_alive_players, get_next_random_player, get_players_in_room, get_last_player_action
 import jsonpickle
-import pickle
-from among_them.engine.player_filters import get_alive_players, get_next_random_player, get_players_in_room
-from among_them.engine.phase_filters import get_phase_and_actions_until_phase_ends
+import random
 from among_them.models.end_game import get_end_game_reason
-from among_them.engine.player_filters import get_last_player_action
-from among_them.engine.actions import get_action_history_str, get_task_phase_actions, get_vote_actions
 from among_them.models.action import Action
+from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
+from among_them.models.player import Player
 
 
 class GameEngine:
@@ -31,7 +28,8 @@ class GameEngine:
     file_path: str = STATE_FILE
 
     def __init__(self, players: List[Player], impostor_count: int = 1) -> None:
-        self.players = check_and_get_players(players, impostor_count)
+        self.players = players
+        self.check_players_set_impostors(impostor_count)
         self.history = initialize_history(self.players)
 
 
@@ -45,12 +43,12 @@ class GameEngine:
             True and end game reason if the game is over or in MAIN_MENU stage, False otherwise
         """
         alive_players = get_alive_players(self.history, self.players)
-        phase, actions_until_phase_ends = get_phase_and_actions_until_phase_ends(self.history, len(alive_players))
+        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, alive_players)
         end_game_reason = get_end_game_reason(self.history, self.players)
         if phase == GamePhase.MAIN_MENU or end_game_reason is not None:
             return True, end_game_reason
 
-        current_player, next_players = get_next_random_player(self.history, self.players)
+        current_player, next_players = get_next_random_player(self.history, alive_players)
 
         last_player_action = get_last_player_action(self.history, current_player)
         players_in_room = get_players_in_room(self.history, self.players, last_player_action.location)
@@ -124,3 +122,48 @@ class GameEngine:
             # self.history, self.players = pickle.load(f)
             self.history, self.players = jsonpickle.decode(f.read())
             return True
+    
+    def check_players_set_impostors(
+        self, impostor_count: int = 1
+    ):
+        """Checks if the players have already been assigned roles, checks balance and assigns roles (crewmate or impostor).
+
+        Args:
+            impostor_count: Expected number of impostors
+
+        Returns:
+            List of players with roles assigned
+
+        Raises:
+            ValueError: Inconsistent configuration
+        """
+        if len(self.players) < 3:
+            raise ValueError("Minimum number of players is 3.")
+
+        if impostor_count >= len(self.players) or impostor_count <= 0:
+            raise ValueError("Invalid number of impostors")
+
+        # Count existing impostors
+        existing_impostors = sum(
+            1 for player in self.players if player.role == PlayerRole.IMPOSTOR
+        )
+
+        # Assign impostors randomly, only if needed
+        impostors_to_assign = impostor_count - existing_impostors
+        while impostors_to_assign > 0:
+            available_players = [p for p in self.players if p.role != PlayerRole.IMPOSTOR]
+            if not available_players:
+                break  # No more players to assign as impostors
+            chosen_player = random.choice(available_players)
+            chosen_player.role = PlayerRole.IMPOSTOR
+            impostors_to_assign -= 1
+
+        # Check for imbalanced team sizes AFTER role assignment
+        crewmates_count = len(self.players) - impostor_count
+        if impostor_count >= crewmates_count:
+            raise ValueError(
+                "Number of impostors cannot be greater than "
+                "or equal to the number of crewmates."
+            )
+        random.shuffle(self.players)
+        print("Players:", {p.name: p.role.value for p in self.players})

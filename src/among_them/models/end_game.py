@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import List
 from among_them.models.history import History
-from among_them.players.player import Player
-from among_them.engine.player_filters import get_alive_players
-from among_them.models.game_phase import GamePhase
+from among_them.models.player import Player
+from among_them.utils.player_utils import get_alive_players
+from among_them.models.phase import GamePhase
 from among_them.models.player_role import PlayerRole
 
 class EndGameReason(str, Enum):

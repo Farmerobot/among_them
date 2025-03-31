@@ -2,13 +2,7 @@ import re
 from typing import List, Optional, Tuple
 import tiktoken
 from among_them.models.action import Action, ActionType
-from among_them.models.action import normalize_and_check_action_valid
-from among_them.llm_prompts import (
-    ADVENTURE_ACTION_SYSTEM_PROMPT,
-    DISCUSSION_RESPONSE_SYSTEM_PROMPT,
-    UNIVERSAL_SYSTEM_PROMPT,
-    VOTING_SYSTEM_PROMPT,
-)
+from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from ollama import chat
 
 
@@ -20,16 +14,6 @@ class UnifiedAgent:
     def __init__(self, llm_model_name: str = "deepseek-r1:1.5b"):
         self.llm = None
         self.llm_model_name = llm_model_name
-        # self.init_llm()
-
-    def get_system_prompt(self, action_type: ActionType) -> str:
-        """Get the appropriate system prompt based on action type."""
-        if action_type == ActionType.SPEAK:
-            return DISCUSSION_RESPONSE_SYSTEM_PROMPT
-        elif action_type == ActionType.VOTE:
-            return VOTING_SYSTEM_PROMPT
-        else:
-            return ADVENTURE_ACTION_SYSTEM_PROMPT
 
     def act(
         self, prompt: str, actions: List[Action]
@@ -66,23 +50,27 @@ class UnifiedAgent:
         stream = chat(
             model=self.llm_model_name,
             messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
             ],
-            stream=True
+            stream=True,
         )
 
         # Process the response
         cot = None
         response_text = ""
         for chunk in stream:
-            print("\033[94m" + chunk['message']['content'] + "\033[0m", end='', flush=True)
-            response_text += chunk['message']['content']
+            print(
+                "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
+            )
+            response_text += chunk["message"]["content"]
 
-        cot_match = re.search(r'<think>.*?</think>', response_text, re.DOTALL)
+        cot_match = re.search(r"<think>.*?</think>", response_text, re.DOTALL)
         if cot_match:
             cot = cot_match.group(0)
-            response_text = re.sub(r'<think>.*?</think>', '', response_text, flags=re.DOTALL)
+            response_text = re.sub(
+                r"<think>.*?</think>", "", response_text, flags=re.DOTALL
+            )
         else:
             raise ValueError("No chain of thought found in response")
 
@@ -93,60 +81,77 @@ class UnifiedAgent:
         action_idx = None
         if actions and not actions[0].type == ActionType.SPEAK:
             try:
-                action_idx, _ = normalize_and_check_action_valid([action.text for action in actions], response_text)
+                action_idx, _ = self.normalize_and_check_action_valid(
+                    [action.text for action in actions], response_text
+                )
             except ValueError as e:
                 stream = chat(
                     model=self.llm_model_name,
                     messages=[
-                        {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': prompt},
-                        {'role': 'assistant', 'content': f"<think>{cot}</think>\n{response_text}"},
-                        {'role': 'assistant', 'content': f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be "}
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt},
+                        {
+                            "role": "assistant",
+                            "content": f"<think>{cot}</think>\n{response_text}",
+                        },
+                        {
+                            "role": "assistant",
+                            "content": f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be ",
+                        },
                     ],
-                    stream=True
+                    stream=True,
                 )
-                print(f"\033[91m<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be \033[0m")
+                print(
+                    f"\033[91m<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be \033[0m"
+                )
 
                 # Process the response
                 response_text = ""
                 for chunk in stream:
-                    print("\033[94m" + chunk['message']['content'] + "\033[0m", end='', flush=True)
-                    response_text += chunk['message']['content']
+                    print(
+                        "\033[94m" + chunk["message"]["content"] + "\033[0m",
+                        end="",
+                        flush=True,
+                    )
+                    response_text += chunk["message"]["content"]
 
                 # Clean up the response
                 response_text = response_text.strip()
-                action_idx, _ = normalize_and_check_action_valid([action.text for action in actions], response_text)
+                action_idx, _ = self.normalize_and_check_action_valid(
+                    [action.text for action in actions], response_text
+                )
         elif actions[0].type == ActionType.SPEAK:
+            # Extract text after "[something]: "
+            match = re.search(r'\[(.*?)\]:\s*(.*)', response_text)
+            if match:
+                response_text = match.group(2)
             action_idx = 0
-    
+
         # Calculate token usage with tiktoken
         encoding = tiktoken.encoding_for_model("gpt-4o")
         input_tokens = len(encoding.encode(system_prompt + prompt))
         output_tokens = len(encoding.encode(response_text + (cot or "")))
-        
-        return action_idx, response_text, cot, {"input_tokens": input_tokens, "output_tokens": output_tokens}
 
-    def init_llm(self):
-        """Initialize the language model client."""
-        if not OPENROUTER_API_KEY and not RUN_LOCALLY:
-            raise ValueError(
-                "Missing OpenRouter API key. "
-                "Please set OPENROUTER_API_KEY in your environment."
-            )
+        return (
+            action_idx,
+            response_text,
+            cot,
+            {"input_tokens": input_tokens, "output_tokens": output_tokens},
+        )
 
-        # Support for local Ollama models
-        if RUN_LOCALLY:
-            self.llm = ChatOpenAI(
-                base_url="http://localhost:11434/v1",
-                api_key="ollama",
-                model=self.llm_model_name or "deepseek-r1:1.5b",
-                temperature=0,
-            )
-        else:
-            # Default to OpenRouter
-            self.llm = chat(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=OPENROUTER_API_KEY,
-                model=self.llm_model_name,
-                temperature=0,
-            )
+
+    def normalize_and_check_action_valid(
+        self, available_actions: List[str], chosen_action: str
+    ) -> tuple[int, str]:
+        chosen_action = chosen_action.strip().lower()
+        available_actions = [a.lower() for a in available_actions]
+        for action in range(len(available_actions) - 1, -1): # wait is last
+            if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
+                return action, available_actions[action]
+
+        warning_str = (
+            f"LLM did not conform to output format. "
+            f"Expected one of {available_actions}, but got '{chosen_action}'"
+        )
+        print(warning_str)
+        raise ValueError(warning_str)

@@ -1,7 +1,7 @@
 import os
 from among_them.consts import STATE_FILE
 from among_them.game_engine import GameEngine
-from among_them.players.ai import AIPlayer
+from among_them.models.player import AIPlayer
 from among_them.agents.unified_agent import UnifiedAgent
 
 # To run this script, you need to

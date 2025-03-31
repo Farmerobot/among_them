@@ -10,7 +10,6 @@ class ActionType(str, Enum):
     KILL = "Kill"
     REPORT = "Report"
     PRETEND = "Pretend"
-        
+
     def __repr__(self):
         return self.value
-        
