@@ -120,7 +120,8 @@ class GameEngine:
     def load_state(self):
         with open(self.file_path, 'rb') as f:
             # self.history, self.players = pickle.load(f)
-            self.history, self.players = jsonpickle.decode(f.read())
+            obj_str = f.read().decode('utf-8')
+            self.history, self.players = jsonpickle.decode(obj_str)
             return True
     
     def check_players_set_impostors(
