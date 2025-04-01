@@ -145,7 +145,7 @@ class UnifiedAgent:
     ) -> tuple[int, str]:
         chosen_action = chosen_action.strip().lower()
         available_actions = [a.lower() for a in available_actions]
-        for action in range(len(available_actions) - 1, -1): # wait is last
+        for action in range(len(available_actions) - 1, -1, -1): # wait is last
             if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
                 return action, available_actions[action]
 
