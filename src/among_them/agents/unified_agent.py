@@ -115,6 +115,7 @@ class UnifiedAgent:
                         flush=True,
                     )
                     response_text += chunk["message"]["content"]
+                print("")
 
                 # Clean up the response
                 response_text = response_text.strip()
