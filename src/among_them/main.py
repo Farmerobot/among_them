@@ -3,7 +3,7 @@ from among_them.consts import STATE_FILE
 from among_them.game_engine import GameEngine
 from among_them.models.player import AIPlayer
 from among_them.agents.unified_agent import UnifiedAgent
-
+from among_them.config import OLLAMA_LLM_MODEL_NAME
 # To run this script, you need to
 # `poetry install`
 # and then run the following command:
@@ -11,7 +11,7 @@ from among_them.agents.unified_agent import UnifiedAgent
 
 
 def main():
-    agent = UnifiedAgent("deepseek-r1:1.5b")
+    agent = UnifiedAgent(OLLAMA_LLM_MODEL_NAME)
     players = [
         AIPlayer(name="Alice", agent=agent),
         AIPlayer(name="Bob", agent=agent),
