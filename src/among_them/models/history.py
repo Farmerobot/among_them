@@ -1,5 +1,4 @@
 from typing import List, Dict
-from langchain_core.messages.ai import UsageMetadata
 from among_them.consts import IMPOSTOR_COOLDOWN
 from among_them.models.phase import GamePhase
 from among_them.models.location import Location
@@ -25,7 +24,7 @@ class History:
         action_type: ActionType,
         llm_cot: str,
         llm_response: str,
-        token_usage: UsageMetadata,
+        token_usage: Dict[str, int],
         killed_or_reported_player_name: str,
         action_result_agent_sees: str,
         action_result_spectator_sees: str,
@@ -92,7 +91,7 @@ def initialize_history(players: List[Player]) -> List[History]:
         action_type = ActionType.WAIT,
         llm_cot = "",
         llm_response = "",
-        token_usage = UsageMetadata(),
+        token_usage = {},
         killed_or_reported_player_name = "",
         action_result_agent_sees = "",
         action_result_spectator_sees = f"The game started",
@@ -120,7 +119,7 @@ def create_vote_history_entry(
         action_type = action_type,
         llm_cot = "",
         llm_response = "",
-        token_usage = UsageMetadata(),
+        token_usage = {},
         killed_or_reported_player_name = ejected_player,
         action_result_agent_sees = "",
         action_result_spectator_sees = action_result,

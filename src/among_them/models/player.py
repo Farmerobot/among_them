@@ -1,9 +1,8 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from among_them.agents.unified_agent import UnifiedAgent
 from among_them.models.action_type import ActionType
 from among_them.models.player_role import PlayerRole
 from among_them.models.action import Action
-from langchain_core.messages.ai import UsageMetadata
 
 
 class Player:
@@ -13,7 +12,7 @@ class Player:
 
     def prompt_action(
         self, actions: List[Action], history_str: str
-    ) -> tuple[int, str, str, UsageMetadata]:
+    ) -> tuple[int, str, str, Dict[str, int]]:
         pass
 
 
@@ -28,7 +27,7 @@ class AIPlayer(Player):
 
     def prompt_action(
         self, actions: List[Action], history_str: str
-    ) -> tuple[int, str, str, UsageMetadata]:
+    ) -> tuple[int, str, str, Dict[str, int]]:
         chosen_action_idx, response, cot, token_usage = self.agent.act(
             prompt=history_str,
             actions=actions,
@@ -39,10 +38,10 @@ class AIPlayer(Player):
 class HumanPlayer(Player):
     def prompt_action(
         self, actions: List[Action], history_str: str
-    ) -> Tuple[int, str, str, UsageMetadata]:
+    ) -> Tuple[int, str, str, Dict[str, int]]:
         print(history_str)
         if actions[0].type == ActionType.SPEAK:
-            return 0, input("Your message to others:"), "", UsageMetadata()
+            return 0, input("Your message to others:"), "", {}
         else:
             action_prompt = "\n".join(
                 [f"{i}: {action}" for i, action in enumerate(actions)]
@@ -59,7 +58,7 @@ class HumanPlayer(Player):
                             chosen_action,
                             actions[chosen_action],
                             "",
-                            UsageMetadata(),
+                            {},
                         )
                     else:
                         print(f"Please enter a number between 0 and {len(actions) - 1}")
