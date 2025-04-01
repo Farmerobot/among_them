@@ -30,6 +30,7 @@ class History:
         action_result_agent_sees: str,
         action_result_spectator_sees: str,
         tasks_left_to_do: Dict[str, List[Task]],
+        votes_before_this_discussion_message: Dict[str, str],
     ):
         self.player_names_to_play_next: List[str] = player_names_to_play_next
         self.acted_by_player: str = acted_by_player
@@ -96,6 +97,7 @@ def initialize_history(players: List[Player]) -> List[History]:
         action_result_agent_sees = "",
         action_result_spectator_sees = f"The game started",
         tasks_left_to_do = tasks,
+        votes_before_this_discussion_message = {}
     )
     return [first_entry]
     
@@ -123,6 +125,7 @@ def create_vote_history_entry(
         action_result_agent_sees = "",
         action_result_spectator_sees = action_result,
         tasks_left_to_do = history[-1].tasks_left_to_do,
+        votes_before_this_discussion_message = {}
     )
 
 def get_action_history_str(history: List[History], player: Player, players_in_room: List[Player], alive_players: List[Player], location: Location, phase: GamePhase) -> str:

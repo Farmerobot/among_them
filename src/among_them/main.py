@@ -11,7 +11,7 @@ from among_them.agents.unified_agent import UnifiedAgent
 
 
 def main():
-    agent = UnifiedAgent("deepseek-r1:14b")
+    agent = UnifiedAgent("deepseek-r1:1.5b")
     players = [
         AIPlayer(name="Alice", agent=agent),
         AIPlayer(name="Bob", agent=agent),
@@ -28,6 +28,7 @@ def main():
         print(history_item)
     game_ended = False
     once = False
+    retry_count = 0
     while not game_ended:
         try:
             game_ended, reason = game_engine.perform_step()
@@ -37,6 +38,8 @@ def main():
         except Exception as e:
             if "LLM did" in str(e):
                 print(f"Error: {e}")
+                print(f"main.py: Model failed at {action_type.name}. Retry count: {retry_count}")
+                retry_count += 1
                 continue
             else:
                 raise e

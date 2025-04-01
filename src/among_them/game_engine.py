@@ -57,6 +57,7 @@ class GameEngine:
             actions_player_can_take = get_task_phase_actions(current_player, last_player_action.location, last_player_action.impostor_cooldown, self.history, self.players)
             spectators_who_saw = [p.name for p in players_in_room]
         elif phase == GamePhase.DISCUSS:
+            # Set some variables
             location = Location.CAFETERIA
             actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
             spectators_who_saw = [p.name for p in alive_players]
@@ -64,7 +65,32 @@ class GameEngine:
             location = Location.CAFETERIA
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
             spectators_who_saw = [p.name for p in alive_players]
-        
+
+        # Force a new vote BEFORE each discussion message.
+        # It does not affect the game logic. It is just extra data.
+        votes_before_this_discussion_message = {}
+        if phase == GamePhase.DISCUSS:
+            for player in alive_players:
+                retry_count = 0
+                while True:
+                    retry_count += 1
+                    try:
+                        voting_actions_player_can_take = get_vote_actions(self.history, self.players, player)
+                        history_str = get_action_history_str(self.history, player, players_in_room, alive_players, location, phase)
+                        action_taken_idx, response, cot, token_usage = player.prompt_action(voting_actions_player_can_take, history_str)
+                        action_taken = voting_actions_player_can_take[action_taken_idx]
+                        votes_before_this_discussion_message[player.name] = action_taken.target_player_name
+                        print(f"{player.name} voted for {action_taken.target_player_name}")
+                        break
+                    except Exception as e:
+                        if "LLM did" in str(e):
+                            print(f"Error: {e}")
+                            print(f"Model failed to vote. Retry count: {retry_count}")
+                            continue
+                        else:
+                            raise e
+            print(f"Votes before this discussion message: {votes_before_this_discussion_message}")
+
         history_str = get_action_history_str(self.history, current_player, players_in_room, alive_players, location, phase)
         action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
         action_taken = actions_player_can_take[action_taken_idx]
@@ -106,7 +132,9 @@ class GameEngine:
             action_result_agent_sees=agent_sees,
             action_result_spectator_sees=spectator_sees,
             tasks_left_to_do=tasks_left_to_do,
+            votes_before_this_discussion_message=votes_before_this_discussion_message
         )
+
         self.history.append(new_history_item)
         self.save_state()
         return False, None
