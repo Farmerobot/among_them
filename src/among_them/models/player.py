@@ -44,7 +44,7 @@ class HumanPlayer(Player):
             return 0, input("Your message to others:"), "", {}
         else:
             action_prompt = "\n".join(
-                [f"{i}: {action}" for i, action in enumerate(actions)]
+                [f"{i}: {action.text}" for i, action in enumerate(actions)]
             )
             prompt = "========================================\n"
             prompt += f"Your turn {self.name}: Choose an action\n{action_prompt}\n\n"
