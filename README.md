@@ -213,8 +213,7 @@ RUN_LOCALLY=True
 ## Configuration Constants
 
 The `consts.py` file defines important game parameters:
-- `NUM_SHORT_TASKS` (4): Number of short tasks assigned to each player
-- `NUM_LONG_TASKS` (1): Number of long tasks assigned to each player
+- `NUM_TASKS` (4): Number of tasks assigned to each player
 - `NUM_CHATS` (5): Number of discussion messages per player
 - `NUM_ACTIONS_WITHOUT_REPORT` (5): Maximum actions without reporting. After this the game will end.
 - `IMPOSTOR_COOLDOWN` (1): Turns between impostor kill actions

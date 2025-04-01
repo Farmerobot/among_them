@@ -1,8 +1,7 @@
 import os
 from among_them.consts import STATE_FILE
 from among_them.game_engine import GameEngine
-from among_them.models.player import AIPlayer
-from among_them.agents.unified_agent import UnifiedAgent
+from among_them.models.player import Player
 from among_them.config import OLLAMA_LLM_MODEL_NAME
 # To run this script, you need to
 # `poetry install`
@@ -11,13 +10,12 @@ from among_them.config import OLLAMA_LLM_MODEL_NAME
 
 
 def main():
-    agent = UnifiedAgent(OLLAMA_LLM_MODEL_NAME)
     players = [
-        AIPlayer(name="Alice", agent=agent),
-        AIPlayer(name="Bob", agent=agent),
-        AIPlayer(name="Charlie", agent=agent),
-        AIPlayer(name="David", agent=agent),
-        AIPlayer(name="Eve", agent=agent),
+        Player(name="Alice"),
+        Player(name="Bob"),
+        Player(name="Charlie"),
+        Player(name="David"),
+        Player(name="Eve"),
     ]
     game_engine = GameEngine(players, 1)
     if os.path.exists(STATE_FILE):

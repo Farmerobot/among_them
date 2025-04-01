@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class GamePhase(str, Enum):
+class GamePhase(Enum):
     MAIN_MENU = "Main Menu"
     TASK = "Task"
     DISCUSS = "Discuss"

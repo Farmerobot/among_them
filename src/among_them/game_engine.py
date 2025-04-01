@@ -1,6 +1,8 @@
 from typing import List
 
 from among_them.consts import STATE_FILE
+from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook
+from among_them.models import action
 from among_them.models.history import History, get_action_history_str, initialize_history
 from among_them.models.location import Location
 from among_them.models.phase import GamePhase
@@ -8,12 +10,13 @@ from among_them.utils.phase_utils import get_phase_and_when_it_ends
 from among_them.models.action_type import ActionType
 from among_them.models.player_role import PlayerRole
 from among_them.utils.player_utils import get_alive_players, get_next_random_player, get_players_in_room, get_last_player_action
-import jsonpickle
+from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
+from among_them.models.player import Player
+import json
 import random
 from among_them.models.end_game import get_end_game_reason
 from among_them.models.action import Action
-from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
-from among_them.models.player import Player
+from typing import List
 
 
 class GameEngine:
@@ -63,7 +66,7 @@ class GameEngine:
             spectators_who_saw = [p.name for p in alive_players]
         elif phase == GamePhase.VOTE:
             location = Location.CAFETERIA
-            actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
+            actions_player_can_take = get_vote_actions(alive_players, current_player)
             spectators_who_saw = [p.name for p in alive_players]
 
         # Force a new vote BEFORE each discussion message.
@@ -75,12 +78,12 @@ class GameEngine:
                 while True:
                     retry_count += 1
                     try:
-                        voting_actions_player_can_take = get_vote_actions(self.history, self.players, player)
-                        history_str = get_action_history_str(self.history, player, players_in_room, alive_players, location, phase)
-                        action_taken_idx, response, cot, token_usage = player.prompt_action(voting_actions_player_can_take, history_str)
-                        action_taken = voting_actions_player_can_take[action_taken_idx]
-                        votes_before_this_discussion_message[player.name] = action_taken.target_player_name
-                        print(f"Discussion phase fake voting: {player.name} voted for {action_taken.target_player_name}")
+                        fake_voting_actions_player_can_take = get_vote_actions(alive_players, player)
+                        fake_history_str = get_action_history_str(self.history, player, players_in_room=alive_players, alive_players=alive_players, location=Location.CAFETERIA, phase=GamePhase.VOTE)
+                        fake_action_taken_idx, _, _, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
+                        fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
+                        votes_before_this_discussion_message[player.name] = fake_action_taken.target_player_name
+                        print(f"Discussion phase fake voting: {player.name} voted for {fake_action_taken.target_player_name}")
                         break
                     except Exception as e:
                         if "LLM did" in str(e):
@@ -95,9 +98,6 @@ class GameEngine:
         action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
         action_taken = actions_player_can_take[action_taken_idx]
 
-        killed_or_reported_player_name = None
-        if action_taken.type == ActionType.KILL or action_taken.type == ActionType.REPORT:
-            killed_or_reported_player_name = action_taken.target_player_name
         if action_taken.type == ActionType.REPORT:
             spectators_who_saw = [p.name for p in alive_players]
 
@@ -117,20 +117,16 @@ class GameEngine:
 
         new_history_item = History(
             player_names_to_play_next=next_players,
-            acted_by_player=current_player.name,
             phase=phase,
             actions_until_phase_ends=actions_until_phase_ends,
             location=location,
             impostor_cooldown=max(0, last_player_action.impostor_cooldown-1),
             actions_agent_could_take=[a.text for a in actions_player_can_take],
             spectators_who_saw=spectators_who_saw,
-            action_type=action_taken.type,
             llm_cot=cot,
             llm_response=response,
             token_usage=token_usage,
-            killed_or_reported_player_name=killed_or_reported_player_name,
-            action_result_agent_sees=agent_sees,
-            action_result_spectator_sees=spectator_sees,
+            action_taken=action_taken,
             tasks_left_to_do=tasks_left_to_do,
             votes_before_this_discussion_message=votes_before_this_discussion_message
         )
@@ -140,16 +136,14 @@ class GameEngine:
         return False, None
 
     def save_state(self):
-        with open(self.file_path, 'wb') as f:
-            # pickle.dump((self.history, self.players), f)
-            obj_str = jsonpickle.encode((self.history, self.players), indent=2)
-            f.write(obj_str.encode('utf-8'))
+        with open(self.file_path, 'w') as f:
+            json_str = json.dumps((self.history, self.players), indent=2, cls=GameJSONEncoder)
+            f.write(json_str)
             
     def load_state(self):
-        with open(self.file_path, 'rb') as f:
-            # self.history, self.players = pickle.load(f)
-            obj_str = f.read().decode('utf-8')
-            self.history, self.players = jsonpickle.decode(obj_str)
+        with open(self.file_path, 'r') as f:
+            json_str = f.read()
+            self.history, self.players = json.loads(json_str, object_hook=game_object_hook)
             return True
     
     def check_players_set_impostors(

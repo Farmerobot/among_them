@@ -1,3 +1,4 @@
+from ast import Dict
 from typing import List
 from among_them.models.history import History, create_vote_history_entry
 from among_them.models.action_type import ActionType
@@ -20,7 +21,7 @@ def get_phase_and_when_it_ends(history: List[History], alive_players: List[Playe
     if len(history) == 1: # First phase
         return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
     previous_phase = history[-1].phase
-    if history[-1].action_type == ActionType.REPORT: # if report start discussion
+    if history[-1].action_taken.type == ActionType.REPORT: # if report start discussion
         return GamePhase.DISCUSS, (NUM_CHATS * len(alive_players)) - 1
     if history[-1].actions_until_phase_ends == 0:
         return handle_phase_change(history, alive_players, previous_phase)
@@ -37,7 +38,7 @@ def handle_phase_change(history: List[History], alive_players: List[Player], pre
     elif previous_phase == GamePhase.DISCUSS:
         return GamePhase.VOTE, len(alive_players) - 1
     elif previous_phase == GamePhase.VOTE:
-        vote_counts = count_votes(history)
+        vote_counts, votes = count_votes(history)
         ejected_player, action_type = determine_ejection_result(vote_counts)
 
         history.append(create_vote_history_entry(
@@ -45,26 +46,29 @@ def handle_phase_change(history: List[History], alive_players: List[Player], pre
             alive_players=alive_players,
             ejected_player=ejected_player,
             action_result=f"{ejected_player} was voted out.",
-            action_type=action_type
+            action_type=action_type,
+            votes=votes
         ))
         return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
     elif previous_phase == GamePhase.MAIN_MENU:
         return GamePhase.MAIN_MENU, 0
 
 
-def count_votes(history: List[History]) -> dict:
-    """Count votes from the history."""
+def count_votes(history: List[History]) -> tuple[dict, dict]:
+    """Count votes from the history. Returns vote counts and votes dictionary."""
     vote_counts = {}
+    votes: Dict[str, str] = {}
     for item in range(len(history) - 1, -1, -1):
-        if history[item].action_type == ActionType.VOTE:
-            voted_for = history[item].action_result_spectator_sees.split(" voted for ")[-1]
+        if history[item].action_taken.type == ActionType.VOTE:
+            voted_for = history[item].action_taken.target_player_name
             vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
+            votes[history[item].action_taken.player_name] = voted_for
         else:
             break
-    return vote_counts
+    return vote_counts, votes
 
 
-def determine_ejection_result(vote_counts: dict) -> tuple:
+def determine_ejection_result(vote_counts: dict[str, int]) -> tuple[str, ActionType]:
     """Determine the ejected player and action type based on vote counts."""
     most_voted = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
 

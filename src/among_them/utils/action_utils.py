@@ -4,7 +4,7 @@ from among_them.models.history import History
 from among_them.models.location import DOORS, Location
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
-from among_them.utils.player_utils import get_alive_players, get_dead_players, get_players_in_room
+from among_them.utils.player_utils import get_dead_players, get_players_in_room
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
 
 
@@ -75,7 +75,7 @@ def get_task_phase_actions(
 
 
 def get_vote_actions(
-    history: List[History], players: List[Player], player: Player
+    alive_players: List[Player], player: Player
 ) -> list[Action]:
     """Creates voting options.
 
@@ -88,7 +88,7 @@ def get_vote_actions(
             type=ActionType.VOTE, player_name=player.name, target_player_name="nobody"
         )
     )
-    for other_player in get_alive_players(history, players):
+    for other_player in alive_players:
         if other_player != player:
             actions.append(
                 Action(

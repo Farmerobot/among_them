@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ActionType(str, Enum):
+class ActionType(Enum):
     VOTE = "Vote"
     SPEAK = "Speak"
     WAIT = "Wait"

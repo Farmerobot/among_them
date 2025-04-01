@@ -24,7 +24,8 @@ class Action:
         self.text = text
         self.result = result
         self.spectator = spectator
-        self.set_stories()
+        if text == "" and result == "" and spectator == "":
+            self.set_stories()
 
     def set_stories(self):
         if self.type == ActionType.MOVE:

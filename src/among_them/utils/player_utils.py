@@ -26,7 +26,7 @@ def get_next_random_player(
 
     # Remove any player who is not alive from players_to_play_next
     players_to_play_next = [p for p in players_to_play_next if p in [player.name for player in alive_players]]
-    if not players_to_play_next or history[-1].action_type == ActionType.REPORT:
+    if not players_to_play_next or history[-1].action_taken.type == ActionType.REPORT:
         players_to_play_next = [p.name for p in alive_players]
 
     next_player_name = random.choice(players_to_play_next)
@@ -35,14 +35,14 @@ def get_next_random_player(
 
 
 def get_alive_players(history: List[History], players: List[Player]) -> List[Player]:
-    kill_history = [history_item for history_item in history if history_item.action_type == ActionType.KILL]
-    dead_players = [history_item.killed_or_reported_player_name for history_item in kill_history]
+    kill_history = [history_item for history_item in history if history_item.action_taken.type == ActionType.KILL]
+    dead_players = [history_item.action_taken.target_player_name for history_item in kill_history]
     return [player for player in players if player.name not in dead_players]
 
 
 def get_last_player_action(history: List[History], player: Player) -> History:
     for i in range(len(history) - 1, -1, -1):
-        if history[i].acted_by_player == player.name:
+        if history[i].action_taken.player_name == player.name:
             return history[i]
     return history[0]
 
@@ -50,8 +50,8 @@ def get_last_player_action(history: List[History], player: Player) -> History:
 def get_dead_players(history: List[History], players: List[Player]) -> Dict[str, str]:
     """Returns the dictionary of dead players and their location that can be reported (without ghosts)"""
     search_from = get_last_discussion_action_idx(history)
-    kill_history = [history_item for history_item in history[search_from:] if history_item.action_type == ActionType.KILL]
-    return {history_item.killed_or_reported_player_name: history_item.location for history_item in kill_history}
+    kill_history = [history_item for history_item in history[search_from:] if history_item.action_taken.type == ActionType.KILL]
+    return {history_item.action_taken.target_player_name: history_item.location for history_item in kill_history}
 
 
 def get_players_in_room(

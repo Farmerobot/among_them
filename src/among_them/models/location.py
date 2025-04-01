@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Location(str, Enum):
+class Location(Enum):
     CAFETERIA = "Cafeteria"
     REACTOR = "Reactor"
     UPPER_ENGINE = "Upper Engine"

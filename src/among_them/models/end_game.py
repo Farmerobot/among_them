@@ -6,7 +6,7 @@ from among_them.utils.player_utils import get_alive_players
 from among_them.models.phase import GamePhase
 from among_them.models.player_role import PlayerRole
 
-class EndGameReason(str, Enum):
+class EndGameReason(Enum):
     NO_ACTIONS_LEFT = "No actions left"
     NO_IMPOSTORS_LEFT = "No impostors left"
     ALL_TASKS_DONE = "All tasks done"

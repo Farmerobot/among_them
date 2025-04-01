@@ -6,7 +6,7 @@ from among_them.models.action_type import ActionType
 from among_them.models.player_role import PlayerRole
 from among_them.models.tasks import Task, get_crewmate_tasks, get_impostor_tasks
 from among_them.models.player import Player
-
+from among_them.models.action import Action
 
 class History:
     """Item in the sequence of actions that have occurred in the game."""
@@ -14,40 +14,31 @@ class History:
     def __init__(
         self,
         player_names_to_play_next: List[str],
-        acted_by_player: str,
         phase: GamePhase,
         actions_until_phase_ends: int,
         location: Location, # This is after the action
         impostor_cooldown: int,
         actions_agent_could_take: List[str],
         spectators_who_saw: List[str],
-        action_type: ActionType,
         llm_cot: str,
         llm_response: str,
         token_usage: Dict[str, int],
-        killed_or_reported_player_name: str,
-        action_result_agent_sees: str,
-        action_result_spectator_sees: str,
+        action_taken: Action,
         tasks_left_to_do: Dict[str, List[Task]],
         votes_before_this_discussion_message: Dict[str, str],
     ):
         self.player_names_to_play_next: List[str] = player_names_to_play_next
-        self.acted_by_player: str = acted_by_player
-
         self.phase: GamePhase = phase
         self.actions_until_phase_ends: int = actions_until_phase_ends
         self.location: Location = location
         self.impostor_cooldown: int = impostor_cooldown
-        self.killed_or_reported_player_name: str = killed_or_reported_player_name
 
-        self.action_type: ActionType = action_type
         self.actions_agent_could_take: List[str] = actions_agent_could_take
         self.llm_cot: str = llm_cot
         self.llm_response: str = llm_response
         self.token_usage: dict = token_usage
+        self.action_taken: Action = action_taken
 
-        self.action_result_agent_sees: str = action_result_agent_sees
-        self.action_result_spectator_sees: str = action_result_spectator_sees
         self.spectators_who_saw: List[str] = spectators_who_saw
 
         self.tasks_left_to_do: Dict[str, List[Task]] = tasks_left_to_do
@@ -55,12 +46,12 @@ class History:
 
     def __repr__(self) -> str:
         # Format the token usage for better readability
-        token_usage_str = ""
+        token_usage_str = "\n".join([f"{key}: {value}" for key, value in self.token_usage.items()])
         
         # Format task information with indentation
         tasks_str = ""
         for player, tasks in self.tasks_left_to_do.items():
-            if player == self.acted_by_player:
+            if player == self.action_taken.player_name:
                 task_list = "\n    - ".join(str(task) for task in tasks)
                 tasks_str += f"\n    - {player}:\n    - {task_list}"
         if not tasks_str:
@@ -69,10 +60,9 @@ class History:
         # Format the lists for better readability
         players_next = ", ".join(self.player_names_to_play_next)
         spectators = ", ".join(self.spectators_who_saw)
-        actions_available = "\n    - ".join(self.actions_agent_could_take)
             
         # Build the full representation with clear sections
-        return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_result_spectator_sees}\033[0m{"- "+self.killed_or_reported_player_name if self.action_type == ActionType.KILL else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
+        return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_taken.spectator}\033[0m{"- "+self.action_taken.target_player_name if self.action_taken.type == ActionType.KILL else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
 
 
 def initialize_history(players: List[Player]) -> List[History]:
@@ -82,20 +72,16 @@ def initialize_history(players: List[Player]) -> List[History]:
 
     first_entry = History(
         player_names_to_play_next = [p.name for p in players],
-        acted_by_player = "System",
         phase = GamePhase.MAIN_MENU,
         actions_until_phase_ends = 0,
         location = Location.CAFETERIA,
-        impostor_cooldown = 0,
+        impostor_cooldown = IMPOSTOR_COOLDOWN,
         actions_agent_could_take = [],
         spectators_who_saw = [player.name for player in players],
-        action_type = ActionType.WAIT,
         llm_cot = "",
         llm_response = "",
         token_usage = {},
-        killed_or_reported_player_name = "",
-        action_result_agent_sees = "",
-        action_result_spectator_sees = f"The game started",
+        action_taken = Action(ActionType.WAIT, "System", spectator="The game started"),
         tasks_left_to_do = tasks,
         votes_before_this_discussion_message = {}
     )
@@ -106,26 +92,32 @@ def create_vote_history_entry(
     alive_players: List[Player],
     ejected_player: str,
     action_result: str,
-    action_type: ActionType
+    action_type: ActionType,
+    votes: Dict[str, str]
 ) -> History:
+    """
+    Create a new history entry for a vote action. 
+    
+    Args:
+        votes: dictionary of player name to voted for. This is for votes_before_this_discussion_message variable so that it includes votes after discussion.
+    
+    Returns:
+        A new history entry for the vote action.
+    """
     return History(
-        player_names_to_play_next = history[-1].player_names_to_play_next,
-        acted_by_player = "System",
+        player_names_to_play_next = [], # handled automatically
         phase = GamePhase.MAIN_MENU,
         actions_until_phase_ends = 0,
         location = Location.CAFETERIA,
         impostor_cooldown = IMPOSTOR_COOLDOWN,
         actions_agent_could_take = [],
         spectators_who_saw = [p.name for p in alive_players],
-        action_type = action_type,
         llm_cot = "",
         llm_response = "",
         token_usage = {},
-        killed_or_reported_player_name = ejected_player,
-        action_result_agent_sees = "",
-        action_result_spectator_sees = action_result,
+        action_taken = Action(type=action_type, player_name="System", target_player_name=ejected_player, spectator=action_result),
         tasks_left_to_do = history[-1].tasks_left_to_do,
-        votes_before_this_discussion_message = {}
+        votes_before_this_discussion_message = votes
     )
 
 def get_action_history_str(history: List[History], player: Player, players_in_room: List[Player], alive_players: List[Player], location: Location, phase: GamePhase) -> str:
@@ -160,16 +152,16 @@ def get_action_history_str(history: List[History], player: Player, players_in_ro
     # History
     history_str += "\n<history>\n"
     for history_item in history:
-        if history_item.acted_by_player == player.name:
+        if history_item.action_taken.player_name == player.name:
             cot_without_think_tags = "At this point, you thought to yourself:" + history_item.llm_cot.replace("<think>", "\n").replace("</think>", "\n")
             history_str += cot_without_think_tags + "\nAnd after thinking\n"
-            history_str += history_item.action_result_agent_sees + "\n"
+            history_str += history_item.action_taken.result + "\n"
         else:
             if player.name in history_item.spectators_who_saw:
-                if history_item.action_type == ActionType.SPEAK:
-                    history_str += "Discussion: " + history_item.action_result_spectator_sees + "\n"
+                if history_item.action_taken.type == ActionType.SPEAK:
+                    history_str += "Discussion: " + history_item.action_taken.spectator + "\n"
                 else:
-                    history_str += "You saw: " + history_item.action_result_spectator_sees + "\n"
+                    history_str += "You saw: " + history_item.action_taken.spectator + "\n"
     history_str += "</history>\n"
     
     # Player location and phase
@@ -178,7 +170,7 @@ def get_action_history_str(history: List[History], player: Player, players_in_ro
         history_str += (f"You ({player.name}) are currently alone in {location.value}" if len(other_players) == 0 else f"You ({player.name}) are currently with {', '.join(other_players)}") + " in " + location.value + "\n"
         history_str += "Shhh... You can not speak now. It is against the rules\n"
     elif phase == GamePhase.VOTE:
-        history_str += "It is voting phase now. Vote out all impostors.\n"
+        history_str += "It is voting phase now.\n"
     else:
         history_str += "It is discussion phase now. You can speak now. Respond to the crewmates.\n"
     return history_str

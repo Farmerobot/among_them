@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional, Tuple
 import streamlit as st
 import jsonpickle
 import pandas as pd
@@ -12,10 +13,13 @@ import time
 from datetime import datetime
 import json
 
-from among_them.models.location import ROOM_COORDINATES
+from among_them.game_jsonencoder import game_object_hook
+from among_them.models.history import History
+from among_them.models.location import ROOM_COORDINATES, Location
 from among_them.models.action_type import ActionType
 from among_them.models.phase import GamePhase
-from among_them.consts import STATE_FILE
+from among_them.consts import NUM_TASKS, STATE_FILE
+from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 
 
@@ -54,7 +58,7 @@ selected_file = st.sidebar.selectbox("Select Game File", game_files)
 file_path = os.path.join(data_dir, selected_file)
 
 # Add auto-refresh
-auto_refresh = st.sidebar.checkbox("Auto Refresh", value=True)
+auto_refresh = st.sidebar.checkbox("Auto Refresh", value=False)
 refresh_interval = st.sidebar.slider("Refresh Interval (seconds)", 1, 30, 5)
 
 last_modified_time = os.path.getmtime(file_path)
@@ -63,10 +67,10 @@ st.sidebar.write(f"Last Modified: {last_modified_str}")
 
 # Load game state
 @st.cache_data(ttl=refresh_interval)
-def load_game_state(file_path, last_modified_time):
-    with open(file_path, 'rb') as f:
-        state_str = f.read().decode('utf-8')
-        history, players = jsonpickle.decode(state_str)
+def load_game_state(file_path, last_modified_time) -> Tuple[List[History], List[Player], float]:
+    with open(file_path, 'r') as f:
+        state_str = f.read()
+        history, players = json.loads(state_str, object_hook=game_object_hook)
     return history, players, last_modified_time
 
 try:
@@ -75,7 +79,7 @@ try:
     # Check if auto-refresh is enabled
     if auto_refresh:
         st.sidebar.write("Auto-refreshing...")
-        time.sleep(0.1)  # Small delay to prevent excessive refreshing
+        time.sleep(2)  # Small delay to prevent excessive refreshing
         st.rerun()
         
     # Main tabs
@@ -89,7 +93,7 @@ try:
         
         # Draw the map (rooms and connections)
         for room_name, (x, y) in ROOM_COORDINATES.items():
-            circle = plt.Circle((x, y), 0.15, fill=True, alpha=0.2, color='lightgray', edgecolor='black')
+            circle = plt.Circle((x, y), 0.15, fill=True, alpha=0.2, color='lightgray')
             ax.add_patch(circle)
             ax.text(x, y, room_name, ha='center', va='center', fontsize=8)
         
@@ -105,11 +109,11 @@ try:
         latest_entry = history[-1]
         
         # Track player positions
-        player_positions = {}
+        player_positions: Dict[str, Optional[Location]] = {}
         
         # Go through history to find player last known locations
         for entry in history:
-            player_name = entry.acted_by_player
+            player_name = entry.action_taken.player_name
             if player_name != "System" and hasattr(entry, 'location') and entry.location:
                 player_positions[player_name] = entry.location
         
@@ -124,8 +128,8 @@ try:
             all_player_names.add(player.name)
         
         for entry in history:
-            if entry.action_type == ActionType.KILL and entry.killed_or_reported_player_name:
-                dead_players.add(entry.killed_or_reported_player_name)
+            if entry.action_taken.type == ActionType.KILL and entry.action_taken.target_player_name:
+                dead_players.add(entry.action_taken.target_player_name)
         
         # Draw players on map
         player_colors = {
@@ -144,7 +148,7 @@ try:
         for player_name, location in player_positions.items():
             if location:
                 location_name = location.value if hasattr(location, 'value') else location
-                x, y = ROOM_COORDINATES[location_name]
+                x, y = ROOM_COORDINATES[location]
                 
                 # Offset player positions slightly to prevent overlap
                 x += np.random.uniform(-0.05, 0.05)
@@ -183,12 +187,12 @@ try:
         # Latest action information
         st.subheader("Latest Action")
         cols = st.columns(3)
-        cols[0].write(f"Player: {latest_entry.acted_by_player}")
-        cols[1].write(f"Action: {latest_entry.action_type}")
+        cols[0].write(f"Player: {latest_entry.action_taken.player_name}")
+        cols[1].write(f"Action: {latest_entry.action_taken.type}")
         cols[2].write(f"Location: {latest_entry.location}")
         
-        if latest_entry.action_result_spectator_sees:
-            st.write(f"Result: {latest_entry.action_result_spectator_sees}")
+        if latest_entry.action_taken.spectator:
+            st.write(f"Result: {latest_entry.action_taken.spectator}")
 
     with tabs[1]:  # Timeline
         st.header("Game Timeline")
@@ -199,11 +203,11 @@ try:
         for i, entry in enumerate(history):
             timeline_data.append({
                 "Turn": i + 1,
-                "Player": entry.acted_by_player,
+                "Player": entry.action_taken.player_name,
                 "Phase": entry.phase,
-                "Action": entry.action_type,
+                "Action": entry.action_taken.type,
                 "Location": entry.location,
-                "Result": entry.action_result_spectator_sees
+                "Result": entry.action_taken.spectator
             })
         
         df_timeline = pd.DataFrame(timeline_data)
@@ -316,8 +320,8 @@ try:
                 if not tasks:
                     st.write("No tasks remaining! 🎉")
                 else:
-                    task_complete = 0
-                    task_total = len(tasks)
+                    task_complete = NUM_TASKS - len(tasks)
+                    task_total = NUM_TASKS
                     
                     # Count completed tasks
                     for task in tasks:
@@ -446,9 +450,9 @@ try:
         discussions = []
         
         for entry in history:
-            if entry.action_type == ActionType.SPEAK:
-                speaker = entry.acted_by_player
-                message = entry.action_result_spectator_sees
+            if entry.action_taken.type == ActionType.SPEAK:
+                speaker = entry.action_taken.player_name
+                message = entry.action_taken.spectator
                 discussions.append({
                     "Speaker": speaker,
                     "Message": message
@@ -496,4 +500,6 @@ try:
 
 except Exception as e:
     st.error(f"Error loading game state: {e}")
+    # import traceback
+    # traceback.print_exc()
     st.code(str(e))
