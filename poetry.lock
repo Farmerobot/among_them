@@ -261,6 +261,25 @@ files = [
 ]
 
 [[package]]
+name = "jsonpickle"
+version = "4.0.5"
+description = "jsonpickle encodes/decodes any Python object to/from JSON"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "jsonpickle-4.0.5-py3-none-any.whl", hash = "sha256:b4ac7d0a75ddcdfd93445737f1d36ff28768690d43e54bf5d0ddb1d915e580df"},
+    {file = "jsonpickle-4.0.5.tar.gz", hash = "sha256:f299818b39367c361b3f26bdba827d4249ab5d383cd93144d0f94b5417aacb35"},
+]
+
+[package.extras]
+cov = ["pytest-cov"]
+dev = ["black", "pyupgrade"]
+docs = ["furo", "rst.linker (>=1.9)", "sphinx (>=3.5)"]
+packaging = ["build", "setuptools (>=61.2)", "setuptools-scm[toml] (>=6.0)", "twine"]
+testing = ["PyYAML", "atheris (>=2.3.0,<2.4.0) ; python_version < \"3.12\"", "bson", "ecdsa", "feedparser", "gmpy2", "numpy", "pandas", "pymongo", "pytest (>=6.0,!=8.1.*)", "pytest-benchmark", "pytest-benchmark[histogram]", "pytest-checkdocs (>=1.2.3)", "pytest-enabler (>=1.0.1)", "pytest-ruff (>=0.2.1)", "scikit-learn", "scipy (>=1.9.3) ; python_version > \"3.10\"", "scipy ; python_version <= \"3.10\"", "simplejson", "sqlalchemy", "ujson"]
+
+[[package]]
 name = "ollama"
 version = "0.4.7"
 description = "The official Python client for Ollama."
@@ -726,4 +745,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "8611333246e558a1467f46015bf9f3fe3e69399faf3f07ca22d84be0b1dc0976"
+content-hash = "77bd8a93dc049ff260e506534802442f783c10f9597e49ffbb3e0c39bd7fd398"
