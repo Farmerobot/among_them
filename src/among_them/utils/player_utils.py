@@ -44,7 +44,6 @@ def get_last_player_action(history: List[History], player: Player) -> History:
     for i in range(len(history) - 1, -1, -1):
         if history[i].acted_by_player == player.name:
             return history[i]
-    print(f"Player {player.name} has no actions in history")
     return history[0]
 
 
