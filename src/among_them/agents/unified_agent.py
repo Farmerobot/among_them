@@ -64,6 +64,7 @@ class UnifiedAgent:
                 "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
             )
             response_text += chunk["message"]["content"]
+        print("")
 
         cot_match = re.search(r"<think>.*?</think>", response_text, re.DOTALL)
         if cot_match:
