@@ -1,11 +1,13 @@
 import re
 from typing import Dict, List, Optional, Tuple
+
 import tiktoken
+from ollama import chat
+
+from among_them.config import OLLAMA_LLM_MODEL_NAME
+from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
-from among_them.config import OLLAMA_LLM_MODEL_NAME
-from ollama import chat
 
 
 class Player:
@@ -31,7 +33,7 @@ class Player:
     
     def prompt_action(
         self, actions: List[Action], history_str: str
-    ) -> Tuple[int, str, Optional[str], Dict[str, int]]:
+    ) -> Tuple[int, str, str, Dict[str, int]]:
         """
         Prompts the player for an action, either via human input or LLM.
         
@@ -188,7 +190,7 @@ class Player:
         output_tokens = len(encoding.encode(response_text + (cot or "")))
 
         return (
-            action_idx,
+            action_idx, # type: ignore
             response_text,
             cot,
             {"input_tokens": input_tokens, "output_tokens": output_tokens},

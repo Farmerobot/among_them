@@ -1,11 +1,12 @@
 from typing import List
+
 from among_them.models.action import Action, ActionType
 from among_them.models.history import History
 from among_them.models.location import DOORS, Location
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
-from among_them.utils.player_utils import get_dead_players, get_players_in_room
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
+from among_them.utils.player_utils import get_dead_players, get_players_in_room
 
 
 def get_task_phase_actions(

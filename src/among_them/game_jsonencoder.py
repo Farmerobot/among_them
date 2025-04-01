@@ -1,10 +1,11 @@
 import json
 from enum import Enum
-from among_them.models.location import Location
-from among_them.models.player_role import PlayerRole
-from among_them.models.phase import GamePhase
+from typing import Any, Dict
+
 from among_them.models.action_type import ActionType
-from typing import Dict, Any
+from among_them.models.location import Location
+from among_them.models.phase import GamePhase
+from among_them.models.player_role import PlayerRole
 
 
 class GameJSONEncoder(json.JSONEncoder):

@@ -1,7 +1,8 @@
 from typing import Optional
+
+from among_them.models.action_type import ActionType
 from among_them.models.location import Location
 from among_them.models.tasks import Task
-from among_them.models.action_type import ActionType
 
 
 class Action:

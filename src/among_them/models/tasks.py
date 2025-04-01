@@ -1,10 +1,12 @@
-from among_them.models.location import Location
 import random
+from typing import Optional
+
 from among_them import consts
+from among_them.models.location import Location
 
 
 class Task:
-    def __init__(self, name: str, location: Location, completed: bool = False):
+    def __init__(self, name: str, location: Optional[Location], completed: bool = False):
         self.name = name
         self.completed = completed
         self.location = location

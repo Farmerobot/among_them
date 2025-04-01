@@ -1,22 +1,25 @@
-from typing import List
+import json
+import random
+from typing import List, Optional
 
 from among_them.consts import STATE_FILE
 from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook
-from among_them.models import action
-from among_them.models.history import History, get_action_history_str, initialize_history
+from among_them.models.action import Action
+from among_them.models.action_type import ActionType
+from among_them.models.end_game import EndGameReason, get_end_game_reason
+from among_them.models.history import (History, get_action_history_str,
+                                       initialize_history)
 from among_them.models.location import Location
 from among_them.models.phase import GamePhase
-from among_them.utils.phase_utils import get_phase_and_when_it_ends
-from among_them.models.action_type import ActionType
-from among_them.models.player_role import PlayerRole
-from among_them.utils.player_utils import get_alive_players, get_next_random_player, get_players_in_room, get_last_player_action
-from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
 from among_them.models.player import Player
-import json
-import random
-from among_them.models.end_game import get_end_game_reason
-from among_them.models.action import Action
-from typing import List
+from among_them.models.player_role import PlayerRole
+from among_them.utils.action_utils import (get_task_phase_actions,
+                                           get_vote_actions)
+from among_them.utils.phase_utils import get_phase_and_when_it_ends
+from among_them.utils.player_utils import (get_alive_players,
+                                           get_last_player_action,
+                                           get_next_random_player,
+                                           get_players_in_room)
 
 
 class GameEngine:
@@ -36,7 +39,7 @@ class GameEngine:
         self.history = initialize_history(self.players)
 
 
-    def perform_step(self) -> bool:
+    def perform_step(self) -> tuple[bool, Optional[EndGameReason]]:
         """Executes a single step in the game, which is a player action.
 
         Only when player successfully completes the action, the result will be saved to history. 
@@ -71,7 +74,7 @@ class GameEngine:
 
         # Force a new vote BEFORE each discussion message.
         # It does not affect the game logic. It is just extra data.
-        votes_before_this_discussion_message = {}
+        votes_before_this_discussion_message: dict[str, str] = {}
         if phase == GamePhase.DISCUSS:
             for player in alive_players:
                 retry_count = 0
@@ -82,7 +85,7 @@ class GameEngine:
                         fake_history_str = get_action_history_str(self.history, player, players_in_room=alive_players, alive_players=alive_players, location=Location.CAFETERIA, phase=GamePhase.VOTE)
                         fake_action_taken_idx, _, _, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
                         fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
-                        votes_before_this_discussion_message[player.name] = fake_action_taken.target_player_name
+                        votes_before_this_discussion_message[player.name] = fake_action_taken.target_player_name # type: ignore
                         print(f"Discussion phase fake voting: {player.name} voted for {fake_action_taken.target_player_name}")
                         break
                     except Exception as e:
@@ -101,17 +104,15 @@ class GameEngine:
         if action_taken.type == ActionType.REPORT:
             spectators_who_saw = [p.name for p in alive_players]
 
-        agent_sees = f"{action_taken.result}"
-        spectator_sees = action_taken.spectator
         if action_taken.type == ActionType.SPEAK:
-            agent_sees = f"[{current_player.name}]: {response}"
-            spectator_sees = f"[{current_player.name}]: {response}"
+            action_taken.result = f"[{current_player.name}]: {response}"
+            action_taken.spectator = f"[{current_player.name}]: {response}"
 
         tasks_left_to_do = self.history[-1].tasks_left_to_do
         if action_taken.type == ActionType.TASK:
-            tasks_left_to_do[current_player.name].remove(action_taken.target_task)
+            tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
         elif action_taken.type == ActionType.MOVE:
-            location = action_taken.target_location
+            location = action_taken.target_location # type: ignore
             new_players_in_room = get_players_in_room(self.history, self.players, location)
             spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
 

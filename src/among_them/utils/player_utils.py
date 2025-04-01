@@ -1,15 +1,16 @@
-from typing import List, Dict
+import random
+from typing import Dict, List
+
+from among_them.models.action_type import ActionType
 from among_them.models.history import History
 from among_them.models.location import Location
-from among_them.utils.phase_utils import get_last_discussion_action_idx
 from among_them.models.player import Player
-from among_them.models.action_type import ActionType
-import random
+from among_them.utils.phase_utils import get_last_discussion_action_idx
 
 
 def get_next_random_player(
     history: List[History], alive_players: List[Player]
-) -> tuple[Player, List[Player]]:
+) -> tuple[Player, List[str]]:
     """Given a history of actions it selects random player from last history item with players_to_play_next.
     If this variable is empty, it selects random player from all alive players.
 
@@ -21,7 +22,7 @@ def get_next_random_player(
         The list of players who will play in next round.
     """
     if not history:
-        return random.choice(alive_players), alive_players
+        return random.choice(alive_players), [p.name for p in alive_players]
     players_to_play_next = history[-1].player_names_to_play_next
 
     # Remove any player who is not alive from players_to_play_next
@@ -51,7 +52,7 @@ def get_dead_players(history: List[History], players: List[Player]) -> Dict[str,
     """Returns the dictionary of dead players and their location that can be reported (without ghosts)"""
     search_from = get_last_discussion_action_idx(history)
     kill_history = [history_item for history_item in history[search_from:] if history_item.action_taken.type == ActionType.KILL]
-    return {history_item.action_taken.target_player_name: history_item.location for history_item in kill_history}
+    return {history_item.action_taken.target_player_name: history_item.location.value for history_item in kill_history} # type: ignore
 
 
 def get_players_in_room(

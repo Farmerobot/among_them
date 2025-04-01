@@ -1,12 +1,15 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from among_them.consts import IMPOSTOR_COOLDOWN
-from among_them.models.phase import GamePhase
-from among_them.models.location import Location
-from among_them.models.action_type import ActionType
-from among_them.models.player_role import PlayerRole
-from among_them.models.tasks import Task, get_crewmate_tasks, get_impostor_tasks
-from among_them.models.player import Player
 from among_them.models.action import Action
+from among_them.models.action_type import ActionType
+from among_them.models.location import Location
+from among_them.models.phase import GamePhase
+from among_them.models.player import Player
+from among_them.models.player_role import PlayerRole
+from among_them.models.tasks import (Task, get_crewmate_tasks,
+                                     get_impostor_tasks)
+
 
 class History:
     """Item in the sequence of actions that have occurred in the game."""
@@ -62,7 +65,7 @@ class History:
         spectators = ", ".join(self.spectators_who_saw)
             
         # Build the full representation with clear sections
-        return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_taken.spectator}\033[0m{"- "+self.action_taken.target_player_name if self.action_taken.type == ActionType.KILL else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
+        return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_taken.spectator}\033[0m{"- "+self.action_taken.target_player_name if self.action_taken.type == ActionType.KILL and self.action_taken.target_player_name else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
 
 
 def initialize_history(players: List[Player]) -> List[History]:

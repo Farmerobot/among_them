@@ -9,10 +9,6 @@ authors = [
     { name = "Mateusz Idziejczak" },
     { name = "Mateusz Stawicki" }
 ]
-packages = [
-    { include = "among_them", from = "src" }
-]
-package-mode = true
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
@@ -34,6 +30,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 main = "scripts.main:main"
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]
 
 [tool.ruff]
 preview = true

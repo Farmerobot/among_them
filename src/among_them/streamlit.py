@@ -1,27 +1,26 @@
-from typing import Dict, List, Optional, Tuple
-import streamlit as st
-import jsonpickle
-import pandas as pd
-import networkx as nx
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.path import Path
-import numpy as np
-import os
-from collections import defaultdict
-import time
-from datetime import datetime
 import json
+import os
+import time
+from collections import defaultdict
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
+import streamlit as st
+from matplotlib.path import Path
+
+from among_them.consts import NUM_TASKS, STATE_FILE
 from among_them.game_jsonencoder import game_object_hook
+from among_them.models.action_type import ActionType
 from among_them.models.history import History
 from among_them.models.location import ROOM_COORDINATES, Location
-from among_them.models.action_type import ActionType
 from among_them.models.phase import GamePhase
-from among_them.consts import NUM_TASKS, STATE_FILE
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
-
 
 st.set_page_config(
     page_title="Among Them - Game Visualizer",
@@ -95,7 +94,7 @@ try:
         for room_name, (x, y) in ROOM_COORDINATES.items():
             circle = plt.Circle((x, y), 0.15, fill=True, alpha=0.2, color='lightgray')
             ax.add_patch(circle)
-            ax.text(x, y, room_name, ha='center', va='center', fontsize=8)
+            ax.text(x, y, room_name.value, ha='center', va='center', fontsize=8)
         
         # Draw connections
         from among_them.models.location import DOORS
@@ -356,7 +355,7 @@ try:
             G.add_node(player.name, role=player.role)
         
         # Track interactions between players
-        interactions = defaultdict(int)
+        interactions: dict[tuple[str, str], int] = defaultdict(int)
         
         # Count interactions (players in same room)
         for entry in history:
@@ -420,7 +419,7 @@ try:
         plt.title("Player Interaction Network")
         
         # Display the graph
-        st.pyplot(plt)
+        st.pyplot(plt.gcf())
         
         # Display interaction tables
         st.subheader("Player Co-Location Frequency")

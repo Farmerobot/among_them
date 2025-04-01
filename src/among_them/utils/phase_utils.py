@@ -1,10 +1,12 @@
 from ast import Dict
 from typing import List
-from among_them.models.history import History, create_vote_history_entry
-from among_them.models.action_type import ActionType
+
 from among_them.consts import NUM_ACTIONS_WITHOUT_REPORT, NUM_CHATS
+from among_them.models.action_type import ActionType
+from among_them.models.history import History, create_vote_history_entry
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
+
 
 def get_last_discussion_action_idx(history: List[History]) -> int:
     for i in range(len(history) - 1, -1, -1):
@@ -54,13 +56,13 @@ def handle_phase_change(history: List[History], alive_players: List[Player], pre
         return GamePhase.MAIN_MENU, 0
 
 
-def count_votes(history: List[History]) -> tuple[dict, dict]:
+def count_votes(history: List[History]) -> tuple[dict[str, int], dict[str, str]]:
     """Count votes from the history. Returns vote counts and votes dictionary."""
-    vote_counts = {}
-    votes: Dict[str, str] = {}
+    vote_counts: dict[str, int] = {}
+    votes: dict[str, str] = {}
     for item in range(len(history) - 1, -1, -1):
         if history[item].action_taken.type == ActionType.VOTE:
-            voted_for = history[item].action_taken.target_player_name
+            voted_for: str = history[item].action_taken.target_player_name # type: ignore
             vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
             votes[history[item].action_taken.player_name] = voted_for
         else:
