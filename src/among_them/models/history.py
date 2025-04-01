@@ -51,6 +51,7 @@ class History:
         self.spectators_who_saw: List[str] = spectators_who_saw
 
         self.tasks_left_to_do: Dict[str, List[Task]] = tasks_left_to_do
+        self.votes_before_this_discussion_message: Dict[str, str] = votes_before_this_discussion_message
 
     def __repr__(self) -> str:
         # Format the token usage for better readability
