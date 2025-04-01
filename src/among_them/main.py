@@ -38,7 +38,7 @@ def main():
         except Exception as e:
             if "LLM did" in str(e):
                 print(f"Error: {e}")
-                print(f"main.py: Model failed at {action_type.name}. Retry count: {retry_count}")
+                print(f"main.py: Model failed. Retry count: {retry_count}")
                 retry_count += 1
                 continue
             else:

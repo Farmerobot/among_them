@@ -80,7 +80,7 @@ class GameEngine:
                         action_taken_idx, response, cot, token_usage = player.prompt_action(voting_actions_player_can_take, history_str)
                         action_taken = voting_actions_player_can_take[action_taken_idx]
                         votes_before_this_discussion_message[player.name] = action_taken.target_player_name
-                        print(f"{player.name} voted for {action_taken.target_player_name}")
+                        print(f"Discussion phase fake voting: {player.name} voted for {action_taken.target_player_name}")
                         break
                     except Exception as e:
                         if "LLM did" in str(e):
