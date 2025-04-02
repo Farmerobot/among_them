@@ -17,7 +17,7 @@ from among_them.consts import NUM_TASKS, STATE_FILE
 from among_them.game_jsonencoder import game_object_hook
 from among_them.models.action_type import ActionType
 from among_them.models.history import History
-from among_them.models.location import ROOM_COORDINATES, Location
+from among_them.models.location import ROOM_COORDINATES, Location, DOORS
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
@@ -82,7 +82,7 @@ try:
         st.rerun()
         
     # Main tabs
-    tabs = st.tabs(["Game Map", "Timeline", "Tasks", "Player Network", "Raw Data"])
+    tabs = st.tabs(["Game Map", "Timeline", "Tasks", "Player Network", "Voting Patterns", "Raw Data"])
 
     with tabs[0]:  # Game Map
         st.header("Game Map Visualization")
@@ -97,7 +97,6 @@ try:
             ax.text(x, y, room_name.value, ha='center', va='center', fontsize=8)
         
         # Draw connections
-        from among_them.models.location import DOORS
         for room_name, connected_rooms in DOORS.items():
             room_x, room_y = ROOM_COORDINATES[room_name]
             for connected_room in connected_rooms:
@@ -464,7 +463,243 @@ try:
         else:
             st.write("No discussions recorded yet.")
 
-    with tabs[4]:  # Raw Data
+    with tabs[4]:  # Voting Patterns
+        st.header("Voting Pattern Visualization")
+        
+        # Extract all discussion phase entries with voting data
+        voting_data = []
+        discussion_entries = []
+        
+        for i, entry in enumerate(history):
+            if entry.phase == GamePhase.DISCUSS and hasattr(entry, 'votes_before_this_discussion_message'):
+                discussion_entries.append(entry)
+                
+                # Store vote information
+                if entry.votes_before_this_discussion_message:
+                    turn_num = i + 1
+                    for voter, votee in entry.votes_before_this_discussion_message.items():
+                        voting_data.append({
+                            "Turn": turn_num,
+                            "Voter": voter,
+                            "Votee": votee,
+                            "Speaker": entry.action_taken.player_name,
+                            "Message": entry.action_taken.spectator if entry.action_taken.spectator else "No message"
+                        })
+        
+        if not voting_data:
+            st.info("No voting data available. Voting data only appears during discussion phases.")
+        else:
+            # Create a dataframe from voting data
+            df_votes = pd.DataFrame(voting_data)
+            
+            # Group voting data by turn
+            vote_turns = sorted(df_votes["Turn"].unique())
+            
+            # Allow users to select which turns to compare
+            st.subheader("Select Turns to Compare Votes")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                start_turn = st.selectbox(
+                    "Starting Turn", 
+                    vote_turns, 
+                    index=0,
+                    key="start_vote_turn"
+                )
+            
+            with col2:
+                # Filter for turns after the start turn
+                valid_end_turns = [t for t in vote_turns if t > start_turn]
+                end_turn = st.selectbox(
+                    "Ending Turn", 
+                    valid_end_turns if valid_end_turns else [start_turn], 
+                    index=min(1, len(valid_end_turns)-1) if valid_end_turns else 0,
+                    key="end_vote_turn"
+                )
+            
+            # Get the voting data for selected turns
+            start_votes = df_votes[df_votes["Turn"] == start_turn]
+            end_votes = df_votes[df_votes["Turn"] == end_turn]
+            
+            # Create Sankey diagram to show vote changes
+            if not start_votes.empty and not end_votes.empty:
+                st.subheader(f"Vote Changes Between Turn {start_turn} and Turn {end_turn}")
+                
+                # Get the vote maps for easier comparison
+                start_vote_map = dict(zip(start_votes["Voter"], start_votes["Votee"]))
+                end_vote_map = dict(zip(end_votes["Voter"], end_votes["Votee"]))
+                
+                # Track which voters changed their votes
+                vote_changes = {}
+                for voter in start_vote_map.keys():
+                    if voter in end_vote_map and start_vote_map[voter] != end_vote_map[voter]:
+                        vote_changes[voter] = (start_vote_map[voter], end_vote_map[voter])
+                
+                # Create a directed graph to visualize vote changes
+                vote_graph = nx.DiGraph()
+                
+                # Add nodes for all players
+                all_players = sorted(list(set(list(start_votes["Voter"]) + list(start_votes["Votee"]) + 
+                                           list(end_votes["Voter"]) + list(end_votes["Votee"]))))
+                
+                for player in all_players:
+                    vote_graph.add_node(player)
+                
+                # Add edges for vote changes with labels
+                for voter, (old_vote, new_vote) in vote_changes.items():
+                    if old_vote != new_vote:  # Only show actual changes
+                        vote_graph.add_edge(old_vote, new_vote, voter=voter, weight=2)
+                
+                if vote_changes:
+                    # Create a directed graph visualization
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    
+                    # Position the nodes in a circle
+                    pos = nx.circular_layout(vote_graph)
+                    
+                    # Draw the nodes
+                    nx.draw_networkx_nodes(vote_graph, pos, node_size=2000, 
+                                          node_color='lightblue', ax=ax)
+                    
+                    # Draw the node labels
+                    nx.draw_networkx_labels(vote_graph, pos, font_size=12, font_weight='bold', ax=ax)
+                    
+                    # Draw the edges with appropriate styling
+                    edges = vote_graph.edges()
+                    if edges:
+                        # Create edge colors based on weight
+                        edge_colors = ['red' for _ in edges]
+                        
+                        # Draw the edges with arrows
+                        nx.draw_networkx_edges(vote_graph, pos, edgelist=edges, width=2, 
+                                               edge_color=edge_colors, arrows=True, 
+                                               arrowsize=20, arrowstyle='->', 
+                                               connectionstyle='arc3,rad=0.2', ax=ax)
+                        
+                        # Add edge labels (showing which player changed their vote)
+                        edge_labels = {(u, v): vote_graph[u][v]['voter'] for u, v in vote_graph.edges()}
+                        nx.draw_networkx_edge_labels(vote_graph, pos, edge_labels=edge_labels, 
+                                                   font_size=10, label_pos=0.3, ax=ax)
+                    
+                    ax.set_title(f"Vote Changes Between Turn {start_turn} and Turn {end_turn}")
+                    ax.axis('off')
+                    
+                    # Display the directed graph
+                    st.pyplot(fig)
+                    
+                    # Display vote change details in a table
+                    st.subheader("Players Who Changed Their Votes")
+                    
+                    # Create a more descriptive table of vote changes
+                    change_data = []
+                    for voter, (old_vote, new_vote) in vote_changes.items():
+                        change_data.append({
+                            "Player": voter,
+                            "Initial Vote For": old_vote,
+                            "Changed Vote To": new_vote
+                        })
+                    
+                    if change_data:
+                        # Display as a styled table
+                        vote_change_df = pd.DataFrame(change_data)
+                        st.table(vote_change_df)
+                    else:
+                        st.info("No players changed their votes between these turns.")
+                else:
+                    # Show before and after vote tables side by side
+                    st.info("No vote changes detected between these turns.")
+                    
+                # Show the before and after votes side by side for comparison
+                st.subheader("Vote Comparison")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"Turn {start_turn} Votes:")
+                    start_vote_df = pd.DataFrame(list(start_vote_map.items()), 
+                                                columns=["Voter", "Voted For"])
+                    st.table(start_vote_df)
+                
+                with col2:
+                    st.write(f"Turn {end_turn} Votes:")
+                    end_vote_df = pd.DataFrame(list(end_vote_map.items()), 
+                                              columns=["Voter", "Voted For"])
+                    st.table(end_vote_df)
+            else:
+                st.info("Please select valid turns with voting data to compare.")
+            
+            # Display a heatmap of voting patterns
+            st.subheader("Voting Heatmap")
+            
+            # Create a matrix of who voted for whom
+            vote_matrix = pd.pivot_table(
+                df_votes, 
+                index="Voter", 
+                columns="Votee", 
+                values="Turn",
+                aggfunc="count",
+                fill_value=0
+            )
+            
+            fig, ax = plt.subplots(figsize=(10, 8))
+            cmap = plt.cm.YlOrRd
+            im = ax.imshow(vote_matrix, cmap=cmap)
+            
+            # Set up axes
+            ax.set_xticks(np.arange(len(vote_matrix.columns)))
+            ax.set_yticks(np.arange(len(vote_matrix.index)))
+            ax.set_xticklabels(vote_matrix.columns)
+            ax.set_yticklabels(vote_matrix.index)
+            
+            # Rotate column labels
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+            
+            # Add a colorbar
+            cbar = ax.figure.colorbar(im, ax=ax)
+            cbar.set_label("Number of Votes")
+            
+            # Add values to cells
+            for i in range(len(vote_matrix.index)):
+                for j in range(len(vote_matrix.columns)):
+                    if vote_matrix.iloc[i, j] > 0:
+                        ax.text(j, i, vote_matrix.iloc[i, j], ha="center", va="center", color="black")
+            
+            ax.set_title("Voting Pattern Heatmap")
+            ax.set_xlabel("Player Voted For")
+            ax.set_ylabel("Voter")
+            fig.tight_layout()
+            
+            # Display the heatmap
+            st.pyplot(fig)
+            
+            # Show vote progression over time
+            st.subheader("Vote Progression Over Time")
+            
+            # Create line chart to show vote counts over time
+            vote_counts = df_votes.groupby(["Turn", "Votee"]).size().reset_index(name="Count")
+            
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            for player in all_players:
+                player_votes = vote_counts[vote_counts["Votee"] == player]
+                if not player_votes.empty:
+                    ax.plot(player_votes["Turn"], player_votes["Count"], marker='o', label=player)
+            
+            ax.set_xlabel("Turn")
+            ax.set_ylabel("Number of Votes")
+            ax.set_title("Votes Received Over Time")
+            ax.legend()
+            ax.grid(True, linestyle='--', alpha=0.7)
+            
+            # Set x-ticks to match turns
+            ax.set_xticks(vote_turns)
+            
+            st.pyplot(fig)
+            
+            # Show raw voting data for reference
+            with st.expander("View Raw Voting Data"):
+                st.dataframe(df_votes)
+    
+    with tabs[5]:  # Raw Data
         st.header("Raw Game Data")
         
         # Allow exploration of raw history data
