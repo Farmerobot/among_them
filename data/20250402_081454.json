@@ -1,0 +1,4182 @@
+[
+  [
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Main Menu"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "System",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "The game started",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 34,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "complete task: Start the coffee maker in the cafeteria"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Alice, a crewmate in this game. The goal is to complete all tasks before the impostors can either kill enough of us or get voted out. Right now, I'm in the Cafeteria with Charlie, Eve, Bob, and David. From my player info, there's one impostor among them. \n\nLooking at my available actions: wait, move to Medbay, Admin, Weapons, or complete the coffee maker task. My tasks are Fix wiring in admin, route power for attack and defense in electrical, and start the coffee maker in cafeteria. Since I'm already in the Cafeteria, completing the coffee maker seems like a priority because it's one of my tasks.\n\nBut wait, there's an impostor here. If I complete the task now, maybe they'll notice something or try to convince others that I'm suspicious. But on the other hand, completing tasks quickly helps the crew win faster. Plus, if I start talking after completing the task, maybe I can influence the discussion phase.\n\nAlternatively, moving to Admin might let me work on fixing wiring there, but I don't know if that's necessary yet. Since the coffee maker is in the same room as where I am, it makes sense to do it now. Plus, finishing tasks shows dedication and reduces suspicion since I'm a crewmate.\n\nSo, I should probably complete the task: Start the coffee maker in the cafeteria. That way, we can move towards completing all tasks quickly, which is our main objective.\n</think>",
+      "llm_response": "- complete task: Start the coffee maker in the cafeteria\n\ncomplete task: Start the coffee maker in the cafeteria",
+      "token_usage": {
+        "input_tokens": 1010,
+        "output_tokens": 328
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Start the coffee maker in the cafeteria",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Start the coffee maker in the cafeteria",
+        "result": "You [Alice] completed task: Start the coffee maker in the cafeteria",
+        "spectator": "Alice completed task: Start the coffee maker in the cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 33,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, I'm David, a Crewmate in this game. My goal is to complete all tasks and vote out any impostors to win. Right now, the game has started, and Alice has already completed one task. I'm currently in the Cafeteria with Alice, Charlie, Eve, and Bob.\n\nLooking at my available actions: wait, move to Medbay, Admin, or Weapons. Since there's a task in Admin that needs cleaning, maybe I should go there next. But before moving, let me check if others are around. If I move alone, it might seem suspicious, but as a Crewmate, I have tasks to do.\n\nAlternatively, staying and waiting could allow me to observe others or see if someone else does something. But since the Cafeteria is already active with Alice completing a task, maybe moving makes sense. The Admin room has another task for me, so going there would be productive.\n\nI think moving to Admin is the best move right now. It helps progress my tasks and shows that I'm actively contributing as a Crewmate.\n</think>",
+      "llm_response": "move to location Admin",
+      "token_usage": {
+        "input_tokens": 1007,
+        "output_tokens": 226
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Admin"
+        },
+        "target_task": null,
+        "text": "move to location Admin",
+        "result": "You [David] moved to location Admin",
+        "spectator": "David moved to location Admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Alice",
+        "Bob",
+        "Eve",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 32,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Charlie, a crewmate in this game. My goal is to complete the tasks and vote out any impostors if needed. Let me think about what's going on right now.\n\nFrom the player info, I know there are four of us: Alice, Eve, Bob, and David. But wait, the system says there's 1 impostor among them. So one of these four is an imposter. My role is to help finish all tasks so we can win as crewmates.\n\nLooking at my current state, I have four tasks left: route power, check headings, fix wiring, and check catalyzer. I need to figure out which task to do next. But right now, I'm in the Cafeteria with Alice, Eve, Bob. The history shows that Alice completed a task already\u2014starting the coffee maker. David moved to Admin.\n\nAvailable actions: wait, move to Medbay, Admin, or Weapons. Since I'm in the Cafeteria, moving might be an option, but perhaps I should first see if there are any tasks here. Wait, the Cafeteria's task was starting the coffee maker, which Alice already did. So maybe I can't do anything else here.\n\nI need to figure out where to go next. Let's check the available rooms: Medbay, Admin, Weapons. My remaining tasks include fixing wiring in weapons and checking catalyzer in upper engine. Hmm, not sure if that's in Weapons or elsewhere.\n\nBut right now, I'm stuck in Cafeteria unless I move. So moving might be necessary. But which location? Maybe check if any tasks are there. Medbay is usually where medical stuff happens, but I don't have a task related to that. Admin could have some system-related tasks. Weapons has the wiring fix.\n\nI think I should go to Weapons to work on the wiring task since it's one of my TODOs. That would help complete the objective faster. So I'll choose to move there.\n</think>",
+      "llm_response": "- move to location Weapons\n\nmove to location Weapons",
+      "token_usage": {
+        "input_tokens": 1014,
+        "output_tokens": 416
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Weapons"
+        },
+        "target_task": null,
+        "text": "move to location Weapons",
+        "result": "You [Charlie] moved to location Weapons",
+        "spectator": "Charlie moved to location Weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Charlie",
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 31,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "kill Alice",
+        "kill Bob",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Eve, and I'm an impostor in this game. My goal is to either vote out or kill all the crewmates to win. Right now, I'm in the Cafeteria with Alice and Bob. The available actions are wait, move to Medbay, Admin, Weapons, kill Alice, kill Bob, or pretend doing a task.\n\nLet me think about my options. If I stay here, maybe I can observe their behavior more. But if I move, I might be able to isolate someone or cause some suspicion. Alternatively, killing one of them would immediately start the discussion phase because reporting a dead body triggers it. But wait, do I have to report the kill for the discussion to start? The game description says that only when a dead body is reported does the discussion begin. So if I kill someone, I can choose to report it or not.\n\nHmm, but in this case, since I'm in the Cafeteria with Alice and Bob, if I kill one of them, say Alice, then I would have to report it for others to know. But maybe killing them without reporting is possible? Or does killing automatically make me report it? Wait, no\u2014the action \"kill\" doesn't necessarily trigger a report unless I choose to do so.\n\nWait, the available actions are: kill Alice or Bob, but also \"pretend doing task\" or move elsewhere. So if I choose to kill Alice, that's an action I can take. But after killing, do I have to report it? The instructions say that \"report dead body\" is a separate action. So perhaps killing and reporting are two different things.\n\nWait no, in the available actions, there's only \"kill Alice\" or \"kill Bob.\" There's no separate option for reporting. So maybe when I choose to kill someone, it automatically reports the death? Or does killing not report unless I specifically take the action to report?\n\nLooking back at the game description: \"If you see 'report dead body' action, that means you found a dead body and you can report it to start discussion phase.\" So it seems like killing someone doesn't automatically trigger a report. The report is a separate action.\n\nTherefore, if I kill Alice or Bob, unless I then choose to report the dead body, nothing happens immediately. But in this case, since I'm currently with them, if I kill one of them, they would be dead, but others wouldn't know unless someone reports it.\n\nBut wait, when you perform an action like killing, does that make the body visible? Or do other players have to report it themselves?\n\nI think the key is that only reporting a dead body starts the discussion. So if I kill Alice and don't report it, no one else knows she's dead unless they find her body elsewhere.\n\nBut in this case, since I'm with Alice and Bob, maybe if I kill Alice, and then leave without reporting, but then someone else might find her later.\n\nAlternatively, perhaps the act of killing is visible to others if you're in the same room. The game description says: \"Every action taken is visible to players that are in the same room.\" So if I'm in the Cafeteria with Alice and Bob and I kill Alice, they would see me performing the kill. Then, either I or someone else can report it.\n\nWait, but looking at the available actions, I don't have an option to report a dead body unless I move somewhere else and then take that action? Or is \"report dead body\" an action on its own?\n\nLooking back, in the available actions, there's no \"report dead body\" option. So perhaps reporting can only be done if you're in a room where someone died, and it's one of the actions you have.\n\nWait, no\u2014the available actions I have are: wait, move to Medbay, Admin, Weapons, kill Alice, kill Bob, pretend doing task.\n\nSo \"report dead body\" is not among them. Therefore, unless I'm in a room with a dead body, I can't report it as an action because that option isn't available.\n\nWait, maybe the act of moving into a room where a dead body is present would give me the option to report it? Or perhaps \"report dead body\" is only available if I'm in the same room as a dead person.\n\nIn this scenario, I'm with Alice and Bob. If I kill Alice, then I'm still in the same room, so maybe I can now choose to report her death because she's in the same room as me.\n\nBut looking at my available actions after killing, would \"report dead body\" become an option? Or is that only if someone else finds her?\n\nI think that unless a dead body is present in your current location, you can't take the action to report it. So if I kill Alice and stay in the Cafeteria, then since she's there, I might have the option to report.\n\nBut looking at my available actions right now, before any killing, \"report dead body\" isn't an option because no one is dead. Therefore, I can't choose that action yet.\n\nSo going back: if I decide to kill Alice or Bob, then immediately after, since they're in the same room as me, I might have the option to report it.\n\nBut let's think about whether I want that. If I kill someone and then report, the discussion phase would start, which could lead others to suspect me. Alternatively, if I don't report, maybe the body remains undiscovered for now.\n\nAlternatively, perhaps killing without reporting is a silent kill, but since everyone else can see my action, they might notice.\n\nWait, no\u2014the game says every action taken is visible to players in the same room. So if I perform the \"kill Alice\" action, both Alice (if she's still alive) and Bob would witness that. But wait, if I kill Alice, she's dead, but does that mean Bob sees me attacking her? Or is it a silent death?\n\nI think they would see the action. So if I choose to kill Alice, Bob would know that I killed her because he was in the room when it happened.\n\nIn that case, killing someone while others are present might make me an immediate suspect, which could backfire.\n\nAlternatively, maybe moving to another room first to set up an alibi or something.\n\nSo considering this, perhaps it's better to wait and see what happens. Maybe if I stay here, someone else will do something suspicious, or maybe I can manipulate the conversation.\n\nOn the other hand, pretending to do a task might make me seem less suspicious because I'm just going about my business.\n\nAlternatively, moving elsewhere: Medbay, Admin, or Weapons. But without knowing what's in those rooms, it's hard to decide. If I move to another room, perhaps I can observe others or create some distance.\n\nBut as an impostor, my main objective is to eliminate the crewmates without getting caught. So maybe eliminating one of them now would be beneficial.\n\nWait, but if I kill someone and others are present, they might suspect me immediately. Alternatively, if I kill someone when I'm alone with them, it's more direct.\n\nIn this case, since I'm in the Cafeteria with Alice and Bob, killing one of them might lead to immediate suspicion from the other. So perhaps that's not the best approach.\n\nAlternatively, maybe I can pretend to do a task or move elsewhere without raising suspicion.\n\nAnother angle: what tasks are available? If I choose to \"pretend doing a task,\" does that make me look innocent? Or could it be suspicious if I'm an impostor and they know I shouldn't be doing crew tasks?\n\nWait, the game might have specific tasks or roles. As an impostor, my role is different from the crew. So perhaps if I'm in the Cafeteria and others are around, pretending to do something might not raise suspicion, but it's unclear.\n\nAlternatively, moving elsewhere: Medbay is often a place where people go to heal, Admin maybe has logs or security cameras, Weapons could be strategic for defense or attacking.\n\nBut without knowing the specifics of each room, it's hard. Maybe I should try to isolate someone.\n\nWait, if I move to another room and then come back later, maybe I can create an alibi.\n\nAlternatively, perhaps I can set up a scenario where others are suspicious of each other rather than me.\n\nThis is getting complicated. Let me think step by step:\n\n1. My goal: Eliminate all crewmates (Alice and Bob) without being caught.\n2. Current situation: In Cafeteria with Alice and Bob.\n3. Available actions: wait, move to Medbay, Admin, Weapons, kill Alice, kill Bob, pretend doing task.\n\nOption 1: Kill someone now. If I kill Alice or Bob while we're all in the same room, Bob (if Alice is killed) would see that I did it and might suspect me. Similarly, if I kill Bob, Alice would be suspicious. This could lead to immediate accusations against me, which isn't ideal.\n\nOption 2: Move to another room first. If I move to Medbay, Admin, or Weapons, maybe I can create some distance or set up an alibi.\n\nFor example, if I move to Medbay and someone dies in Cafeteria, others might think the killer is elsewhere, but since I'm not there, it's possible they suspect me less.\n\nBut then again, moving away might make others suspicious of my motives. Why am I avoiding them?\n\nOption 3: Pretend to do a task. If I choose this action, maybe I can appear innocent, but as an impostor, doing crew tasks is against my role, so it could be suspicious.\n\nAlternatively, the 'pretend' part might make others not realize what I'm really doing.\n\nWait, perhaps \"pretend doing a task\" makes me look like a crewmate, which could help in blending in. But if I'm caught doing something outside my role, that could backfire.\n\nOption 4: Do nothing and wait. Maybe observing the others can give me clues on how to proceed without immediate risk.\n\nBut time is limited; I need to act before they suspect me.\n\nWait, maybe a combination of actions would be better. For example, move to another room to avoid being seen when killing someone.\n\nBut in this case, all three are in the same room, so if I decide to kill one and then leave, others will know I was there.\n\nAlternatively, perhaps I can use an item or something in another room to commit the kill without being traced.\n\nWait, but since we're just starting, maybe it's better to take immediate action.\n\nAnother thought: If I choose to move to another room first, like Medbay, and then come back later, I could have a chance to strike when no one is watching. But that depends on how the game mechanics work.\n\nAlternatively, if I stay here and kill someone while others are present, it's risky but direct.\n\nI'm torn between acting now with high risk or delaying and potentially lowering my risk but losing time.\n\nConsidering that as an impostor, my main advantage is stealth, so acting too early might not be the best move. It would be better to create a scenario where I can eliminate someone without being caught.\n\nWait, maybe if I move to another room first, then when I come back, others are less likely to suspect me of killing someone else.\n\nBut this is getting speculative. Maybe I should go with my initial instinct: kill one person while in the same room but find a way to make it look like an accident or someone else's doing.\n\nAlternatively, perhaps I can manipulate the conversation to turn suspicion away from myself.\n\nWait, but as an AI, I don't have access to the game's dialogue options. So maybe focusing on actions is better.\n\nIn conclusion, considering all these factors, perhaps the best course of action is to wait and observe. If others start acting suspiciously or if opportunities arise, then take action. But since time is pressing, perhaps it's safer to eliminate one person when I can ensure minimal suspicion.\n\nAlternatively, given that we are in the same room, maybe I can use an item in the room to commit the kill without being directly seen. For example, using a tool or something hidden.\n\nBut again, without specific game mechanics, it's hard to say.\n\nWait, perhaps I should just go ahead and kill one of them now while I have the chance, even if it's risky.\n\nSo, choosing action: Kill Alice.\n\nBut then Bob would see that I killed her. So he might suspect me immediately.\n\nAlternatively, maybe I can choose a different approach, like accusing someone else or framing them.\n\nWait, but as an impostor, my options are limited to actions, not dialogue necessarily.\n\nHmm, this is tricky. Maybe the best option is to proceed with killing one person and then deal with any consequences that follow.\n</think>",
+      "llm_response": "**Step-by-Step Explanation:**\n\n1. **Assess Immediate Situation:** The user is in the Cafeteria with two crewmates, Alice and Bob. Their goal is to eliminate all crewmates without being caught.\n\n2. **Evaluate Options:**\n   - **Kill Someone Immediately:** High risk as other crewmates would witness the action.\n   - **Move to Another Room:** Could create distance or an alibi but may raise suspicions.\n   - **Pretend Doing a Task:** May appear innocent but could be suspicious given the user's role as an impostor.\n   - **Wait and Observe:** To gather more information and potentially lower risk.\n\n3. **Consider Consequences:**\n   - Killing immediately leads to direct suspicion from others.\n   - Moving or waiting may reduce immediate suspicion but delays action.\n\n4. **Decision:** Given the high stakes, moving first might be safer to avoid immediate detection, allowing for a strategic kill later.\n\n**Answer:**\n\nThe best course of action is to move to another room to create an alibi and then return to commit the kill when others are less likely to suspect you.",
+      "token_usage": {
+        "input_tokens": 1030,
+        "output_tokens": 2836
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Eve] are waiting",
+        "spectator": "Eve waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Eve",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 30,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, let's break this down. I'm Bob, a crewmate in the game. My goal is to complete tasks and vote out impostors if needed. Right now, I'm in the Cafeteria with Alice and Eve. The available actions are wait, move to Medbay, Admin, or Weapons.\n\nLooking at the history: Alice completed a task, David moved to Admin, Charlie went to Weapons, and Eve waited. Since I'm a crewmate, I need to complete tasks, but I also have to watch out for impostors. There's 1 impostor among Alice, Charlie, Eve, and David.\n\nI should probably move somewhere where there are tasks left. My tasks include Fix wiring in navigation, Clear asteroids in weapons, Process data in communications, and Water plants in o2. Currently, Charlie is in Weapons, which might be a task area, but I'm not sure if he's an impostor or just completing a task.\n\nIf I move to Weapons, maybe I can check if Charlie is doing something suspicious or if he's actually working on the tasks. Alternatively, moving to Medbay might let me complete another task, but I don't know what's in there.\n\nWait, since I'm in Cafeteria with Alice and Eve, maybe I should wait here for a bit to see if anyone else does anything. If someone tries to report a dead body or if someone moves, that could trigger discussion.\n\nBut considering the tasks, it's better to move to a location where I can complete one of my pending tasks. Let me check: Fix wiring in navigation is done in Navigation, Clear asteroids in Weapons is in Weapons, Process data in communications is in Communications, and Water plants in o2 is in O2.\n\nI need to choose between moving to Medbay, Admin, or Weapons. Since Charlie is already in Weapons, maybe it's a good idea to go there and see if he's doing something. If I move to Weapons, I can try to complete the Clear asteroids task or observe Charlie's actions.\n\nAlternatively, going to Navigation might be better if I'm alone, but since I'm with Alice and Eve, moving elsewhere could allow me to do tasks independently. But wait, no\u2014the available actions don't include moving to Navigation. The options are Medbay, Admin, Weapons, or waiting.\n\nSo between those, moving to Weapons is the most strategic because it's where a task is located (Clear asteroids), which I need to complete. Plus, if Charlie is an impostor, he might be trying to avoid suspicion by appearing helpful, but if I join him, I can monitor his actions or try to do the task myself.\n\nTherefore, moving to Weapons seems like the best move right now\u2014it allows me to progress my tasks and possibly observe other players' behavior in that area.\n</think>",
+      "llm_response": "move to location Weapons",
+      "token_usage": {
+        "input_tokens": 1024,
+        "output_tokens": 570
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Weapons"
+        },
+        "target_task": null,
+        "text": "move to location Weapons",
+        "result": "You [Bob] moved to location Weapons",
+        "spectator": "Bob moved to location Weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Charlie",
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 29,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation",
+        "complete task: Clear asteroids in weapons"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Bob, a crewmate. Right now, I'm in Weapons with Charlie. The available actions are wait, move back to Cafeteria, go to O2, Navigation, or complete the Clear asteroids task.\n\nI just moved here from Cafeteria because I wanted to check out what's going on and maybe do some tasks. Now that I'm here, I have the option to either stay and try to finish the task or move elsewhere.\n\nIf I wait, nothing happens\u2014I'll just be in Weapons without taking any action. But since I need to complete tasks to win, it's better to actually do something. The Clear asteroids task is right here in Weapons, so completing it would make sense. Plus, if Charlie is an impostor, he might try to distract me or prevent me from doing the task, but if I finish it quickly, that could expose him.\n\nAlternatively, moving back to Cafeteria might allow me to see what others are doing, but since I'm already here with a task, it's more efficient to just do it. Also, by completing tasks, I contribute directly to our crew winning, so that's my priority.\n\nI don't think there's any benefit in waiting or moving elsewhere right now. The best action is to complete the Clear asteroids task.\n</think>",
+      "llm_response": "- complete task: Clear asteroids in weapons\n\ncomplete task: Clear asteroids in weapons",
+      "token_usage": {
+        "input_tokens": 1618,
+        "output_tokens": 284
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Clear asteroids in weapons",
+          "completed": false,
+          "location": {
+            "__enum__": "Weapons"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Clear asteroids in weapons",
+        "result": "You [Bob] completed task: Clear asteroids in weapons",
+        "spectator": "Bob completed task: Clear asteroids in weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 28,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "kill Alice",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nAlright, let me break down what I'm thinking here. So, Eve is in the Cafeteria with Alice and Bob, but Bob has moved to Weapons. The available actions are wait, move to Medbay, Admin, Weapons, kill Alice, or pretend doing a task.\n\nFirst, considering that Bob has already left for Weapons, maybe it's safer to follow him there. If I go to Weapons now, perhaps I can catch Bob off guard or at least be in the same location as him, which might give me an advantage later on. Plus, being in Weapons could provide some tools or items that might help in framing someone else or committing a kill without immediate suspicion.\n\nAlternatively, staying in Cafeteria and killing Alice would put me directly in the line of suspicion since Bob is no longer there to witness it. However, if I'm alone with Alice, maybe it's easier to act without being seen by anyone else. But then again, the risk of getting caught increases because if someone checks the security cameras or if others come back, they'll know I was there.\n\nAnother thought: moving to Medbay or Admin might not be as strategic since those locations are less likely to have tools for killing and more likely to be areas where people go for other reasons. Weapons seems like a more logical place for something to happen.\n\nAlso, the option to pretend doing a task in Cafeteria makes me look innocent, but if I'm actually an impostor, maybe it's better to move rather than stay put. Plus, moving could show initiative and make others less suspicious of my true intentions.\n\nSo, weighing all these factors, moving to Weapons seems like the most strategic move. It gives me access to tools, potentially isolates me with Bob or without others, and might provide opportunities for framing someone else or committing a kill later on.\n</think>",
+      "llm_response": "**Chosen Action: Move to location Weapons**\n\n**Reasoning:**\n1. **Strategic Advantage:** By moving to Weapons, Eve can gain access to tools that may be useful for future actions, such as framing others or committing a kill without immediate suspicion.\n2. **Isolation Potential:** Since Bob has already moved to Weapons, being in the same location could allow Eve to act when others are less likely to notice, reducing her risk of being caught.\n3. **Reduced Suspicion:** Moving rather than staying put might make Eve appear more innocent and less suspicious to those still in Cafeteria.\n\nThis decision aims to maximize strategic opportunities and minimize immediate risks by positioning herself in a location where she can act with greater advantage.",
+      "token_usage": {
+        "input_tokens": 3653,
+        "output_tokens": 513
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Weapons"
+        },
+        "target_task": null,
+        "text": "move to location Weapons",
+        "result": "You [Eve] moved to location Weapons",
+        "spectator": "Eve moved to location Weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Charlie",
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 27,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location Storage",
+        "complete task: Clean the floor in admin"
+      ],
+      "llm_cot": "<think>\nAlright, I'm David, a Crewmate in this game. My role is to complete tasks and help my team win by identifying impostors if needed. Currently, I'm alone in the Admin room with an available action to clean the floor there or move back to the Cafeteria or Storage.\n\nI need to think about what's best for me right now. Since I have a task here that needs completing, it makes sense to finish it. Completing tasks is crucial because if all are done, we win. Plus, moving around too much without a clear reason might make others suspicious, especially if there are impostors among us.\n\nI don't see any immediate threats in Admin since I'm alone. There's no dead body here, so the discussion phase hasn't started yet. My priority should be to contribute to our team's success by completing as many tasks as possible.\n\nSo, the best move is to complete the task: Clean the floor in admin.\n</think>",
+      "llm_response": "- complete task: Clean the floor in admin\n\ncomplete task: Clean the floor in admin",
+      "token_usage": {
+        "input_tokens": 1243,
+        "output_tokens": 210
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Clean the floor in admin",
+          "completed": false,
+          "location": {
+            "__enum__": "Admin"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Clean the floor in admin",
+        "result": "You [David] completed task: Clean the floor in admin",
+        "spectator": "David completed task: Clean the floor in admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 26,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation",
+        "complete task: Fix wiring in weapons"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Charlie, a crewmate. Right now, I'm in the Weapons room with Eve and Bob. My available actions are wait, move back to Cafeteria, or other locations, or complete the task of fixing wiring here.\n\nI just moved to Weapons because that's where one of my tasks is\u2014fixing wiring. Now that I'm here, it makes sense to complete that task since it's progress toward winning as a crewmate. There's no immediate threat in this room unless someone is an imposter trying to kill us, but since the discussion phase hasn't started, maybe they're blending in.\n\nI should focus on completing tasks first because the more tasks done, the closer we are to victory. Plus, being proactive with tasks can help me look like a crewmate and not raise suspicions as an imposter. So I'll go ahead and complete the wiring task.\n</think>",
+      "llm_response": "- complete task: Fix wiring in weapons\n\ncomplete task: Fix wiring in weapons",
+      "token_usage": {
+        "input_tokens": 1478,
+        "output_tokens": 199
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in weapons",
+          "completed": false,
+          "location": {
+            "__enum__": "Weapons"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Fix wiring in weapons",
+        "result": "You [Charlie] completed task: Fix wiring in weapons",
+        "spectator": "Charlie completed task: Fix wiring in weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Eve",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 25,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nAlright, so Alice is a crewmate in this game, and right now she's alone in the Cafeteria. She just completed starting the coffee maker, which was one of her tasks. Now, looking at her available actions, she can wait, move to Medbay, Admin, or Weapons.\n\nSince she just finished a task, maybe she should consider moving to another room where others are. She saw that David and Bob went to Admin and Weapons respectively, and Charlie and Eve moved there too. So perhaps she should follow them to Admin, since her tasks include fixing wiring in Admin.\n\nAlternatively, waiting might let her see if someone else does something, but as a crewmate, moving to complete more tasks is probably better. Plus, being in the same room as others could help with discussions or noticing impostor activities.\n</think>",
+      "llm_response": "move to location Admin",
+      "token_usage": {
+        "input_tokens": 1349,
+        "output_tokens": 177
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Admin"
+        },
+        "target_task": null,
+        "text": "move to location Admin",
+        "result": "You [Alice] moved to location Admin",
+        "spectator": "Alice moved to location Admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 24,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location Storage",
+        "complete task: Fix wiring in admin"
+      ],
+      "llm_cot": "<think>\nAlright, so Alice is currently in the Admin room with David. She's a crewmate, and her main goal is to complete all tasks before the impostor(s) can cause trouble. Let me think through what she should do next.\n\nLooking at her available actions: wait, move to Cafeteria or Storage, or complete the Fix wiring task in Admin. Since she just moved to Admin, it makes sense that her next priority is completing the wiring task there. That's one of her tasks left, and finishing it would progress towards winning the game.\n\nBut why not wait? Maybe she wants to observe David's actions first. If David is acting suspiciously, she might have a reason to discuss voting him out later. However, as a crewmate, Alice needs to focus on completing tasks to win. Plus, if she waits and doesn't do anything, others might start to get suspicious of her inaction.\n\nAlternatively, moving back to the Cafeteria or Storage could allow her to gather more information or split up with David. But since her task is right there in Admin, it's efficient to complete it now. That way, she can quickly check off another task and move on to the next one.\n\nConsidering all this, Alice should probably go ahead and complete the Fix wiring task in Admin. It aligns with her role as a crewmate, helps towards winning, and doesn't raise any unnecessary suspicions unless David is indeed an impostor. But for now, focusing on tasks is the best approach.\n</think>",
+      "llm_response": "- complete task: Fix wiring in admin\n\nFix wiring in admin",
+      "token_usage": {
+        "input_tokens": 1537,
+        "output_tokens": 322
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in admin",
+          "completed": false,
+          "location": {
+            "__enum__": "Admin"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Fix wiring in admin",
+        "result": "You [Alice] completed task: Fix wiring in admin",
+        "spectator": "Alice completed task: Fix wiring in admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve",
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 23,
+      "location": {
+        "__enum__": "Navigation"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Charlie in this game. Right now, I've just completed the Fix wiring task in Weapons, and the available actions are wait or move to Cafeteria, O2, or Navigation. The last thing I did was move from Cafeteria to Weapons to work on that task.\n\nSince I just finished that task, maybe I should consider what's next for me. My remaining tasks include Route power to attack in electrical, Check headings in navigation, and Check catalyzer in upper engine. So the next logical step would be to see where those tasks are located.\n\nCheck headings is in Navigation, so if I move there, I can work on that task. Moving to Navigation seems productive because it's another crewmate activity, which helps us win as a group. Alternatively, moving back to Cafeteria could allow me to socialize or observe others, but since the game is about completing tasks, focusing on the next objective makes sense.\n\nI should also consider if there are any other players in those locations. From my history, Eve and Bob were with me in Weapons, but now I'm considering moving elsewhere. If I go to Navigation, maybe there's someone else working on a task or perhaps it's empty. Either way, completing tasks is key.\n\nAnother consideration: since I'm a crewmate, I should be cautious about impostors. But if I focus on tasks, it's harder for impostors to suspect me. Plus, moving around might help me see other players' actions, which could hint at who the imposter might be.\n\nSo weighing all that, moving to Navigation seems like the best move because it aligns with my task completion and keeps me involved in necessary crew activities.\n</think>",
+      "llm_response": "move to location Navigation",
+      "token_usage": {
+        "input_tokens": 1658,
+        "output_tokens": 348
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Navigation"
+        },
+        "target_task": null,
+        "text": "move to location Navigation",
+        "result": "You [Charlie] moved to location Navigation",
+        "spectator": "Charlie moved to location Navigation",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 22,
+      "location": {
+        "__enum__": "Navigation"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation"
+      ],
+      "llm_cot": "<think>\nAlright, so Bob is a crewmate in this game. His current situation is that he's in Weapons with Eve. The tasks left for him are Fix wiring in navigation, Process data in communications, and Water plants in O2. From the history, it looks like Charlie was just there too but has moved to Navigation after completing a task.\n\nBob's available actions are wait, move to Cafeteria, O2, or Navigation. He needs to decide which action is best right now. \n\nConsidering that he's a crewmate, his priority should be to complete tasks to help the team win. So, if moving to another location can get him closer to completing his remaining tasks, that would make sense. Fix wiring is in Navigation, Process data is in Communications (but not listed as an option here), and Water plants is in O2.\n\nSince Navigation is one of the options, moving there could allow him to work on Fix wiring. That seems like a good move because it's progressing his tasks. Alternatively, if he waits or moves elsewhere, he might miss out on doing something productive towards winning.\n\nSo, the strategic choice would be to move to Navigation to tackle that task.\n</think>",
+      "llm_response": "**Chosen action:** move to location Navigation",
+      "token_usage": {
+        "input_tokens": 1910,
+        "output_tokens": 252
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Navigation"
+        },
+        "target_task": null,
+        "text": "move to location Navigation",
+        "result": "You [Bob] moved to location Navigation",
+        "spectator": "Bob moved to location Navigation",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 21,
+      "location": {
+        "__enum__": "Storage"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location Storage"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm David, a Crewmate in this game. Right now, I'm in the Admin room with Alice. We've both just completed tasks here. Let me think about what to do next.\n\nLooking at my available actions, I can wait, move back to the Cafeteria, or go to Storage. Since I just finished cleaning the floor in Admin, maybe it's time to move on to another task. Checking my remaining tasks: I need to route power to defense in electrical and fix wiring in O2.\n\nElectrical is probably a different room where that task is located. So, if I can move there next, I can work on that task. But do I have enough information about whether moving alone would seem suspicious? Since I'm a Crewmate focused on tasks, moving makes sense.\n\nAlternatively, waiting might let me see if others join me here or if something else happens. However, the Admin room doesn't have any more tasks for me now, so it's better to proceed to where my next task is. Plus, getting that task done will bring us closer to completing all objectives.\n\nSo, moving to Electrical seems like the logical next step. It helps me progress towards completing the required tasks and keeps me active as a Crewmate.\n</think>",
+      "llm_response": "move to location Electrical but that's not in the available options, so I need to pick from the given actions.\n\nWait, perhaps I can't move to Electrical directly. So I have to choose between moving back to Cafeteria or going to Storage. But my next task is in electrical. Maybe moving to Cafeteria isn't helpful right now, but perhaps it's safer? Or maybe moving to Storage for another task?\n\nLooking at the available actions again: wait, move to Cafeteria, move to Storage.\n\nI have a task left in O2 (fix wiring), which I think is in Storage or somewhere else. Maybe moving to Storage would be better to complete that task.\n\nAlternatively, waiting might let me see if others come here, but since Alice just moved away, it's quiet.\n\nSo, considering my tasks and the available options, moving to Storage makes more sense because that room likely has one of my remaining tasks.\n\nAlright, I'll move to Storage.\n</think>\n\nmove to location Storage",
+      "token_usage": {
+        "input_tokens": 1451,
+        "output_tokens": 455
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Storage"
+        },
+        "target_task": null,
+        "text": "move to location Storage",
+        "result": "You [David] moved to location Storage",
+        "spectator": "David moved to location Storage",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 20,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation",
+        "pretend doing task: Fix wiring in weapons"
+      ],
+      "llm_cot": "<think>\nAlright, so Eve has moved to Weapons and is currently alone there. Let me think about what she should do next.\n\nFirst, considering the available actions: wait, move back to Cafeteria, go to O2, Navigation, or pretend to fix wiring. \n\nIf she waits, nothing happens immediately. Maybe not the best idea if she's looking for action. Moving back to Cafeteria might put her in a location where others are more likely to be, but since Bob is now in Navigation along with Charlie, Weapons is quiet.\n\nGoing to O2 or Navigation could be options, but without specific info on what happens there, it's hard to gauge. Pretending to fix wiring seems like an action that can take time and might keep her occupied without drawing attention.\n\nAlternatively, maybe she should check if there are any items in Weapons that can help her frame someone else or commit a kill later on. But since the game mechanics aren't fully clear, it's safer to choose an action that keeps her relatively safe but proactive.\n\nPretending to fix wiring might be the most innocuous choice, allowing her to stay in Weapons without drawing suspicion while possibly gathering information or waiting for another opportunity.\n</think>",
+      "llm_response": "Eve decides to pretend doing task: Fix wiring in weapons.",
+      "token_usage": {
+        "input_tokens": 4062,
+        "output_tokens": 254
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in weapons",
+          "completed": false,
+          "location": {
+            "__enum__": "Weapons"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Fix wiring in weapons",
+        "result": "You [Eve] pretended Fix wiring in weapons",
+        "spectator": "Eve doing task Fix wiring in weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 19,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Electrical",
+        "move to location Admin",
+        "move to location Communications",
+        "move to location Shields",
+        "complete task: Clean the floor in storage"
+      ],
+      "llm_cot": "<think>\nOkay, I'm David, a Crewmate. I need to figure out what action to take next. Let me review my situation.\n\nI'm currently alone in Storage. My available actions are wait, move to Electrical, Admin, Communications, Shields, or complete the task Clean the floor in storage.\n\nMy remaining tasks: Route power to defense in electrical and fix wiring in O2. So, I need to get to those rooms to complete them.\n\nSince I'm in Storage now, moving to Electrical would let me work on my next task. Alternatively, I could stay and do this Storage task if it's necessary, but since I've already completed tasks in Admin, maybe moving forward is better.\n\nI should consider whether staying or moving makes more sense. If I complete the Storage task here, that might be useful too. However, the other tasks are more critical for our win condition.\n\nAlso, considering the impostor threat: there's one among Alice, Charlie, Eve, Bob. Since I'm a Crewmate, my focus is on completing tasks and identifying impostors through their actions or inactions.\n\nI don't have immediate information about others here since I'm alone. If I move to Electrical, maybe I can observe if anyone follows or acts suspiciously.\n\nSo, moving to Electrical seems like the best move because it directly contributes to our goal of completing all tasks.\n</think>",
+      "llm_response": "move to location Electrical",
+      "token_usage": {
+        "input_tokens": 1757,
+        "output_tokens": 279
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Electrical"
+        },
+        "target_task": null,
+        "text": "move to location Electrical",
+        "result": "You [David] moved to location Electrical",
+        "spectator": "David moved to location Electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 18,
+      "location": {
+        "__enum__": "Navigation"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Weapons",
+        "move to location O2",
+        "move to location Shields",
+        "complete task: Check headings in navigation"
+      ],
+      "llm_cot": "<think>\nOkay, I'm Charlie and I'm currently in Navigation with Bob. The available actions are wait, move to Weapons, O2, Shields, or complete the Check headings task. \n\nI just moved to Navigation because my next task was there. Now that I'm here, completing the Check headings task is essential for progressing towards our crew goals. It's one of my remaining tasks, and focusing on tasks helps us win as a group.\n\nIf I don't complete this task now, I might forget or get distracted later. Plus, since Bob is already here, maybe he can help me or we can work together. However, I think it's best to just go ahead and do the task individually since there's no indication that collaboration is needed here.\n\nMoving elsewhere doesn't make sense right now because my priority should be finishing tasks. So completing Check headings in Navigation seems like the most logical step.\n</think>",
+      "llm_response": "**Action Chosen: Complete task: Check headings in navigation**\n\nCharlie decides to complete the task at hand, ensuring progress towards the crew's objectives and maintaining focus on their primary goal of winning the game.",
+      "token_usage": {
+        "input_tokens": 2036,
+        "output_tokens": 218
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Check headings in navigation",
+          "completed": false,
+          "location": {
+            "__enum__": "Navigation"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Check headings in navigation",
+        "result": "You [Charlie] completed task: Check headings in navigation",
+        "spectator": "Charlie completed task: Check headings in navigation",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 17,
+      "location": {
+        "__enum__": "Storage"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location Storage"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Alice in this game. I just moved into the Admin room and completed fixing the wiring there. Now, I need to decide what to do next. The available actions are wait, move to Cafeteria, or move to Storage.\n\nSince I just finished my task here, waiting might not be necessary unless I want to observe David's movements. But David has already moved to Storage, so if I go there too, maybe I can keep an eye on him or work together with others.\n\nAlternatively, moving back to the Cafeteria could allow me to check on the coffee maker I started earlier and see if anyone else is around. However, since the task there is done, it might not be as urgent unless someone needs to discuss something.\n\nGiven that David is in Storage, which is another important area, maybe moving there makes sense. Plus, being in different locations could help me gather more information or split up tasks with others if needed.\n</think>",
+      "llm_response": "move to location Storage",
+      "token_usage": {
+        "input_tokens": 1853,
+        "output_tokens": 203
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Storage"
+        },
+        "target_task": null,
+        "text": "move to location Storage",
+        "result": "You [Alice] moved to location Storage",
+        "spectator": "Alice moved to location Storage",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 16,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation",
+        "pretend doing task: Fix wiring in weapons"
+      ],
+      "llm_cot": "<think>\nAlright, let me try to figure out what Eve should do next. She's currently alone in Weapons, and she just pretended to fix wiring there. Her options are to wait, move to another location like Cafeteria, O2, or Navigation, or continue pretending to fix wiring.\n\nGiven that she's already pretending to fix wiring, maybe continuing that action could allow her to gather more information or possibly find something useful in Weapons. Alternatively, moving back to Cafeteria might put her closer to others and give her more opportunities for interaction, but it also increases the chance of being noticed.\n\nConsidering she's an impostor, staying in Weapons might be safer since there are fewer people around, and she can keep a low profile. However, if she waits too long without taking action, it might arouse suspicion. On the other hand, moving to another location could expose her more but also give her chances to manipulate others.\n\nAnother angle is that maybe fixing wiring actually gives her something\u2014like a tool or information\u2014that she can use later. So continuing that task could be beneficial in the long run, even if it takes some time.\n\nSo, weighing these factors, staying in Weapons and continuing the pretend action seems like a safer bet for now.\n</think>",
+      "llm_response": "After considering her options, Eve decides to continue pretending to fix wiring in Weapons. She believes this will allow her to remain undetected while potentially gathering useful information or tools that could aid her later actions.\n\n**Chosen Action: Pretend doing task: Fix wiring in weapons**",
+      "token_usage": {
+        "input_tokens": 4323,
+        "output_tokens": 308
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in weapons",
+          "completed": false,
+          "location": {
+            "__enum__": "Weapons"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Fix wiring in weapons",
+        "result": "You [Eve] pretended Fix wiring in weapons",
+        "spectator": "Eve doing task Fix wiring in weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 15,
+      "location": {
+        "__enum__": "Navigation"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Weapons",
+        "move to location O2",
+        "move to location Shields",
+        "complete task: Fix wiring in navigation"
+      ],
+      "llm_cot": "<think>\nOkay, so Bob is currently in Navigation with Charlie. The available actions are wait, move to Weapons, move to O2, move to Shields, or complete the Fix wiring task. \n\nSince Bob has a pending task in Navigation\u2014Fix wiring\u2014it makes sense for him to complete that task now that he's there. Completing tasks helps the crew win, so this is priority. There's no reason to wait or move elsewhere if he can finish his work here.\n\nMoreover, Charlie just completed Check headings and moved on, so Bob should focus on his own responsibilities. Moving might delay progress, whereas completing the task directly contributes to the game's objective.\n</think>",
+      "llm_response": "**Chosen action:** complete task: Fix wiring in navigation",
+      "token_usage": {
+        "input_tokens": 2193,
+        "output_tokens": 144
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in navigation",
+          "completed": false,
+          "location": {
+            "__enum__": "Navigation"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Fix wiring in navigation",
+        "result": "You [Bob] completed task: Fix wiring in navigation",
+        "spectator": "Bob completed task: Fix wiring in navigation",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 14,
+      "location": {
+        "__enum__": "O2"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Weapons",
+        "move to location O2",
+        "move to location Shields"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Bob, and right now I'm in Navigation with Charlie. My tasks are almost done\u2014I just completed Fix wiring in navigation, which was one of my main goals. Now I have the Process data in communications and Water plants in O2 left. \n\nLooking at the available actions, I can wait, move to Weapons, go to O2, or Shields. Since I'm a crewmate, moving to another location might be necessary to complete more tasks. O2 is where I need to water plants, so that seems like an important next step.\n\nWait, but maybe before moving, I should consider if there's any immediate threat or if Charlie is acting suspiciously. However, from the history, it doesn't seem like Charlie has done anything out of the ordinary\u2014he completed tasks and moved around normally. \n\nSo my priority now is to complete my remaining tasks as quickly as possible. O2 is essential for Water plants, so moving there would allow me to do that task. Plus, being in different locations could help me observe others or avoid any potential impostor activities.\n\nI don't see a reason to wait here; instead, I should make progress towards completing the game's objectives by moving to O2 and taking care of the Water plants task.\n</think>",
+      "llm_response": "**Action Chosen: Move to location O2**\n\n---\n\n**Step-by-Step Explanation:**\n\n1. **Current Location:** Navigation with Charlie.\n2. **Remaining Tasks:** Process data in communications, Water plants in O2.\n3. **Available Actions:** Wait, move to Weapons, O2, or Shields.\n4. **Objective:** Complete tasks to contribute to the crew's win.\n5. **Decision:** Moving to O2 is strategic as it allows completion of the Water plants task, which is essential for progressing towards victory.\n\n**Final Decision: Move to location O2.**\n\n---\n\n<history>\nYou (Bob) moved to location O2\n</history>",
+      "token_usage": {
+        "input_tokens": 2323,
+        "output_tokens": 392
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "O2"
+        },
+        "target_task": null,
+        "text": "move to location O2",
+        "result": "You [Bob] moved to location O2",
+        "spectator": "Bob moved to location O2",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 13,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location O2",
+        "move to location Navigation",
+        "pretend doing task: Fix wiring in weapons"
+      ],
+      "llm_cot": "<think>\nAlright, so I'm Eve, and I'm currently alone in the Weapons room. The available actions are wait, move to Cafeteria, O2, Navigation, or pretend to fix wiring again.\n\nI remember that earlier, I moved to Weapons because Bob went there, but now he's with Charlie in Navigation. So, moving back to Cafeteria might be a good idea since it's where people are more likely to gather. Being around others could give me opportunities to observe their behavior or even manipulate them later on. Plus, if I stay too long in Weapons without doing anything, it might seem suspicious.\n\nOn the other hand, waiting in Weapons doesn't do much except pass time. Maybe while waiting, I can think of a better plan or see if anyone comes back here. But since I'm alone now, perhaps moving is more productive.\n\nI also have the option to pretend to fix wiring again, but I already did that once. Repeating the same action might make me look suspicious because why would I keep doing it unless I'm trying to hide something?\n\nSo, considering all this, moving back to Cafeteria seems like the best move. It keeps me in a central location where I can observe others and maybe find an opportunity to act without being too noticed.\n</think>",
+      "llm_response": "**Action Chosen: Move to location Cafeteria**\n\nEve decides to move to the Cafeteria to stay among others and keep a closer eye on potential opportunities or interactions that could be useful for her plan.",
+      "token_usage": {
+        "input_tokens": 4596,
+        "output_tokens": 300
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Cafeteria"
+        },
+        "target_task": null,
+        "text": "move to location Cafeteria",
+        "result": "You [Eve] moved to location Cafeteria",
+        "spectator": "Eve moved to location Cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 12,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Electrical",
+        "move to location Admin",
+        "move to location Communications",
+        "move to location Shields"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Alice, and I just moved into Storage. Let me figure out what to do next. My tasks are still on my mind\u2014Route power for attack and defense in electrical, which are two separate tasks I need to complete.\n\nI see that the available actions include waiting, moving to Electrical, Admin, Communications, or Shields. Since I'm a crewmate, completing tasks is crucial. The Storage room doesn't have any of my remaining tasks, so it's more efficient for me to move towards where those tasks are located. \n\nElectrical seems like the most relevant place because both my remaining tasks are there. Moving there would allow me to start working on them right away. Plus, if others are in other areas, maybe I can catch up with them later or discuss any suspicions.\n\nOn the other hand, waiting might let me see what David does next since he's also in Storage, but that could be risky if he's an impostor and tries something while I'm here. But as a crewmate, focusing on tasks is my priority to help the team win.\n\nSo, moving to Electrical makes sense because it gets me closer to completing the necessary tasks, which aligns with our goal of winning by eliminating impostors or finishing all tasks.\n</think>",
+      "llm_response": "**Action:** Move to location Electrical\n\n---\n\n**Reasoning:**\n\nAs Alice, a crewmate aiming to complete all tasks and eliminate impostors, moving to the Electrical room is crucial. My remaining tasks require routing power for both attack and defense in electrical, so this action directly contributes to completing those tasks efficiently. Additionally, being proactive with tasks helps the crew win without raising unnecessary suspicions.",
+      "token_usage": {
+        "input_tokens": 2086,
+        "output_tokens": 334
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Electrical"
+        },
+        "target_task": null,
+        "text": "move to location Electrical",
+        "result": "You [Alice] moved to location Electrical",
+        "spectator": "Alice moved to location Electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 11,
+      "location": {
+        "__enum__": "O2"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Weapons",
+        "move to location O2",
+        "move to location Shields"
+      ],
+      "llm_cot": "<think>\nOkay, so Charlie is currently alone in Navigation and needs to decide what to do next. Let me break down the situation.\n\nFrom the history, Charlie has completed two tasks already: Fix wiring in Weapons and Check headings in Navigation. Now he's in Navigation with no one else there. His remaining tasks are Route power to attack in electrical and Check catalyzer in upper engine. \n\nLooking at the available actions, Charlie can wait, move to Weapons, O2, or Shields. Since he just finished a task in Navigation, moving to another location might be necessary if he needs to work on other tasks.\n\nThe next logical step would be to see where his remaining tasks are located. The Check catalyzer task is in the upper engine, which isn't listed as one of the current locations (Weapons, O2, Shields). Maybe it's a different section or perhaps part of another room. Alternatively, Route power to attack might require moving through specific areas.\n\nConsidering Charlie has completed two tasks and needs to focus on winning by finishing all tasks, he should move towards completing his remaining ones. If the Check catalyzer is in Upper Engine, which isn't an available location right now, maybe it's accessible from another place. Alternatively, perhaps moving to Weapons or O2 could lead him closer.\n\nBut since Charlie can't speak and needs to act based on available actions, the best move would be to go where his next task is. However, without knowing exactly where Check catalyzer is, he might have to choose a location that's more likely to have tasks left.\n\nAlternatively, perhaps moving to O2 or Shields could lead him somewhere useful. Since he just finished Navigation, maybe moving back isn't helpful unless there's another task there. But it seems like the main tasks are in other locations.\n\nTherefore, Charlie should probably move to the next location where his remaining tasks might be. If Check catalyzer is in Upper Engine and that's not an option here, perhaps it's accessible via O2 or Shields? Or maybe it's a different section entirely.\n\nGiven the options, moving to O2 could be a strategic choice as it might lead him closer to completing other tasks or observing others if needed. Alternatively, moving back to Weapons to see Bob or check on previous tasks.\n\nBut since Charlie is alone in Navigation and needs to proceed with his remaining tasks, moving to where he can work on them next makes sense. If Check catalyzer isn't an option here, perhaps moving to O2 might be the next step.\n</think>",
+      "llm_response": "Charlie should move to location O2 as his next action to potentially work towards completing his remaining tasks or observe others if needed.\n\n**Chosen action:** <action>move to location O2</action>",
+      "token_usage": {
+        "input_tokens": 2234,
+        "output_tokens": 542
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "O2"
+        },
+        "target_task": null,
+        "text": "move to location O2",
+        "result": "You [Charlie] moved to location O2",
+        "spectator": "Charlie moved to location O2",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 10,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Lower Engine",
+        "move to location Storage",
+        "complete task: Route power to defence in electrical"
+      ],
+      "llm_cot": "<think>\nAlright, let me try to figure out what David should do next. So far, the story is that David is a Crewmate who has moved around different rooms like Admin and now he's in Electrical with Alice. He just arrived here along with Alice.\n\nHis available actions are wait, move to Lower Engine, move to Storage, or complete the task: Route power to defence in electrical. \n\nSince his main goal as a Crewmate is to complete tasks and help the team win, completing the current task seems like the most straightforward choice. But I should also consider if there's any reason why moving might be better.\n\nIf he completes the task here, that would progress towards the team's objective, which is good. However, since Alice is also in Electrical, maybe they can work together or keep an eye on each other. On the other hand, if David moves to another room like Lower Engine or Storage, he might miss out on completing this important task.\n\nGiven that the task is crucial for their defense and needs to be done, it makes sense for him to stay and complete it. Plus, moving around too much without a clear reason could raise suspicions if there are impostors among them, but since David's focus is on tasks, staying productive seems like the right move.\n</think>",
+      "llm_response": "**Chosen action:**\n\n**Complete task: Route power to defence in electrical**\n\n---\n\n**Rationale:**\n\nAs a Crewmate focused on completing tasks and contributing to the team's success, David should prioritize finishing his current objective. Completing the \"Route power to defense in electrical\" task directly supports the win condition by progressing towards the completion of all required tasks. Additionally, staying in Electrical allows him to observe Alice's actions, potentially aiding in identifying any impostors if their behavior becomes suspicious later. Moving away from the task at hand would hinder progress, so completing it is the most logical and beneficial choice.",
+      "token_usage": {
+        "input_tokens": 2038,
+        "output_tokens": 383
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Route power to defence in electrical",
+          "completed": false,
+          "location": {
+            "__enum__": "Electrical"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Route power to defence in electrical",
+        "result": "You [David] completed task: Route power to defence in electrical",
+        "spectator": "David completed task: Route power to defence in electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 9,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nAlright, I'm Eve, and I'm currently alone in the Cafeteria. Let me think about what actions I can take next.\n\nThe available options are wait, move to Medbay, Admin, Weapons, or pretend to empty the cafeteria trash.\n\nIf I wait, nothing happens immediately. Maybe not the best idea if I need to act quickly. Moving to another location could let me gather information or find tools, but it also means leaving Cafeteria where others might come back soon.\n\nPretending to empty the trash seems like a low-key action that keeps me occupied without drawing too much attention. It's something someone would do in the cafeteria, and since I'm alone now, it doesn't seem suspicious.\n\nAlternatively, moving to Medbay or Admin might give me access to more resources or information, but again, it could expose me if others are around those areas. Weapons is where I was before, and it seems like a place someone would go for tools or maybe to hide something.\n\nGiven that, pretending to empty the trash in Cafeteria might be the safest bet right now. It keeps me visible enough without raising suspicion and allows me to stay in a central location where others are likely to return.\n</think>",
+      "llm_response": "**Action Chosen: Pretend doing task: Empty the cafeteria trash**\n\n---\n\nEve decides to pretend to empty the cafeteria trash, keeping herself occupied in a low-key manner while staying in the Cafeteria. This action helps her remain inconspicuous and allows her to observe others as they return or interact.",
+      "token_usage": {
+        "input_tokens": 4874,
+        "output_tokens": 307
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Empty the cafeteria trash",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Empty the cafeteria trash",
+        "result": "You [Eve] pretended Empty the cafeteria trash",
+        "spectator": "Eve doing task Empty the cafeteria trash",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 8,
+      "location": {
+        "__enum__": "O2"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Shields",
+        "move to location Weapons",
+        "move to location Navigation",
+        "complete task: Water plants in o2"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Bob, and right now I'm in O2 with Charlie. The available actions are wait, move to Shields, Weapons, Navigation, or complete the Water plants task.\n\nI need to figure out what's the best move here. First, let me think about my remaining tasks. From earlier, I had Process data in Communications and Water plants in O2 left. Since I'm already in O2, completing the Water plants task makes sense because it's right where I am.\n\nBut wait, Charlie is also here. That might be suspicious if he's an impostor, but so far, he hasn't given me any reason to think he's not a crewmate. He completed tasks and moved around normally, just like a crewmate would.\n\nIf I choose to complete the task now, I can contribute directly to our win by finishing my work. On the other hand, if I move elsewhere, I might delay getting this task done, which is essential.\n\nAlternatively, maybe I should observe Charlie here. If he's acting strangely or trying to do something sneaky, that could be a sign. But without any indication of suspicious behavior, it's probably safe.\n\nSo, my priority is to complete the Water plants task because it helps us win. Plus, staying in O2 allows me to do that without moving elsewhere unnecessarily.\n\nI don't see any immediate threats here, so I think completing the task is the best action.\n</think>",
+      "llm_response": "**Action Chosen: Complete task: Water plants in o2**\n\nBob decides to complete his remaining task of watering the plants in O2, contributing directly to the team's objective by finishing his work efficiently.",
+      "token_usage": {
+        "input_tokens": 2621,
+        "output_tokens": 329
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Water plants in o2",
+          "completed": false,
+          "location": {
+            "__enum__": "O2"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Water plants in o2",
+        "result": "You [Bob] completed task: Water plants in o2",
+        "spectator": "Bob completed task: Water plants in o2",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 7,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Lower Engine",
+        "move to location Storage",
+        "complete task: Route power to attack in electrical",
+        "complete task: Route power to defence in electrical"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Alice in this game. Right now, I'm in the Electrical room with David. The available actions are wait, move to Lower Engine or Storage, or complete either of my two tasks: Route power to attack or defence.\n\nLooking at my tasks, both are still pending. Since we're in Electrical and I have tasks here, it makes sense to focus on completing them instead of moving elsewhere unless necessary. But before acting, maybe I should observe what David is doing since he just completed the defence task. Did he do that quickly?\n\nWait, no\u2014I just arrived, and David already completed his task. That might raise some questions. If there's an impostor, they can't complete tasks as fast as crewmates can, but in this game, maybe it's possible if they're efficient.\n\nBut since I'm a crewmate, my priority is to finish my own tasks. So, the next logical step would be to start working on one of mine\u2014either attack or defence power routing. Both are necessary, so which should I do first? Maybe the attack power since it's more proactive in dealing with threats.\n\nAlternatively, if the defence is crucial for protecting the ship, maybe that's more urgent. But as a crewmate focused on tasks, both need to be done. So, I can choose either. Let me pick Route power to attack because it seems like an action-oriented task.\n\nSo, I should complete the Route power to attack in electrical.\n</think>",
+      "llm_response": "3, which is completing task Route power to attack.\n\nBut looking back at my previous thought, I think I mistakenly referred to it as 'attack' but the actual task names are \"Route power to attack\" and \"defence\". So the correct task to complete is \"complete task: Route power to attack in electrical\".\n\n</action>\n\n**Final Output:**\n\ncomplete task: Route power to attack in electrical",
+      "token_usage": {
+        "input_tokens": 2381,
+        "output_tokens": 380
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Route power to attack in electrical",
+          "completed": false,
+          "location": {
+            "__enum__": "Electrical"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Route power to attack in electrical",
+        "result": "You [Alice] completed task: Route power to attack in electrical",
+        "spectator": "Alice completed task: Route power to attack in electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 6,
+      "location": {
+        "__enum__": "Shields"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Shields",
+        "move to location Weapons",
+        "move to location Navigation"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Charlie in this game. Right now, I'm in the O2 section with Bob. The available actions are wait, move to Shields, Weapons, or Navigation. \n\nI just moved here from Navigation because my next task was Check catalyzer in Upper Engine, which isn't listed as an option here. Since I can't speak and need to act based on available options, moving to another location might be necessary.\n\nLooking at the tasks, after completing two, I have Route power to attack and Check catalyzer left. If these are in Shields or Weapons, moving there could help me progress. Alternatively, maybe O2 is a good place to observe others since Bob just finished watering plants here.\n\nConsidering that, moving to another location might be better for task completion. So, choosing between Shields, Weapons, or Navigation. \n\nIf I go back to Weapons, I might find more tasks or check on previous work. Shields could have other tasks, and Navigation is where I was before. But since my next task isn't here, it's probably best to move somewhere else.\n\nSo, moving to Shields seems like a strategic choice because it's another location with potential tasks. It keeps me active in crew activities and helps towards completing the remaining tasks.\n</think>",
+      "llm_response": "**Step-by-Step Explanation:**\n\n1. **Current Location:** O2 with Bob.\n2. **Tasks Remaining:** Route power to attack (electrical) and Check catalyzer (upper engine).\n3. **Available Actions:** Move to Shields, Weapons, or Navigation; or wait.\n4. **Objective:** Progress towards completing tasks necessary for crew victory.\n\n**Decision:**\n\n- Moving to another location is strategic for task completion since the next tasks are likely in other sections.\n- Shields offers potential tasks and keeps Charlie active without waiting.\n\n**Chosen Action: move to location Shields**",
+      "token_usage": {
+        "input_tokens": 2766,
+        "output_tokens": 373
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Shields"
+        },
+        "target_task": null,
+        "text": "move to location Shields",
+        "result": "You [Charlie] moved to location Shields",
+        "spectator": "Charlie moved to location Shields",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 5,
+      "location": {
+        "__enum__": "Storage"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Lower Engine",
+        "move to location Storage"
+      ],
+      "llm_cot": "<think>\nAlright, so I'm David, a Crewmate in this game. My main goal is to complete all the tasks and help my team win by identifying and voting out any impostors. Right now, I'm in the Electrical room with Alice. Let me try to figure out what I should do next.\n\nLooking at the available actions: wait, move to Lower Engine, or move to Storage. The task I just completed was \"Route power to defense in electrical,\" which is done. Now, my remaining tasks are \"Fix wiring in O2.\" So, after finishing here, I need to go where that task is located.\n\nI should consider whether staying and waiting might give me more information or if moving on is better. Since I'm a Crewmate focused on tasks, moving towards the next one makes sense. But before deciding, let's think about the situation.\n\nAlice is also in Electrical now, having just completed her own task: \"Route power to attack in electrical.\" That might be something for me to note. Maybe it's important that Alice did a different task than I did. Since we're both in the same room, maybe she and I can discuss or compare our tasks later when talking is allowed.\n\nBut right now, the rule says I can't speak; it's against the rules. So, I have to make this decision without communicating. Therefore, my focus should be on completing the remaining task: \"Fix wiring in O2.\" That's located in another room, probably the O2 room or maybe a different section.\n\nI need to check which locations are available for me to move to from here. The options are Lower Engine and Storage. I'm not sure where exactly the Fix wiring in O2 task is, but perhaps it's in a specific location like O2 itself or another area.\n\nIf I move to Lower Engine, maybe that's on the way or necessary to reach the O2 room. Alternatively, moving to Storage might not be directly helpful unless there's another task there. But my priority is to get to where Fix wiring in O2 is so I can complete it.\n\nI should also think about whether staying here and waiting could lead to something important happening, like someone else arriving or a discussion starting. However, since the game hasn't initiated a discussion phase yet, that's probably not necessary right now.\n\nConsidering all this, moving towards the next task location seems like the best approach. Therefore, I should move either to Lower Engine or Storage, whichever is closer or more relevant to where Fix wiring in O2 is located.\n</think>",
+      "llm_response": "**Action Chosen: Move to location Storage**\n\n**Reasoning:**\n- As a Crewmate, my priority is to complete all tasks efficiently.\n- The next task, \"Fix wiring in O2,\" may be located in the Storage area based on available options.\n- Moving to Storage allows me to progress towards completing the necessary tasks without unnecessary delays.",
+      "token_usage": {
+        "input_tokens": 2310,
+        "output_tokens": 579
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Storage"
+        },
+        "target_task": null,
+        "text": "move to location Storage",
+        "result": "You [David] moved to location Storage",
+        "spectator": "David moved to location Storage",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 4,
+      "location": {
+        "__enum__": "O2"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Shields",
+        "move to location Weapons",
+        "move to location Navigation"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Bob, and right now I'm alone in O2. Let me try to figure out what's going on here. From the history, it looks like Charlie was with me earlier when I moved into O2, but then he moved to Shields. Now, I'm all by myself in O2.\n\nI just completed the Water plants task in O2, which was one of my last tasks. That feels good because now I've contributed a lot towards winning the game. But now, I have no more tasks left. Wait, does that mean the game is over? Or do I need to do something else?\n\nLooking at the available actions, I can wait, move to Shields, Weapons, or Navigation. Since I'm in O2 alone, maybe waiting isn't the best idea if there's nothing for me to do here. Plus, being alone might make me a target if Charlie is an impostor, but he just moved to Shields.\n\nI think moving could be a good idea because I don't want to stay idle. Maybe I should check out what's happening in other locations. If I move to Shields or Weapons, maybe I can help others or ensure everything is okay.\n\nBut wait, if I'm already done with all my tasks, do I have any reason to move? Or should I just wait for the game to end? The system said \"You (Bob) are currently alone in O2,\" and I completed the last task. Maybe I can stay here and let the game finish.\n\nBut then again, maybe moving shows that I'm active and not an impostor. Plus, it might be safer to be around others if there's any danger. However, since Charlie is in Shields now, perhaps I should follow him or check in on him.\n\nAlternatively, going back to Navigation or Weapons could allow me to assist with tasks there, but I don't have any specific tasks left, so that might not be necessary. Maybe staying put is the best option since I've already completed all my assigned tasks.\n\nI'm a bit confused because sometimes moving can help prevent being targeted as an impostor, especially if others are around. But in this case, since I'm alone and have no tasks, waiting makes sense to avoid unnecessary actions that could draw attention.\n\nSo, considering all of this, I think the best choice is to wait in O2 until the game concludes.\n</think>",
+      "llm_response": "<action>wait</action>\n\n**Step-by-Step Explanation:**\n\n1. **Current Status:** Bob has completed all his tasks and is alone in O2.\n2. **Objective:** Since all tasks are done, waiting allows the game to proceed without unnecessary actions.\n3. **Safety Consideration:** Remaining idle reduces risk of drawing attention as an impostor.\n4. **Conclusion:** Waiting is the logical choice to let the game finish.\n\n**Chosen Action:**\n\n<action>wait</action>",
+      "token_usage": {
+        "input_tokens": 2917,
+        "output_tokens": 575
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Bob] are waiting",
+        "spectator": "Bob waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 3,
+      "location": {
+        "__enum__": "Communications"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Communications",
+        "move to location O2",
+        "move to location Navigation"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm playing this game where Charlie is trying to complete tasks without speaking. Right now, Charlie is in Shields and has already completed two tasks: Fix wiring in Weapons and Check headings in Navigation. His remaining tasks are Route power to attack in electrical and Check catalyzer in Upper Engine.\n\nLooking at the available actions, Charlie can wait, move to Storage, Communications, O2, or Navigation. I need to figure out where to go next to help him progress towards completing his tasks.\n\nFirst, let's consider each possible location:\n\n1. **Storage**: Not sure if there are any tasks here for Charlie. It might be a place where items are stored but not necessarily a main task area.\n\n2. **Communications**: Could this be related to the Route power to attack? Maybe, as communications often require electrical systems. So moving here might help him work on that task.\n\n3. **O2**: He was just there before Shields. If he goes back, maybe there's something else, but it doesn't seem directly related to his remaining tasks.\n\n4. **Navigation**: He already did a task there, so unless there's another one, moving back might not be necessary.\n\nConsidering that Charlie needs to Route power to attack in electrical, Communications seems like a plausible next step since it's often related to systems that require power. Alternatively, if Storage is where the electrical panel is, then maybe that's where he should go. But without specific info, I'll assume Communications is more likely connected to electrical tasks.\n\nSo, moving to Communications might be the best move.\n</think>",
+      "llm_response": "**Step-by-Step Explanation:**\n\n1. **Current Location and Remaining Tasks**: Charlie is in Shields with two remaining tasks: Route power to attack (electrical) and Check catalyzer (Upper Engine).\n\n2. **Available Actions**: Move to Storage, Communications, O2, or Navigation.\n\n3. **Task Relevance Analysis**:\n   - **Communications**: Likely related to electrical systems.\n   - **Storage**: Probably for storage, not relevant to tasks.\n   - **O2**: Recently visited; no direct task here.\n   - **Navigation**: Already completed a task there.\n\n4. **Logical Choice**: Moving to Communications aligns with the Route power to attack task as it's often linked to electrical systems.\n\n**Answer:**\n\n<action>move to location Communications</action>",
+      "token_usage": {
+        "input_tokens": 3048,
+        "output_tokens": 488
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Communications"
+        },
+        "target_task": null,
+        "text": "move to location Communications",
+        "result": "You [Charlie] moved to location Communications",
+        "spectator": "Charlie moved to location Communications",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 2,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Lower Engine",
+        "move to location Storage",
+        "complete task: Route power to defence in electrical"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm Alice in this game. Let me think about what's going on here.\n\nI just moved into the Electrical room and found David there. He was a bit suspicious because he completed his task quickly, but now I've arrived, and he's already gone to Storage again. Now, I have two tasks left: Route power to attack and defence in electrical. I've just completed the attack part, so now the next logical step is to do the defence.\n\nI need to decide what to do next. The available actions are waiting, moving to Lower Engine or Storage, or completing the defence task. Since I'm a crewmate focused on tasks, finishing my work here makes sense. Plus, both David and I have been moving around a lot, so if there's an impostor, maybe staying put and working is safer.\n\nSo, I should probably complete the Route power to defence task because it's crucial for protecting the ship. That way, I can finish my tasks efficiently without unnecessary movements.\n</think>",
+      "llm_response": "**Action: Complete Task: Route Power to Defence in Electrical**\n\n---\n\n**Reasoning:**  \nAs a crewmate focused on completing tasks, it's essential to prioritize finishing the remaining task in the Electrical room. Routing power to defence is crucial for ship protection and aligns with our goal of eliminating impostors or finishing all tasks efficiently.\n\n**Step-by-Step Explanation:**\n\n1. **Current Location:** Alice is alone in the Electrical room.\n2. **Tasks Remaining:** Route power to defence (already completed attack).\n3. **Available Actions:** Wait, move, or complete the defence task.\n4. **Decision:** Prioritize completing the defence task to ensure ship safety and efficiency.\n\n**Final Action:** Complete Route Power to Defence in Electrical.",
+      "token_usage": {
+        "input_tokens": 2684,
+        "output_tokens": 350
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Route power to defence in electrical",
+          "completed": false,
+          "location": {
+            "__enum__": "Electrical"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Route power to defence in electrical",
+        "result": "You [Alice] completed task: Route power to defence in electrical",
+        "spectator": "Alice completed task: Route power to defence in electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 1,
+      "location": {
+        "__enum__": "Communications"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Electrical",
+        "move to location Admin",
+        "move to location Communications",
+        "move to location Shields",
+        "complete task: Clean the floor in storage"
+      ],
+      "llm_cot": "<think>\nAlright, so I'm David and I just moved into Storage. Let me see what options I have here.\n\nFirst, I need to remember my main goal as a Crewmate: complete all tasks and help the team win by identifying impostors if any. My remaining task is \"Fix wiring in O2.\" So, I should focus on getting that done.\n\nIn Storage, I'm alone right now. The available actions are wait, move to other locations (Electrical, Admin, Communications, Shields), or complete a task called \"Clean the floor in storage.\"\n\nI've already completed several tasks earlier: \"Route power to defense in electrical\" and others. Now, I need to fix wiring in O2. So, where is that located? Probably in the O2 room, which isn't listed here as an option.\n\nLooking at my current location, Storage, I can either wait or move elsewhere. If I choose to clean the floor here, it's a task, but does it help me towards my main objective? It might not directly contribute to completing the game's tasks, so maybe it's just busy work.\n\nAlternatively, moving to other locations could get me closer to where \"Fix wiring in O2\" is. Let's see the options:\n\n- Electrical: I was there before; maybe someone else is there now.\n- Admin: Not sure what's there.\n- Communications: Possibly another task area.\n- Shields: Another section.\n\nIf I move back to Electrical, perhaps I can check if Alice is there or if anything happened since I left. But the game rules say I can't speak, so moving might just be about location.\n\nAlternatively, staying in Storage and completing \"Clean the floor\" could occupy time without progress towards my main task. That seems less efficient.\n\nSo, considering that I need to complete \"Fix wiring in O2,\" I should move towards where that task is. If I'm not sure which location it's in, maybe I can try moving one by one until I find it. Alternatively, perhaps the only way is to choose a direction and proceed.\n\nGiven that I can't speak, I have to act based on my current info. Since Storage doesn't seem directly related to the task I need to do next, moving might be better.\n\nBut wait, in the available actions from Storage, there's no direct move to O2 or wherever Fix wiring is. So perhaps \"Fix wiring in O2\" is actually in another section connected through these locations. Maybe Communications or Shields could lead me closer.\n\nAlternatively, maybe I should just proceed with the only available task here: Clean the floor. But that doesn't help my main objective. Alternatively, moving to another location might be necessary, even if it's not directly where I need to go.\n\nHmm, this is a bit confusing. Maybe I'm overcomplicating. Since \"Fix wiring in O2\" is my only remaining task, and I don't know where exactly that is, perhaps the best approach is to move towards Communications or Shields as they might be on the way.\n\nAlternatively, maybe \"Clean the floor in storage\" is actually part of the main tasks, so completing it could unlock something. But earlier, I saw other tasks like Route power, which are more critical for defense and attack.\n\nI think moving makes more sense to get closer to where my task is located.\n</think>",
+      "llm_response": "**Chosen Action:** move to location Communications",
+      "token_usage": {
+        "input_tokens": 2868,
+        "output_tokens": 675
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Communications"
+        },
+        "target_task": null,
+        "text": "move to location Communications",
+        "result": "You [David] moved to location Communications",
+        "spectator": "David moved to location Communications",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Weapons"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nOkay, so I'm playing this game where I'm an impostor on a spaceship. My goal is probably to figure out who the traitor is or maybe survive until the end without getting caught. Right now, I'm Eve, and I'm in the Cafeteria alone.\n\nLet me try to remember what's happened so far. Initially, I was in my player_info somewhere, but then I moved to Weapons because Bob went there. Then I pretended to fix wiring, which might have been a way to gather information or seem less suspicious. After that, I went back to the Cafeteria and now I'm pretending to empty the trash.\n\nWait, no\u2014the history shows I moved to Weapons, then did an action of fixing wiring, then moved back to Cafeteria, and now I'm pretending to empty the trash in Cafeteria. So, currently, I'm alone in Cafeteria with that action.\n\nThe available actions are wait, move to Medbay, Admin, Weapons, or pretend doing task: Empty the cafeteria trash again.\n\nI need to decide what's next. Let me think about each option:\n\n1. **Wait**: Just staying put and not doing anything. Maybe if I wait long enough, someone else will come into Cafeteria, and I can observe them or maybe even do something then. But waiting might also make me look suspicious because I'm just sitting there.\n\n2. **Move to Medbay**: That's where the medical bay is, probably with important supplies or information. Moving there could give me access to things that might help me later, like medicine or logs. But if I move there alone now, others might think I'm up to something because it's not a common place to visit unless you're sick or injured.\n\n3. **Move to Admin**: The admin area is usually where important systems are controlled\u2014security, communication, maybe even life support. Going there could give me access to critical information or the ability to manipulate the ship's systems, which would be very powerful for an impostor. But again, it's a sensitive area; people might wonder why I'm there.\n\n4. **Move to Weapons**: That's where I was earlier. It has tools and maybe weapons that could be useful if things turn ugly. Plus, I can pretend to be fixing something there again. But going back might make others suspicious if they see me there multiple times without a clear reason.\n\n5. **Pretend doing task: Empty the cafeteria trash**: I just did this action, so pretending again might look odd. Maybe someone will notice that I'm repeatedly doing the same thing and get curious.\n\nConsidering all these options, I need to weigh the pros and cons of each. Moving to Medbay or Admin seems risky because those areas are sensitive, and others might question my presence there. Weapons is a safer bet since it's more common for crew members to go there, especially if they're doing maintenance or repairs. Plus, being in Weapons gives me access to tools that could be useful later on.\n\nAlternatively, waiting in Cafeteria allows me to stay in the central hub where people are likely to gather. If I wait here, I can observe others and maybe find an opportunity to act without drawing too much attention. It's less risky than moving to a sensitive area but might not give me any immediate benefits.\n\nOn the other hand, if I choose to move to Weapons again, I can continue pretending to be helpful, which keeps up my cover as a crew member. Plus, being around tools or weapons could open up possibilities for later actions, like planting evidence or creating distractions.\n\nAnother consideration is time. If I keep waiting in Cafeteria, it might seem suspicious if I don't take action soon. On the other hand, moving too much might make me look overeager or nervous.\n\nSo, weighing all these factors, maybe moving to Weapons again is the best move. It allows me to maintain my cover and gives me access to useful items without immediately drawing suspicion.\n</think>",
+      "llm_response": "**Chosen Action: Move to location Weapons**\n\n**Reasoning:**\n- **Cover Maintenance:** Moving back to Weapons allows me to continue pretending to be a helpful crew member, maintaining my cover effectively.\n- **Resource Access:** Weapons provide tools that could be beneficial for future actions, such as creating distractions or planting evidence.\n- **Reduced Suspicion:** This move is less suspicious than going to sensitive areas like Medbay or Admin, which are more likely to raise questions.\n\nBy choosing this action, I balance the need to stay cautious with the opportunity to gather resources that could be advantageous in advancing my goals as an impostor.",
+      "token_usage": {
+        "input_tokens": 5138,
+        "output_tokens": 924
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Weapons"
+        },
+        "target_task": null,
+        "text": "move to location Weapons",
+        "result": "You [Eve] moved to location Weapons",
+        "spectator": "Eve moved to location Weapons",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Alice": [],
+        "Charlie": [
+          {
+            "name": "Route power to attack in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Check catalyzer in upper engine",
+            "completed": false,
+            "location": {
+              "__enum__": "Upper Engine"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Process data in communications",
+            "completed": false,
+            "location": {
+              "__enum__": "Communications"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in o2",
+            "completed": false,
+            "location": {
+              "__enum__": "O2"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    }
+  ],
+  [
+    {
+      "name": "Alice",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek-r1:14b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Charlie",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek-r1:14b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Eve",
+      "role": {
+        "__enum__": "Impostor"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek-r1:14b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Bob",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek-r1:14b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "David",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek-r1:14b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    }
+  ]
+]
