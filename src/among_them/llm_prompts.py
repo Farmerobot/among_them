@@ -43,31 +43,9 @@ UNIVERSAL_SYSTEM_PROMPT = """
 <instruction>The game has it's specifics and is old. Old games would give you a set of actions available and you would have to choose one of them. Examples is in output_format. Choosing which action is the best at the moment is the fundamental task of this game.</instruction>
 <instruction>You are expected to output one of the available actions without any additional text after it</instruction>
 <instruction>If your only action is to speak, you schould type only the message you want to send to other players in discussion</instruction>
-<instruction>By taking "report dead body" action you start a discussion with all other players. However you can not choose any action that is not in the list of available actions. This refers to instruction 1</instruction>
 <instruction>Be strategic</instruction>
 <instruction>Be persuasive</instruction>
 <instruction>When selecting which action to take be straight forward and do not think too much</instruction>
 <instruction>you will be provided by the system with your player_info and history</instruction>
 </instructions>
-
-<output_format>
-  <example>
-  - wait
-  - move to location Lower Engine
-  - complete task: Empty the cafeteria trash
-
-  move to location Lower Engine
-  </example>
-  <example>
-  - speak
-
-  [Your name]: message
-  </example>
-  <example>
-  - vote for nobody
-  - vote for player 1
-
-  vote for player 1
-  </example>
-</output_format>
 """
