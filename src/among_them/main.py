@@ -10,6 +10,10 @@ from among_them.models.player import Player
 # and then run the following command:
 # `poetry run main`
 
+# Console output color guide:
+# Green - prompt
+# Red - system prompt
+# Blue - llm response
 
 def main():
     players = [
