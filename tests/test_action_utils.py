@@ -12,110 +12,18 @@ from among_them.utils.action_utils import get_task_phase_actions, get_vote_actio
 from among_them.consts import IMPOSTOR_COOLDOWN
 
 
-@pytest.fixture
-def crewmate_player() -> Player:
-    return Player(name="Crewmate1", role=PlayerRole.CREWMATE)
-
-@pytest.fixture
-def impostor_player() -> Player:
-    return Player(name="Impostor1", role=PlayerRole.IMPOSTOR)
-
-@pytest.fixture
-def other_player() -> Player:
-    return Player(name="OtherPlayer", role=PlayerRole.CREWMATE)
-
-@pytest.fixture
-def dead_player() -> Player:
-    return Player(name="DeadPlayer", role=PlayerRole.CREWMATE)
-
-@pytest.fixture
-def current_location() -> Location:
-    return Location.CAFETERIA
-
-@pytest.fixture
-def other_location() -> Location:
-    return Location.WEAPONS
-
-@pytest.fixture
-def task_at_location() -> Task:
-    return Task(name="Fix Wires", location=Location.CAFETERIA)
-
-@pytest.fixture
-def task_elsewhere() -> Task:
-    return Task(name="Upload Data", location=Location.NAVIGATION)
-
-@pytest.fixture
-def alive_players(crewmate_player: Player, impostor_player: Player, other_player: Player) -> List[Player]:
-    """Fixture for a list of currently alive players for action tests."""
-    return [crewmate_player, impostor_player, other_player]
-
-@pytest.fixture
-def all_players(alive_players: List[Player], dead_player: Player) -> List[Player]:
-    """Fixture for all players including the dead player."""
-    return alive_players + [dead_player]
-
-@pytest.fixture
-def initial_history(all_players: List[Player]) -> List[History]:
-    """Create the initial history entry using initialize_history."""
-    return initialize_history(all_players)
-
-@pytest.fixture
-def base_history_entry(initial_history: List[History], current_location: Location, 
-                       crewmate_player: Player, task_at_location: Task, 
-                       task_elsewhere: Task, alive_players: List[Player],
-                       dead_player: Player) -> List[History]:
-    """
-    Base history for testing, starting with the initialized history
-    and adding a move action to the current location.
-    """
-    # Start with the initialized history
-    history = initial_history.copy()
-    
-    # Update tasks for the crewmate player
-    first_entry = history[0]
-    tasks_left = first_entry.tasks_left_to_do.copy()
-    tasks_left[crewmate_player.name] = [task_at_location, task_elsewhere]
-    
-    # Add a move action to the current location
-    move_action = Action(
-        type=ActionType.MOVE,
-        player_name=crewmate_player.name,
-        target_location=current_location,
-        spectator=f"{crewmate_player.name} moved to {current_location.value}"
-    )
-    
-    # Create a new history entry after the move
-    # Use explicit list of player names rather than trying to iterate all_players fixture
-    spectators = [p.name for p in alive_players]
-    
-    move_history = History(
-        player_names_to_play_next=[p for p in first_entry.player_names_to_play_next if p != crewmate_player.name],
-        phase=GamePhase.TASK,
-        actions_until_phase_ends=10,
-        location=current_location,
-        impostor_cooldown=IMPOSTOR_COOLDOWN,
-        actions_agent_could_take=[],
-        spectators_who_saw=spectators,
-        llm_cot="",
-        llm_response="",
-        token_usage={},
-        action_taken=move_action,
-        tasks_left_to_do=tasks_left,
-        votes_before_this_discussion_message={}
-    )
-    
-    history.append(move_history)
-    return history
-
-
 # --- Tests for get_task_phase_actions ---
 
-def test_get_task_phase_actions_base(crewmate_player: Player, current_location: Location, 
-                                    base_history_entry: List[History], alive_players: List[Player]):
+def test_get_task_phase_actions_base(crewmate_player: Player, cafeteria_location: Location,
+                                     base_history_entry: List[History], generic_test_players: List[Player]):
     """Test basic actions available to a crewmate."""
     acting_player = crewmate_player
-    
-    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, alive_players)
+    current_location = cafeteria_location  # For readability in the test
+
+    # Ensure the base history reflects the player being in the location
+    history = base_history_entry  # Assuming base_history_entry sets the initial location correctly
+
+    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players)
     action_types = {action.type for action in actions}
 
     assert ActionType.WAIT in action_types
@@ -125,45 +33,53 @@ def test_get_task_phase_actions_base(crewmate_player: Player, current_location: 
     assert any(a.type == ActionType.MOVE and a.target_location == Location.MEDBAY for a in actions)
 
 
-def test_get_task_phase_actions_report(crewmate_player: Player, current_location: Location, 
-                                      base_history_entry: List[History], alive_players: List[Player], 
-                                      dead_player: Player, impostor_player: Player):
+def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_location: Location,
+                                       base_history_entry: List[History], generic_test_players: List[Player],
+                                       dead_player: Player, impostor_player: Player, kill_action: Action):
     """Test that REPORT action is available when a dead body is present."""
     acting_player = crewmate_player
-    players_list_with_dead = alive_players + [dead_player]
-    
+    target_dead_player = dead_player  # For readability
+    current_location = cafeteria_location
+    players_list_with_dead = generic_test_players + [target_dead_player]
+
     # Start with the base history
     history = base_history_entry.copy()
-    
-    # Add kill action - impostor kills dead_player at current_location
-    kill_action = Action(
+
+    # Add kill action using the fixture (Impostor kills Crewmate)
+    # We need to modify the kill_action fixture's target to be the dead_player
+    specific_kill_action = Action(
         type=ActionType.KILL,
         player_name=impostor_player.name,
-        target_player_name=dead_player.name,
-        spectator=f"{impostor_player.name} killed {dead_player.name}"
+        target_player_name=target_dead_player.name,
+        spectator=f"{impostor_player.name} killed {target_dead_player.name}"
     )
-    
-    next_players = [p for p in history[-1].player_names_to_play_next if p != impostor_player.name]
-    
-    kill_history = history[-1].copy(
+
+    # Simulate the state *after* the kill, before the report
+    # Ensure impostor is in the location for the kill
+    impostor_move_hist = history[-1].copy(
         location=current_location,
-        action_taken=kill_action,
-        player_names_to_play_next=next_players
+        action_taken=Action(type=ActionType.MOVE, player_name=impostor_player.name, target_location=current_location)
+    )
+    history.append(impostor_move_hist)
+
+    # The kill happens
+    kill_history = impostor_move_hist.copy(
+        location=current_location,
+        action_taken=specific_kill_action,
+        player_names_to_play_next=[p for p in impostor_move_hist.player_names_to_play_next if p != impostor_player.name],
+        impostor_cooldown=IMPOSTOR_COOLDOWN  # Reset cooldown after kill
     )
     history.append(kill_history)
-    
-    # Add a subsequent action by the reporting player to place them in the room
+
+    # Add a subsequent action by the reporting player to place them in the room *after* the kill
     wait_action = Action(
         type=ActionType.WAIT,
         player_name=acting_player.name,
         spectator=f"{acting_player.name} waited"
     )
-    
-    next_players = [p for p in kill_history.player_names_to_play_next if p != acting_player.name]
-    
     wait_history = kill_history.copy(
         action_taken=wait_action,
-        player_names_to_play_next=next_players
+        player_names_to_play_next=[p for p in kill_history.player_names_to_play_next if p != acting_player.name]
     )
     history.append(wait_history)
 
@@ -171,19 +87,21 @@ def test_get_task_phase_actions_report(crewmate_player: Player, current_location
     actions = get_task_phase_actions(acting_player, current_location, 0, history, players_list_with_dead)
     report_actions = [a for a in actions if a.type == ActionType.REPORT]
     assert len(report_actions) == 1, "REPORT action should be available"
-    assert report_actions[0].target_player_name == dead_player.name
+    assert report_actions[0].target_player_name == target_dead_player.name  # Check it reports the correct player
 
 
-def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Player, current_location: Location, 
-                                                          base_history_entry: List[History], alive_players: List[Player], 
-                                                          dead_player: Player, other_location: Location):
+def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Player, cafeteria_location: Location,
+                                                           base_history_entry: List[History], generic_test_players: List[Player],
+                                                           dead_player: Player, weapons_location: Location):
     """Test REPORT is not available if the body is in a different location."""
     acting_player = crewmate_player
-    players_list_with_dead = alive_players + [dead_player]
+    current_location = cafeteria_location
+    other_location = weapons_location  # For readability
+    players_list_with_dead = generic_test_players + [dead_player]
 
     # Start with the base history
     history = base_history_entry.copy()
-    
+
     # Dead player moves to other_location
     dead_move_action = Action(
         type=ActionType.MOVE,
@@ -200,7 +118,7 @@ def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Pla
         player_names_to_play_next=next_players
     )
     history.append(dead_move_history)
-    
+
     # Acting player moves to current_location
     player_move_action = Action(
         type=ActionType.MOVE,
@@ -208,43 +126,57 @@ def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Pla
         target_location=current_location,
         spectator=f"{acting_player.name} moved to {current_location.value}"
     )
-    
-    next_players = [p for p in dead_move_history.player_names_to_play_next if p != acting_player.name]
-    
-    player_move_history = dead_move_history.copy(
+    move_history = history[-1].copy(
         location=current_location,
         action_taken=player_move_action,
-        player_names_to_play_next=next_players
+        player_names_to_play_next=[p for p in history[-1].player_names_to_play_next if p != acting_player.name]
     )
-    history.append(player_move_history)
+    history.append(move_history)
 
-    # Call the function with the constructed history
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, players_list_with_dead)
+    # Add history entry simulating dead player at weapons_location
+    # We need impostor to kill dead player at weapons_location
+    impostor_name = next(p.name for p in generic_test_players if p.role == PlayerRole.IMPOSTOR)
+    kill_at_weapons = Action(type=ActionType.KILL, player_name=impostor_name, target_player_name=dead_player.name)
+    hist_entry_dead_at_weapons = History(
+        player_names_to_play_next=[], phase=GamePhase.TASK, actions_until_phase_ends=10,
+        location=weapons_location,  # Location of kill
+        impostor_cooldown=IMPOSTOR_COOLDOWN,
+        actions_agent_could_take=[], spectators_who_saw=[],
+        llm_cot="", llm_response="", token_usage={},
+        action_taken=kill_at_weapons, tasks_left_to_do={},
+        votes_before_this_discussion_message={}
+    )
+    history_with_body_elsewhere = history + [hist_entry_dead_at_weapons, move_history]  # Add the kill event
+
+    actions = get_task_phase_actions(acting_player, current_location, 0, history_with_body_elsewhere, players_list_with_dead)
     report_actions = [a for a in actions if a.type == ActionType.REPORT]
     assert len(report_actions) == 0, "REPORT action should NOT be available"
 
 
-def test_get_task_phase_actions_task(crewmate_player: Player, current_location: Location, 
-                                    base_history_entry: List[History], alive_players: List[Player], 
-                                    task_at_location: Task):
+def test_get_task_phase_actions_task(crewmate_player: Player, cafeteria_location: Location,
+                                     base_history_entry: List[History], generic_test_players: List[Player],
+                                     task_in_cafeteria: Task):
     """Test DO_TASK action is available when a task is at the current location."""
     acting_player = crewmate_player
-    
-    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, alive_players)
+    current_location = cafeteria_location
+    task_at_location = task_in_cafeteria  # For readability
+
+    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, generic_test_players)
     task_actions = [a for a in actions if a.type == ActionType.TASK]
 
     assert len(task_actions) == 1
     assert task_actions[0].target_task.name == task_at_location.name
 
 
-def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, other_location: Location, 
-                                                   base_history_entry: List[History], alive_players: List[Player]):
+def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, weapons_location: Location,
+                                                     base_history_entry: List[History], generic_test_players: List[Player]):
     """Test DO_TASK is not available if the task is elsewhere."""
     acting_player = crewmate_player
-    
-    # Start with the base history
+    other_location = weapons_location  # For readability
+
+    # Start with the base history (player starts in Cafeteria)
     history = base_history_entry.copy()
-    
+
     # Add action to move player to other_location
     move_action = Action(
         type=ActionType.MOVE,
@@ -252,31 +184,29 @@ def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, ot
         target_location=other_location,
         spectator=f"{acting_player.name} moved to {other_location.value}"
     )
-    
-    next_players = [p for p in history[-1].player_names_to_play_next if p != acting_player.name]
-    
     move_history = history[-1].copy(
         location=other_location,
         action_taken=move_action,
-        player_names_to_play_next=next_players
+        player_names_to_play_next=[p for p in history[-1].player_names_to_play_next if p != acting_player.name]
     )
     history.append(move_history)
-    
-    actions = get_task_phase_actions(acting_player, other_location, 0, history, alive_players)
+
+    actions = get_task_phase_actions(acting_player, other_location, 0, history, generic_test_players)
     task_actions = [a for a in actions if a.type == ActionType.TASK]
     assert len(task_actions) == 0
 
 
-def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player, crewmate_player: Player, 
-                                                      current_location: Location, base_history_entry: List[History], 
-                                                      alive_players: List[Player]):
+def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player, crewmate_player: Player,
+                                                      cafeteria_location: Location, base_history_entry: List[History],
+                                                      generic_test_players: List[Player]):
     """Test KILL action is available for impostor when cooldown is 0 and target is present."""
     acting_player = impostor_player
     target_player = crewmate_player
+    current_location = cafeteria_location
 
     # Start with the base history
     history = base_history_entry.copy()
-    
+
     # Target moves to location
     target_move_action = Action(
         type=ActionType.MOVE,
@@ -313,23 +243,26 @@ def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player,
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, alive_players)
+    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
-    
-    assert len(kill_actions) >= 1, "KILL action should be available"
-    assert any(a.target_player_name == target_player.name for a in kill_actions), "Should be able to kill the target"
+
+    assert len(kill_actions) >= 1  # Should be at least one kill action
+    # Find the specific action targeting the crewmate
+    kill_target_action = next((a for a in kill_actions if a.target_player_name == target_player.name), None)
+    assert kill_target_action is not None, f"Kill action targeting {target_player.name} not found"
 
 
-def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, crewmate_player: Player, 
-                                                     current_location: Location, base_history_entry: List[History], 
-                                                     alive_players: List[Player]):
-    """Test KILL action is not available when cooldown is > 0."""
+def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, crewmate_player: Player,
+                                                      cafeteria_location: Location, base_history_entry: List[History],
+                                                      generic_test_players: List[Player]):
+    """Test KILL action is NOT available for impostor when cooldown > 0."""
     acting_player = impostor_player
+    current_location = cafeteria_location
     target_player = crewmate_player
 
     # Start with the base history
     history = base_history_entry.copy()
-    
+
     # Target moves to location
     target_move_action = Action(
         type=ActionType.MOVE,
@@ -366,34 +299,37 @@ def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, 
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, current_location, 5, history, alive_players)
+    actions = get_task_phase_actions(acting_player, current_location, 5, history, generic_test_players)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
     
     assert len(kill_actions) == 0, "KILL action should not be available when cooldown > 0"
 
 
-def test_get_task_phase_actions_impostor_kill_no_target(impostor_player: Player, current_location: Location, 
-                                                      base_history_entry: List[History], alive_players: List[Player], 
-                                                      other_location: Location):
-    """Test KILL action is not available when no target is present."""
+def test_get_task_phase_actions_impostor_kill_target_elsewhere(impostor_player: Player, crewmate_player: Player,
+                                                               cafeteria_location: Location, weapons_location: Location,
+                                                               base_history_entry: List[History], generic_test_players: List[Player]):
+    """Test KILL action is NOT available for impostor if target is elsewhere."""
     acting_player = impostor_player
+    target_player = crewmate_player
+    impostor_location = cafeteria_location
+    target_location = weapons_location
 
     # Start with the base history
     history = base_history_entry.copy()
-    
+
     # Other players move to other_location
-    for player in [p for p in alive_players if p != impostor_player]:
+    for player in [p for p in generic_test_players if p != impostor_player]:
         move_action = Action(
             type=ActionType.MOVE,
             player_name=player.name,
-            target_location=other_location,
-            spectator=f"{player.name} moved to {other_location.value}"
+            target_location=target_location,
+            spectator=f"{player.name} moved to {target_location.value}"
         )
         
         next_players = [p for p in history[-1].player_names_to_play_next if p != player.name]
         
         move_history = history[-1].copy(
-            location=other_location,
+            location=target_location,
             action_taken=move_action,
             player_names_to_play_next=next_players
         )
@@ -403,14 +339,14 @@ def test_get_task_phase_actions_impostor_kill_no_target(impostor_player: Player,
     impostor_move_action = Action(
         type=ActionType.MOVE,
         player_name=acting_player.name,
-        target_location=current_location,
-        spectator=f"{acting_player.name} moved to {current_location.value}"
+        target_location=impostor_location,
+        spectator=f"{acting_player.name} moved to {impostor_location.value}"
     )
     
     next_players = [p for p in history[-1].player_names_to_play_next if p != acting_player.name]
     
     impostor_move_history = history[-1].copy(
-        location=current_location,
+        location=impostor_location,
         impostor_cooldown=0,  # Cooldown is 0
         action_taken=impostor_move_action,
         player_names_to_play_next=next_players
@@ -418,47 +354,61 @@ def test_get_task_phase_actions_impostor_kill_no_target(impostor_player: Player,
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, alive_players)
+    actions = get_task_phase_actions(acting_player, impostor_location, 0, history, generic_test_players)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
-    
+        
     assert len(kill_actions) == 0, "KILL action should not be available when no target is present"
 
 
-def test_get_task_phase_actions_impostor_pretend(impostor_player: Player, current_location: Location, 
-                                                base_history_entry: List[History], alive_players: List[Player]):
+def test_get_task_phase_actions_impostor_pretend(impostor_player: Player, weapons_location: Location, 
+                                                base_history_entry: List[History], generic_test_players: List[Player]):
     """Test PRETEND_TASK action is available for impostor."""
     acting_player = impostor_player
     
-    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, alive_players)
+    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players)
     pretend_actions = [a for a in actions if a.type == ActionType.PRETEND]
     
     assert len(pretend_actions) >= 1, "PRETEND_TASK action should be available for impostor"
 
 
-def test_get_task_phase_actions_crewmate_no_impostor_actions(crewmate_player: Player, current_location: Location, 
-                                                           base_history_entry: List[History], alive_players: List[Player]):
+def test_get_task_phase_actions_crewmate_no_impostor_actions(crewmate_player: Player, weapons_location: Location, 
+                                                           base_history_entry: List[History], generic_test_players: List[Player]):
     """Test that crewmates cannot KILL or PRETEND_TASK."""
     acting_player = crewmate_player
-    
-    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, alive_players)
+
+    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players)
     impostor_action_types = [ActionType.KILL, ActionType.PRETEND]
-    
+
     for action in actions:
         assert action.type not in impostor_action_types, f"Crewmate should not have {action.type} action available"
 
 
 # --- Tests for get_vote_actions ---
 
-def test_get_vote_actions(crewmate_player: Player, impostor_player: Player, other_player: Player):
-    alive_players = [crewmate_player, impostor_player, other_player]
-    actions = get_vote_actions(alive_players, crewmate_player)
-    vote_targets = {a.target_player_name for a in actions if a.type == ActionType.VOTE}
+def test_get_vote_actions(crewmate_player: Player, generic_test_players: List[Player], dead_player: Player):
+    """Test available VOTE actions, including voting for alive players and nobody."""
+    acting_player = crewmate_player
+    players_list_with_dead = generic_test_players
+    # Filter out the dead player and the acting player for valid vote targets
+    possible_targets = [p.name for p in players_list_with_dead if p.name != acting_player.name]
 
-    assert len(actions) == 3 # nobody + 2 other players
-    assert "nobody" in vote_targets
-    assert impostor_player.name in vote_targets
-    assert other_player.name in vote_targets
-    assert crewmate_player.name not in vote_targets # Can't vote for self
+    actions = get_vote_actions(players_list_with_dead, acting_player)
+    action_types = {action.type for action in actions}
+    target_players = {action.target_player_name for action in actions if action.type == ActionType.VOTE}
+
+    assert ActionType.VOTE in action_types
+    assert ActionType.WAIT not in action_types  # Wait is not a vote option
+
+    # Check if all possible alive targets are present
+    for target in possible_targets:
+        assert target in target_players
+
+    # Check if voting for 'nobody' is an option
+    assert "nobody" in target_players
+
+    # Total vote actions should be number of alive players (excluding self) + 1 (for nobody)
+    assert len(actions) == len(possible_targets) + 1
+
 
 def test_get_vote_actions_only_self(crewmate_player: Player):
     alive_players = [crewmate_player]

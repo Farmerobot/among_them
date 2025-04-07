@@ -1,6 +1,6 @@
 """Shared utilities for Among Them tests."""
 from typing import List, Optional
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from among_them.models.action import Action, ActionType
 from among_them.models.history import History, initialize_history
@@ -34,6 +34,9 @@ def create_base_history(
         List[History]: A list containing the initial history entry and a subsequent
                       action entry for the acting player
     """
+    # Create a task in the current location
+    cafeteria_task = Task(name="Fix something", location=location)
+    
     # Start with initialized history
     initial_hist = initialize_history(all_players)
     first_entry = initial_hist[0]
@@ -47,6 +50,12 @@ def create_base_history(
     
     # Update tasks if provided
     tasks_left = first_entry.tasks_left_to_do.copy()
+    
+    # Manually assign tasks to each player
+    for player in all_players:
+        tasks_left[player.name] = [cafeteria_task]
+    
+    # Override with provided tasks if any
     if tasks:
         tasks_left[acting_player.name] = tasks
     

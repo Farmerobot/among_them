@@ -16,189 +16,182 @@ from among_them.utils.player_utils import (
     get_dead_players,
     get_players_in_room,
 )
-from tests.utils import create_base_history
-
-
-@pytest.fixture
-def player1() -> Player:
-    return Player(name="P1", role=PlayerRole.CREWMATE)
-
-@pytest.fixture
-def player2() -> Player:
-    return Player(name="P2", role=PlayerRole.CREWMATE)
-
-@pytest.fixture
-def player3() -> Player:
-    return Player(name="P3", role=PlayerRole.IMPOSTOR)
-
-@pytest.fixture
-def all_players(player1: Player, player2: Player, player3: Player) -> List[Player]:
-    return [player1, player2, player3]
-
-@pytest.fixture
-def alive_players(player1: Player, player2: Player, player3: Player) -> List[Player]:
-    return [player1, player2, player3]
-
-@pytest.fixture
-def base_action(player1: Player) -> Action:
-    return Action(type=ActionType.WAIT, player_name=player1.name)
-
-@pytest.fixture
-def kill_action_p2(player3: Player, player2: Player) -> Action:
-    return Action(type=ActionType.KILL, player_name=player3.name, target_player_name=player2.name)
-
-@pytest.fixture
-def report_action(player1: Player, player2: Player) -> Action:
-    return Action(type=ActionType.REPORT, player_name=player1.name, target_player_name=player2.name)
-
-@pytest.fixture
-def move_action_p1_medbay(player1: Player) -> Action:
-    return Action(type=ActionType.MOVE, player_name=player1.name, target_location=Location.MEDBAY)
-
-@pytest.fixture
-def move_action_p2_weapons(player2: Player) -> Action:
-    return Action(type=ActionType.MOVE, player_name=player2.name, target_location=Location.WEAPONS)
-
-@pytest.fixture
-def base_history_entry(all_players: List[Player], player1: Player, base_action: Action) -> List[History]:
-    """Create a consistent base history entry using the shared utility."""
-    return create_base_history(all_players, player1, Location.CAFETERIA)
 
 
 # --- Tests for get_next_random_player ---
 
 @patch('random.choice')
-def test_get_next_random_player_empty_history(mock_choice, alive_players: List[Player], player1: Player) -> None:
+def test_get_next_random_player_empty_history(mock_choice, generic_test_players: List[Player], crewmate_player: Player) -> None:
+    """Test get_next_random_player with empty history."""
     # Mock random.choice to return the Player object itself when called with alive_players
-    # When history is empty, it chooses from the list of Player objects.
-    mock_choice.return_value = player1
-    next_player, next_players_list = get_next_random_player([], alive_players)
-    assert next_player.name == player1.name # Compare name
-    assert next_player == player1 # Also check object equality
-    assert len(next_players_list) == len(alive_players) - 1
-    assert player1.name not in next_players_list
+    mock_choice.return_value = crewmate_player
+    next_player, next_players_list = get_next_random_player([], generic_test_players)
+    assert next_player.name == crewmate_player.name # Compare name
+    assert next_player == crewmate_player # Also check object equality
+    assert len(next_players_list) == len(generic_test_players) - 1
+    assert crewmate_player.name not in next_players_list
 
 @patch('random.choice')
-def test_get_next_random_player_with_remaining(mock_choice, base_history_entry: List[History], alive_players: List[Player], player2: Player) -> None:
+def test_get_next_random_player_with_remaining(mock_choice, base_history_entry: List[History], generic_test_players: List[Player], 
+                                              other_player: Player, impostor_player: Player) -> None:
+    """Test get_next_random_player with remaining players in history."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1].copy()
-    base_entry.player_names_to_play_next = ["P2", "P3"]
+    # Set remaining players to other_player and impostor_player
+    base_entry.player_names_to_play_next = [other_player.name, impostor_player.name]
     
-    mock_choice.return_value = "P2"
-    next_player, next_players_list = get_next_random_player(base_history_entry + [base_entry], alive_players)
-    assert next_player.name == player2.name
-    assert next_players_list == ["P3"]
-    mock_choice.assert_called_once_with(["P2", "P3"]) # Called with remaining players
+    mock_choice.return_value = other_player.name
+    next_player, next_players_list = get_next_random_player(base_history_entry + [base_entry], generic_test_players)
+    assert next_player.name == other_player.name
+    assert next_players_list == [impostor_player.name]
+    mock_choice.assert_called_once_with([other_player.name, impostor_player.name]) # Called with remaining players
 
 @patch('random.choice')
-def test_get_next_random_player_empty_remaining(mock_choice, base_history_entry: List[History], alive_players: List[Player], player1: Player) -> None:
+def test_get_next_random_player_empty_remaining(mock_choice, base_history_entry: List[History], generic_test_players: List[Player], 
+                                               crewmate_player: Player) -> None:
+    """Test get_next_random_player with empty remaining players in history."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1].copy()
     base_entry.player_names_to_play_next = []
     
     # Mock should return a name from the list random.choice will operate on
-    expected_players_list = [p.name for p in alive_players]
-    mock_choice.return_value = player1.name 
-    next_player, next_players_list = get_next_random_player(base_history_entry + [base_entry], alive_players)
-    assert next_player == player1
+    expected_players_list = [p.name for p in generic_test_players]
+    mock_choice.return_value = crewmate_player.name 
+    next_player, next_players_list = get_next_random_player(base_history_entry + [base_entry], generic_test_players)
+    assert next_player == crewmate_player
     # Verify choice was called with the correct list
     mock_choice.assert_called_once_with(expected_players_list)
     # Assert the returned list excludes the chosen player
-    assert set(next_players_list) == set(p.name for p in alive_players if p != player1)
+    assert set(next_players_list) == set(p.name for p in generic_test_players if p != crewmate_player)
 
 
 @patch('random.choice')
-def test_get_next_random_player_after_report(mock_choice, base_history_entry: List[History], report_action: Action, alive_players: List[Player], player1: Player) -> None:
+def test_get_next_random_player_after_report(mock_choice, base_history_entry: List[History], report_action: Action, 
+                                            generic_test_players: List[Player], crewmate_player: Player) -> None:
+    """Test get_next_random_player after a report action."""
     # Use the latest entry as base to create a new entry with report action
     base_entry = base_history_entry[-1]
     report_entry = base_entry.copy(action_taken=report_action)
-    report_entry.player_names_to_play_next = ["P2", "P3"] # Should be ignored by the function logic
+    # These should be ignored by the function logic after a report
+    report_entry.player_names_to_play_next = [p.name for p in generic_test_players if p != crewmate_player]
     
     history = base_history_entry + [report_entry]
     
     # Mock should return a name from the list random.choice will operate on (all alive players after report)
-    expected_players_list = [p.name for p in alive_players]
-    mock_choice.return_value = player1.name
-    next_player, next_players_list = get_next_random_player(history, alive_players)
-    assert next_player == player1
+    expected_players_list = [p.name for p in generic_test_players]
+    mock_choice.return_value = crewmate_player.name
+    next_player, next_players_list = get_next_random_player(history, generic_test_players)
+    assert next_player == crewmate_player
     # Verify choice was called with the correct list
     mock_choice.assert_called_once_with(expected_players_list)
     # Assert the returned list excludes the chosen player
-    assert set(next_players_list) == set(p.name for p in alive_players if p != player1)
+    assert set(next_players_list) == set(p.name for p in generic_test_players if p != crewmate_player)
 
 @patch('random.choice')
-def test_get_next_random_player_removes_dead(mock_choice, base_history_entry: List[History], alive_players: List[Player], player2: Player, player3: Player) -> None:
+def test_get_next_random_player_removes_dead(mock_choice, base_history_entry: List[History], crewmate_player: Player,
+                                            other_player: Player, impostor_player: Player) -> None:
+    """Test get_next_random_player removes dead players from consideration."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1].copy()
-    base_entry.player_names_to_play_next = ["P1", "P2", "P3"]
+    # Include all player names, including one that's not in the alive list
+    base_entry.player_names_to_play_next = [crewmate_player.name, other_player.name, impostor_player.name]
     
-    # P1 is technically alive, but not in the alive_players list passed
-    current_alive = [player2, player3]
-    mock_choice.return_value = "P2" # Example return
+    # Only other_player and impostor_player are considered alive
+    current_alive = [other_player, impostor_player]
+    mock_choice.return_value = other_player.name
 
     next_player, next_players_list = get_next_random_player(base_history_entry + [base_entry], current_alive)
 
-    assert next_player.name == player2.name
-    # P1 should be removed from the list used by random.choice and the returned list
-    assert set(next_players_list) == {"P3"}
-    mock_choice.assert_called_once_with(["P2", "P3"])
+    assert next_player.name == other_player.name
+    # "Crewmate" should be removed from the list used by random.choice and the returned list
+    assert set(next_players_list) == {impostor_player.name}
+    mock_choice.assert_called_once_with([other_player.name, impostor_player.name])
 
 
 # --- Tests for get_alive_players ---
 
-def test_get_alive_players_no_kills(all_players: List[Player]) -> None:
+def test_get_alive_players_no_kills(generic_test_players: List[Player]) -> None:
+    """Test get_alive_players with no kills in history."""
     # Start with empty history - no kills yet
     history: List[History] = []
-    alive = get_alive_players(history, all_players)
-    assert len(alive) == 3
-    assert set(p.name for p in alive) == {"P1", "P2", "P3"}
+    alive = get_alive_players(history, generic_test_players)
+    assert len(alive) == len(generic_test_players)
+    assert set(p.name for p in alive) == set(p.name for p in generic_test_players)
 
-def test_get_alive_players_one_kill(all_players: List[Player], base_history_entry: List[History], kill_action_p2: Action) -> None:
+def test_get_alive_players_one_kill(generic_test_players: List[Player], base_history_entry: List[History], 
+                                   kill_action: Action, crewmate_player: Player) -> None:
+    """Test get_alive_players with one kill in history."""
     # Use the latest entry as base to create a kill entry
     base_entry = base_history_entry[-1]
-    kill_entry = base_entry.copy(action_taken=kill_action_p2)
+    kill_entry = base_entry.copy(action_taken=kill_action)
     
     history = base_history_entry + [kill_entry]
-    alive = get_alive_players(history, all_players)
-    assert len(alive) == 2
-    assert set(p.name for p in alive) == {"P1", "P3"}
+    alive = get_alive_players(history, generic_test_players)
+    assert len(alive) == len(generic_test_players) - 1
+    assert crewmate_player.name not in set(p.name for p in alive)
 
-def test_get_alive_players_multiple_kills(all_players: List[Player], base_history_entry: List[History], kill_action_p2: Action) -> None:
+def test_get_alive_players_multiple_kills(all_generic_test_players: List[Player], base_history_entry: List[History], 
+                                         kill_action: Action, crewmate_player: Player, other_player: Player, impostor_player: Player) -> None:
+    """Test get_alive_players with multiple kills in history."""
     # Use the latest entry as base to create kill entries
     base_entry = base_history_entry[-1]
-    kill_action_p1 = Action(type=ActionType.KILL, player_name="P3", target_player_name="P1")
+    # Create a second kill action (impostor kills other_player)
+    kill_action_other = Action(
+        type=ActionType.KILL, 
+        player_name=impostor_player.name, 
+        target_player_name=other_player.name
+    )
     
-    kill_p2_entry = base_entry.copy(action_taken=kill_action_p2)
-    kill_p1_entry = base_entry.copy(action_taken=kill_action_p1)
+    kill_crewmate_entry = base_entry.copy(action_taken=kill_action)
+    kill_other_entry = base_entry.copy(action_taken=kill_action_other)
     
-    history = base_history_entry + [kill_p2_entry, kill_p1_entry]
-    alive = get_alive_players(history, all_players)
-    assert len(alive) == len(all_players) - 2
-    assert set(p.name for p in alive) == {"P3"} # Compare names
+    history = base_history_entry + [kill_crewmate_entry, kill_other_entry]
+    alive = get_alive_players(history, all_generic_test_players)
+    assert len(alive) == len(all_generic_test_players) - 2
+    alive_names = set(p.name for p in alive)
+    assert crewmate_player.name not in alive_names
+    assert other_player.name not in alive_names
+    assert impostor_player.name in alive_names
 
 # --- Tests for get_last_player_action ---
 
-def test_get_last_player_action_found(base_history_entry: List[History], move_action_p1_medbay: Action, player1: Player) -> None:
+def test_get_last_player_action_found(base_history_entry: List[History], move_action: Action, 
+                                     crewmate_player: Player, other_player: Player, impostor_player: Player) -> None:
+    """Test get_last_player_action when the player's action is found."""
     # Use the latest entry as base to create a sequence of history entries
     base_entry = base_history_entry[-1]
     
-    move_p2_entry = base_entry.copy(action_taken=Action(type=ActionType.MOVE, player_name="P2", target_location=Location.ADMIN))
-    move_p1_entry = base_entry.copy(action_taken=move_action_p1_medbay)
-    move_p3_entry = base_entry.copy(action_taken=Action(type=ActionType.MOVE, player_name="P3", target_location=Location.STORAGE))
+    # Create move actions for each player
+    move_other_action = Action(
+        type=ActionType.MOVE, 
+        player_name=other_player.name, 
+        target_location=Location.ADMIN
+    )
+    move_impostor_action = Action(
+        type=ActionType.MOVE, 
+        player_name=impostor_player.name, 
+        target_location=Location.STORAGE
+    )
     
-    history = base_history_entry + [move_p2_entry, move_p1_entry, move_p3_entry]
-    last_action_entry = get_last_player_action(history, player1)
-    assert last_action_entry.action_taken == move_action_p1_medbay
+    move_other_entry = base_entry.copy(action_taken=move_other_action)
+    move_crewmate_entry = base_entry.copy(action_taken=move_action)
+    move_impostor_entry = base_entry.copy(action_taken=move_impostor_action)
+    
+    history = base_history_entry + [move_other_entry, move_crewmate_entry, move_impostor_entry]
+    last_action_entry = get_last_player_action(history, crewmate_player)
+    assert last_action_entry.action_taken == move_action
 
-def test_get_last_player_action_only_first(base_history_entry: List[History], player1: Player) -> None:
-    # Only base history with player1's action
-    last_action_entry = get_last_player_action(base_history_entry, player1)
+def test_get_last_player_action_only_first(base_history_entry: List[History], crewmate_player: Player) -> None:
+    """Test get_last_player_action when only the first action is found."""
+    # Only base history with crewmate_player's action
+    last_action_entry = get_last_player_action(base_history_entry, crewmate_player)
     assert last_action_entry == base_history_entry[-1]
 
-def test_get_last_player_action_not_found(base_history_entry: List[History], player1: Player, player3: Player) -> None:
-    # History only contains P2's action
-    last_action_entry = get_last_player_action(base_history_entry, player1)
+def test_get_last_player_action_not_found(base_history_entry: List[History], crewmate_player: Player, impostor_player: Player) -> None:
+    """Test get_last_player_action when the player's action is not found."""
+    # Assuming base_history_entry doesn't contain an action by crewmate_player
     # Should return the first entry if player not found
+    last_action_entry = get_last_player_action(base_history_entry, crewmate_player)
     assert last_action_entry == base_history_entry[-1]
 
 # Test for empty history is omitted as the current implementation would raise IndexError.
@@ -207,39 +200,42 @@ def test_get_last_player_action_not_found(base_history_entry: List[History], pla
 
 # --- Tests for get_dead_players ---
 
-def test_get_dead_players_none_since_discussion(base_history_entry: List[History], player1: Player) -> None:
+def test_get_dead_players_none_since_discussion(base_history_entry: List[History], crewmate_player: Player) -> None:
+    """Test get_dead_players when no players have died since the last discussion."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1]
     
     discuss_entry = base_entry.copy(
         phase=GamePhase.DISCUSS,
-        action_taken=Action(type=ActionType.SPEAK, player_name=player1.name, text="Hi")
+        action_taken=Action(type=ActionType.SPEAK, player_name=crewmate_player.name, text="Hi")
     )
     
     history = base_history_entry + [discuss_entry]
     dead = get_dead_players(history)
     assert dead == {}
 
-def test_get_dead_players_one_since_discussion(base_history_entry: List[History], kill_action_p2: Action) -> None:
+def test_get_dead_players_one_since_discussion(base_history_entry: List[History], kill_action: Action, crewmate_player: Player) -> None:
+    """Test get_dead_players when one player has died since the last discussion."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1]
     
     discuss_entry = base_entry.copy(phase=GamePhase.DISCUSS)
     kill_entry = base_entry.copy(
-        action_taken=kill_action_p2,
+        action_taken=kill_action,
         location=Location.WEAPONS
     )
     
     history = base_history_entry + [discuss_entry, kill_entry]
     dead = get_dead_players(history)
-    assert dead == {"P2": Location.WEAPONS.value}
+    assert dead == {crewmate_player.name: Location.WEAPONS.value}
 
-def test_get_dead_players_kill_before_discussion(base_history_entry: List[History], kill_action_p2: Action) -> None:
+def test_get_dead_players_kill_before_discussion(base_history_entry: List[History], kill_action: Action) -> None:
+    """Test get_dead_players when a kill happened before the last discussion."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1]
     
     kill_entry = base_entry.copy(
-        action_taken=kill_action_p2,
+        action_taken=kill_action,
         location=Location.WEAPONS
     )
     discuss_entry = base_entry.copy(phase=GamePhase.DISCUSS)
@@ -247,78 +243,122 @@ def test_get_dead_players_kill_before_discussion(base_history_entry: List[Histor
     # Kill happens *before* the last discussion phase starts
     history = base_history_entry + [kill_entry, discuss_entry]
     dead = get_dead_players(history)
-    assert dead == {}
+    assert dead == {} # Should be empty as the kill was before discussion
 
-def test_get_dead_players_no_discussion_phase(base_history_entry: List[History], kill_action_p2: Action) -> None:
+def test_get_dead_players_multiple_kills(base_history_entry: List[History], kill_action: Action, 
+                                        other_player: Player, impostor_player: Player, crewmate_player: Player) -> None:
+    """Test get_dead_players with multiple kills since the last discussion."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1]
     
-    kill_entry = base_entry.copy(
-        action_taken=kill_action_p2,
+    discuss_entry = base_entry.copy(phase=GamePhase.DISCUSS)
+    
+    # First kill - Impostor kills Crewmate at WEAPONS
+    kill_crewmate_entry = base_entry.copy(
+        action_taken=kill_action,
         location=Location.WEAPONS
     )
     
-    history = base_history_entry + [kill_entry] # No DISCUSS phase yet
-    dead = get_dead_players(history)
-    # Should search from beginning if no discussion found
-    assert dead == {"P2": Location.WEAPONS.value}
-
-
-# --- Tests for get_players_in_room ---
-
-def test_get_players_in_room_multiple(base_history_entry: List[History], all_players: List[Player], alive_players: List[Player], move_action_p1_medbay: Action, player1: Player, player2: Player) -> None:
-    # Use the latest entry as base
-    base_entry = base_history_entry[-1]
-    
-    # P2 waits in cafeteria
-    p2_wait_entry = base_entry.copy(
-        action_taken=Action(type=ActionType.WAIT, player_name=player2.name),
-        location=Location.CAFETERIA
+    # Second kill - Impostor kills OtherPlayer at MEDBAY
+    kill_other_action = Action(
+        type=ActionType.KILL, 
+        player_name=impostor_player.name, 
+        target_player_name=other_player.name
     )
-    
-    # P1 moves to medbay
-    p1_move_entry = base_entry.copy(
-        action_taken=move_action_p1_medbay,
+    kill_other_entry = base_entry.copy(
+        action_taken=kill_other_action,
         location=Location.MEDBAY
     )
     
-    # P3 waits in cafeteria
-    p3_wait_entry = base_entry.copy(
-        action_taken=Action(type=ActionType.WAIT, player_name="P3"),
-        location=Location.CAFETERIA
-    )
-    
-    history = base_history_entry + [p2_wait_entry, p1_move_entry, p3_wait_entry]
-    
-    in_cafeteria = get_players_in_room(history, all_players, Location.CAFETERIA)
-    in_medbay = get_players_in_room(history, all_players, Location.MEDBAY)
+    history = base_history_entry + [discuss_entry, kill_crewmate_entry, kill_other_entry]
+    dead = get_dead_players(history)
+    assert dead == {
+        crewmate_player.name: Location.WEAPONS.value,
+        other_player.name: Location.MEDBAY.value
+    }
 
-    assert set(p.name for p in in_cafeteria) == {"P2", "P3"} # Compare names
-    assert set(p.name for p in in_medbay) == {"P1"} # Compare names
+# --- Tests for get_players_in_room ---
 
-def test_get_players_in_room_none(base_history_entry: List[History], all_players: List[Player], alive_players: List[Player]) -> None:
-    # Everyone starts in CAFETERIA, check WEAPONS
-    in_weapons = get_players_in_room(base_history_entry, all_players, Location.WEAPONS)
-    assert in_weapons == []
+def test_get_players_in_room_initial_location(base_history_entry: List[History], generic_test_players: List[Player], 
+                                             cafeteria_location: Location) -> None:
+    """Test get_players_in_room with initial location."""
+    # In base_history_entry, all players start in CAFETERIA
+    players_in_room = get_players_in_room(base_history_entry, generic_test_players, cafeteria_location)
+    assert set(p.name for p in players_in_room) == set(p.name for p in generic_test_players)
 
-def test_get_players_in_room_ignores_dead(base_history_entry: List[History], kill_action_p2: Action, all_players: List[Player], alive_players: List[Player]) -> None:
+def test_get_players_in_room_after_move(base_history_entry: List[History], generic_test_players: List[Player], 
+                                       weapons_location: Location, crewmate_player: Player) -> None:
+    """Test get_players_in_room after a player has moved to a different location."""
     # Use the latest entry as base
     base_entry = base_history_entry[-1]
     
-    # P3 kills P2 in CAFETERIA
-    kill_entry = base_entry.copy(
-        action_taken=kill_action_p2,
-        location=Location.CAFETERIA
+    # Crewmate moves to WEAPONS
+    move_action = Action(
+        type=ActionType.MOVE, 
+        player_name=crewmate_player.name, 
+        target_location=weapons_location
+    )
+    move_entry = base_entry.copy(
+        action_taken=move_action,
+        location=weapons_location
     )
     
-    history = base_history_entry + [kill_entry]
+    history = base_history_entry + [move_entry]
     
-    # P2 is dead, should not be included even though their last action was in CAFETERIA
-    in_cafeteria = get_players_in_room(history, all_players, Location.CAFETERIA)
-    # Expected: P1 and P3 in CAFETERIA
-    assert set(p.name for p in in_cafeteria) == {"P1", "P3"} # Compare names
+    # Check players in WEAPONS
+    players_in_weapons = get_players_in_room(history, generic_test_players, weapons_location)
+    assert len(players_in_weapons) == 1
+    assert players_in_weapons[0].name == crewmate_player.name
+    
+    # Check players in CAFETERIA (original location)
+    players_in_cafeteria = get_players_in_room(history, generic_test_players, Location.CAFETERIA)
+    assert len(players_in_cafeteria) == len(generic_test_players) - 1
+    assert crewmate_player.name not in [p.name for p in players_in_cafeteria]
 
-def test_get_players_in_room_empty(base_history_entry, all_players):
-    history = base_history_entry
-    in_cafeteria = get_players_in_room(history, all_players, Location.CAFETERIA)
-    assert set(p.name for p in in_cafeteria) == {"P1", "P2", "P3"} # Compare names
+def test_get_players_in_room_multiple_moves(base_history_entry: List[History], generic_test_players: List[Player],
+                                           weapons_location: Location, medbay_location: Location,
+                                           crewmate_player: Player, other_player: Player) -> None:
+    """Test get_players_in_room after multiple players have moved to different locations."""
+    # Use the latest entry as base
+    base_entry = base_history_entry[-1]
+    
+    # Crewmate moves to WEAPONS
+    move_crewmate_action = Action(
+        type=ActionType.MOVE, 
+        player_name=crewmate_player.name, 
+        target_location=weapons_location
+    )
+    move_crewmate_entry = base_entry.copy(
+        action_taken=move_crewmate_action,
+        location=weapons_location
+    )
+    
+    # OtherPlayer moves to MEDBAY
+    move_other_action = Action(
+        type=ActionType.MOVE, 
+        player_name=other_player.name, 
+        target_location=medbay_location
+    )
+    move_other_entry = base_entry.copy(
+        action_taken=move_other_action,
+        location=medbay_location
+    )
+    
+    history = base_history_entry + [move_crewmate_entry, move_other_entry]
+    
+    # Check players in WEAPONS
+    players_in_weapons = get_players_in_room(history, generic_test_players, weapons_location)
+    assert len(players_in_weapons) == 1
+    assert players_in_weapons[0].name == crewmate_player.name
+    
+    # Check players in MEDBAY
+    players_in_medbay = get_players_in_room(history, generic_test_players, medbay_location)
+    assert len(players_in_medbay) == 1
+    assert players_in_medbay[0].name == other_player.name
+    
+    # Check players in CAFETERIA (original location)
+    players_in_cafeteria = get_players_in_room(history, generic_test_players, Location.CAFETERIA)
+    assert len(players_in_cafeteria) == len(generic_test_players) - 2
+    cafeteria_names = [p.name for p in players_in_cafeteria]
+    assert crewmate_player.name not in cafeteria_names
+    assert other_player.name not in cafeteria_names

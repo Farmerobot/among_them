@@ -76,7 +76,7 @@ def medbay_location() -> Location:
 @pytest.fixture
 def task_in_cafeteria() -> Task:
     """Create a task in the cafeteria."""
-    return Task(name="Fix Wires", location=Location.CAFETERIA)
+    return Task(name="Fix something", location=Location.CAFETERIA)
 
 
 @pytest.fixture
@@ -150,49 +150,3 @@ def generic_initial_history(all_generic_test_players: List[Player]) -> List[Hist
     """Create the initial history entry using generic test players."""
     return initialize_history(all_generic_test_players)
 
-
-@pytest.fixture
-def generic_test_history_entry(generic_initial_history: List[History], cafeteria_location: Location, 
-                         crewmate_player: Player, task_in_cafeteria: Task, 
-                         task_in_navigation: Task, generic_test_players: List[Player]) -> List[History]:
-    """
-    Base history for generic testing, starting with the initialized generic history
-    and adding a move action to the cafeteria.
-    """
-    # Start with the initialized history
-    history = generic_initial_history.copy()
-    
-    # Update tasks for the crewmate player
-    first_entry = history[0]
-    tasks_left = first_entry.tasks_left_to_do.copy()
-    tasks_left[crewmate_player.name] = [task_in_cafeteria, task_in_navigation]
-    
-    # Add a move action to the location
-    move_action = Action(
-        type=ActionType.MOVE,
-        player_name=crewmate_player.name,
-        target_location=cafeteria_location,
-        spectator=f"{crewmate_player.name} moved to {cafeteria_location.value}"
-    )
-    
-    # Create a new history entry after the move
-    spectators = [p.name for p in generic_test_players]
-    
-    move_history = History(
-        player_names_to_play_next=[p for p in first_entry.player_names_to_play_next if p != crewmate_player.name],
-        phase=GamePhase.TASK,
-        actions_until_phase_ends=10,
-        location=cafeteria_location,
-        impostor_cooldown=IMPOSTOR_COOLDOWN,
-        actions_agent_could_take=[],
-        spectators_who_saw=spectators,
-        llm_cot="",
-        llm_response="",
-        token_usage={},
-        action_taken=move_action,
-        tasks_left_to_do=tasks_left,
-        votes_before_this_discussion_message={}
-    )
-    
-    history.append(move_history)
-    return history
