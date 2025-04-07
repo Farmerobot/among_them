@@ -28,7 +28,7 @@ class History:
         token_usage: Dict[str, int],
         action_taken: Action,
         tasks_left_to_do: Dict[str, List[Task]],
-        votes_before_this_discussion_message: Dict[str, str],
+        votes_before_this_discussion_message: Dict[str, dict],
     ):
         self.player_names_to_play_next: List[str] = player_names_to_play_next
         self.phase: GamePhase = phase
@@ -45,7 +45,7 @@ class History:
         self.spectators_who_saw: List[str] = spectators_who_saw
 
         self.tasks_left_to_do: Dict[str, List[Task]] = tasks_left_to_do
-        self.votes_before_this_discussion_message: Dict[str, str] = votes_before_this_discussion_message
+        self.votes_before_this_discussion_message: Dict[str, dict] = votes_before_this_discussion_message
 
     def __repr__(self) -> str:
         # Format the token usage for better readability
@@ -96,7 +96,6 @@ def create_vote_history_entry(
     ejected_player: str,
     action_result: str,
     action_type: ActionType,
-    votes: Dict[str, str]
 ) -> History:
     """
     Create a new history entry for a vote action. 
@@ -120,7 +119,7 @@ def create_vote_history_entry(
         token_usage = {},
         action_taken = Action(type=action_type, player_name="System", target_player_name=ejected_player, spectator=action_result),
         tasks_left_to_do = history[-1].tasks_left_to_do,
-        votes_before_this_discussion_message = votes
+        votes_before_this_discussion_message = {}
     )
 
 def get_action_history_str(history: List[History], player: Player, players_in_room: List[Player], alive_players: List[Player], location: Location, phase: GamePhase) -> str:
