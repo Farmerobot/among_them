@@ -49,7 +49,7 @@ def get_last_player_action(history: List[History], player: Player) -> History:
     return history[0]
 
 
-def get_dead_players(history: List[History], players: List[Player]) -> Dict[str, str]:
+def get_dead_players(history: List[History]) -> Dict[str, str]:
     """Returns the dictionary of dead players and their location that can be reported (without ghosts)"""
     search_from = get_last_discussion_action_idx(history)
     kill_history = [history_item for history_item in history[search_from:] if history_item.action_taken.type == ActionType.KILL]

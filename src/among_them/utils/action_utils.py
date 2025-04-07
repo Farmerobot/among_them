@@ -27,7 +27,7 @@ def get_task_phase_actions(
     actions.append(Action(type=ActionType.WAIT, player_name=player.name))
 
     # action for REPORT
-    dead_players_in_room_names = [name for name, dead_location in get_dead_players(history, players).items() if dead_location == location.value]
+    dead_players_in_room_names = [name for name, dead_location in get_dead_players(history).items() if dead_location == location.value]
     for dead_name in dead_players_in_room_names:
         actions.append(
             Action(
