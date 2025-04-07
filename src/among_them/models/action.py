@@ -61,3 +61,8 @@ class Action:
             self.text = f"speak"
         else:
             raise ValueError(f"Unknown action type: {self.type}")
+
+    def copy(self, **kwargs):
+        data = self.__dict__.copy()
+        data.update(kwargs)
+        return Action(**data)

@@ -22,7 +22,8 @@ def get_next_random_player(
         The list of players who will play in next round.
     """
     if not history:
-        return random.choice(alive_players), [p.name for p in alive_players]
+        next_player = random.choice(alive_players)
+        return next_player, [p.name for p in alive_players if p != next_player]
     players_to_play_next = history[-1].player_names_to_play_next
 
     # Remove any player who is not alive from players_to_play_next

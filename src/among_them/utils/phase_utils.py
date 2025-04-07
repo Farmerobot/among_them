@@ -49,7 +49,6 @@ def handle_phase_change(history: List[History], alive_players: List[Player], pre
             ejected_player=ejected_player,
             action_result=f"{ejected_player} was voted out.",
             action_type=action_type,
-            votes=votes
         ))
         return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
     elif previous_phase == GamePhase.MAIN_MENU:
@@ -66,12 +65,15 @@ def count_votes(history: List[History]) -> tuple[dict[str, int], dict[str, str]]
             vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
             votes[history[item].action_taken.player_name] = voted_for
         else:
-            break
+            break 
     return vote_counts, votes
 
 
 def determine_ejection_result(vote_counts: dict[str, int]) -> tuple[str, ActionType]:
     """Determine the ejected player and action type based on vote counts."""
+    if not vote_counts: # Added check for empty votes
+        raise ValueError("No votes casted")
+
     most_voted = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
 
     is_tie = len(most_voted) >= 2 and most_voted[0][1] == most_voted[1][1]

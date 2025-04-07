@@ -67,6 +67,11 @@ class History:
         # Build the full representation with clear sections
         return f"""{self.phase}({self.actions_until_phase_ends}) [\033[33m{self.action_taken.spectator}\033[0m{"- "+self.action_taken.target_player_name if self.action_taken.type == ActionType.KILL and self.action_taken.target_player_name else ""}({self.impostor_cooldown}), {self.location}] next: {players_next}||{spectators} saw it"""
 
+    def copy(self, **kwargs): # Added copy method
+        data = self.__dict__.copy()
+        data.update(kwargs)
+        return History(**data)
+
 
 def initialize_history(players: List[Player]) -> List[History]:
     tasks = {}
