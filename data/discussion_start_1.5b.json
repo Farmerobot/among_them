@@ -1764,10 +1764,22 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "Charlie"
+        "Bob": {
+          "voted_player": "Charlie",
+          "chain_of_thought": "placeholder"
+        },
+        "Charlie": {
+          "voted_player": "Bob",
+          "chain_of_thought": "placeholder"
+        },
+        "Alice": {
+          "voted_player": "Charlie",
+          "chain_of_thought": "placeholder"
+        },
+        "David": {
+          "voted_player": "Charlie",
+          "chain_of_thought": "placeholder"
+        }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"

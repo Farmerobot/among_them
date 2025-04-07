@@ -471,17 +471,21 @@ try:
         discussion_entries = []
         
         for i, entry in enumerate(history):
-            if entry.phase == GamePhase.DISCUSS and hasattr(entry, 'votes_before_this_discussion_message'):
+            if entry.phase == GamePhase.DISCUSS and hasattr(entry, 'votes_before_this_discussion_message') and entry.votes_before_this_discussion_message is not None:
                 discussion_entries.append(entry)
                 
                 # Store vote information
                 if entry.votes_before_this_discussion_message:
                     turn_num = i + 1
-                    for voter, votee in entry.votes_before_this_discussion_message.items():
+                    for voter, vote_info in entry.votes_before_this_discussion_message.items():
+                        votee = vote_info["voted_player"]
+                        cot = vote_info.get("chain_of_thought", "")
+                        
                         voting_data.append({
                             "Turn": turn_num,
                             "Voter": voter,
                             "Votee": votee,
+                            "CoT": cot,
                             "Speaker": entry.action_taken.player_name,
                             "Message": entry.action_taken.spectator if entry.action_taken.spectator else "No message"
                         })
@@ -491,6 +495,10 @@ try:
         else:
             # Create a dataframe from voting data
             df_votes = pd.DataFrame(voting_data)
+            
+            # Convert GamePhase objects to strings to avoid Arrow serialization issues
+            if "Phase" in df_votes.columns:
+                df_votes["Phase"] = df_votes["Phase"].astype(str)
             
             # Group voting data by turn
             vote_turns = sorted(df_votes["Turn"].unique())
@@ -641,7 +649,7 @@ try:
             )
             
             fig, ax = plt.subplots(figsize=(10, 8))
-            cmap = plt.cm.YlOrRd
+            cmap = plt.colormaps.get_cmap('YlOrRd')
             im = ax.imshow(vote_matrix, cmap=cmap)
             
             # Set up axes
@@ -695,6 +703,32 @@ try:
             
             st.pyplot(fig)
             
+            # Display chain of thought for each vote
+            st.subheader("Voting Reasoning (Chain of Thought)")
+            
+            # Group votes by turn for easier navigation
+            vote_turns_for_cot = sorted(df_votes["Turn"].unique())
+            selected_turn_for_cot = st.selectbox(
+                "Select Turn to View Reasoning", 
+                vote_turns_for_cot,
+                key="turn_for_cot"
+            )
+            
+            # Get votes for the selected turn
+            turn_votes = df_votes[df_votes["Turn"] == selected_turn_for_cot]
+            
+            if not turn_votes.empty:
+                for _, vote in turn_votes.iterrows():
+                    with st.expander(f"{vote['Voter']} voted for {vote['Votee']}"):
+                        # Format the chain of thought text
+                        cot_text = vote['CoT']
+                        # Remove <think> and </think> tags if present
+                        cot_text = cot_text.replace("<think>", "").replace("</think>", "")
+                        # Display the formatted text
+                        st.markdown(f"**Chain of Thought:**\n\n{cot_text}")
+            else:
+                st.info("No voting data available for this turn.")
+            
             # Show raw voting data for reference
             with st.expander("View Raw Voting Data"):
                 st.dataframe(df_votes)
@@ -714,10 +748,32 @@ try:
         for attr in dir(selected_entry):
             if not attr.startswith('_') and not callable(getattr(selected_entry, attr)):
                 value = getattr(selected_entry, attr)
-                entry_dict[attr] = str(value)
+                # Special handling for votes_before_this_discussion_message
+                if attr == 'votes_before_this_discussion_message' and value:
+                    # Don't convert to string, we'll display it separately
+                    entry_dict[attr] = "See formatted votes below"
+                else:
+                    entry_dict[attr] = str(value)
         
         # Display as JSON
         st.json(entry_dict)
+        
+        # Display votes in a more readable format if they exist
+        if hasattr(selected_entry, 'votes_before_this_discussion_message') and selected_entry.votes_before_this_discussion_message:
+            st.subheader("Votes Before Discussion")
+            
+            # Create a more readable format for the votes
+            for voter, vote_info in selected_entry.votes_before_this_discussion_message.items():
+                with st.expander(f"{voter} voted for {vote_info.get('voted_player', 'unknown')}"):
+                    if 'chain_of_thought' in vote_info:
+                        # Format the chain of thought text
+                        cot_text = vote_info['chain_of_thought']
+                        # Remove <think> and </think> tags if present
+                        cot_text = cot_text.replace("<think>", "").replace("</think>", "")
+                        # Display the formatted text
+                        st.markdown(f"**Chain of Thought:**\n\n{cot_text}")
+                    else:
+                        st.write("No reasoning provided")
         
         # Display players
         st.subheader("Players")

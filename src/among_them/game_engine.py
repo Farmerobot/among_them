@@ -74,7 +74,7 @@ class GameEngine:
 
         # Force a new vote BEFORE each discussion message.
         # It does not affect the game logic. It is just extra data.
-        votes_before_this_discussion_message: dict[str, str] = {}
+        votes_before_this_discussion_message: dict[str, dict] = {}
         if phase == GamePhase.DISCUSS:
             for player in alive_players:
                 retry_count = 0
@@ -83,9 +83,9 @@ class GameEngine:
                     try:
                         fake_voting_actions_player_can_take = get_vote_actions(alive_players, player)
                         fake_history_str = get_action_history_str(self.history, player, players_in_room=alive_players, alive_players=alive_players, location=Location.CAFETERIA, phase=GamePhase.VOTE)
-                        fake_action_taken_idx, _, _, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
+                        fake_action_taken_idx, _, fake_action_chain_of_thought, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
                         fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
-                        votes_before_this_discussion_message[player.name] = fake_action_taken.target_player_name # type: ignore
+                        votes_before_this_discussion_message[player.name] = {"voted_player": fake_action_taken.target_player_name, "chain_of_thought": fake_action_chain_of_thought}
                         print(f"Discussion phase fake voting: {player.name} voted for {fake_action_taken.target_player_name}")
                         break
                     except Exception as e:
