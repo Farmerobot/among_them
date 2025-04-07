@@ -29,35 +29,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-main = "scripts.main:main"
+main = "among_them.main:main"
 
 [tool.mypy]
 disable_error_code = ["import-untyped"]
-
-[tool.ruff]
-preview = true
-
-[tool.ruff.lint]
-select = [
-    "ANN001",   # Missing type annotation for function argument
-    "DOC",      # Pydoclint
-    "D",        # Pydocstyle
-    "E",        # Pycodestyle
-    "F",        # Pyflakes
-    "I",        # Isort
-    "Q",        # Quotes
-]
-
-ignore = [
-    "D1",       # Missing docstrings
-    "D205",
-]
-
-[tool.ruff.lint.flake8-quotes]
-inline-quotes = "double"
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-[tool.ruff.format]
-quote-style = "double"
