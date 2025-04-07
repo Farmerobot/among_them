@@ -42,7 +42,7 @@ class Action:
             self.result = f"You [{self.player_name}] completed task: {self.target_task.name}"
             self.spectator = f"{self.player_name} completed task: {self.target_task.name}"
         elif self.type == ActionType.REPORT:
-            self.text = f"report dead body of {str(self.target_player_name)}"
+            self.text = f"report dead body of {str(self.target_player_name)} and start a discussion"
             self.result = f"You [{self.player_name}] reported dead body of {str(self.target_player_name)} to other players and started discussion"
             self.spectator = f"{self.player_name} reported dead body of {self.target_player_name} to everyone and started discussion"
         elif self.type == ActionType.KILL:
