@@ -1,6 +1,6 @@
 import json
 import random
-from typing import List, Optional
+from typing import List, Optional, ClassVar
 
 from among_them.consts import STATE_FILE
 from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook
@@ -37,6 +37,10 @@ class GameEngine:
         self.players = players
         self.check_players_set_impostors(impostor_count)
         self.history = initialize_history(self.players)
+
+
+    def __init__(self):
+        pass
 
 
     def perform_step(self) -> tuple[bool, Optional[EndGameReason]]:
