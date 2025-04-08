@@ -1,8 +1,9 @@
+from enum import Enum
 import random
 from typing import Optional
 
 from among_them import consts
-from among_them.models.location import Location
+from among_them.models.location import Location, ACTIVE_LOCATIONS
 
 
 class Task:
@@ -32,11 +33,25 @@ def get_impostor_tasks() -> list[Task]:
 
 
 def get_impostor_pretend_tasks_at_location(location: Location) -> list[Task]:
-    return [[task for task in SHORT_TASKS if task.location == location][0]]
+    # Get tasks for this location that are in active locations
+    tasks_at_location = [task for task in SHORT_TASKS 
+                         if task.location == location and location in ACTIVE_LOCATIONS]
+    
+    # If no tasks available at this location, raise error
+    if not tasks_at_location:
+        raise ValueError(f"No tasks available at {location.value}")
+    
+    # Return a single task from this location
+    return [tasks_at_location[0]]
 
 
 def get_short_tasks() -> list[Task]:
-    return random.sample(SHORT_TASKS, k=consts.NUM_TASKS)
+    # Filter tasks to only include those in active locations
+    active_tasks = [task for task in SHORT_TASKS if task.location in ACTIVE_LOCATIONS]
+    # If we need more tasks than available, raise error
+    if consts.NUM_TASKS > len(active_tasks):
+        raise ValueError("Not enough tasks available for the selected map size")
+    return random.sample(active_tasks, k=consts.NUM_TASKS)
 
 
 SHORT_TASKS = [
@@ -73,5 +88,6 @@ SHORT_TASKS = [
     Task(name="Check catalyzer in lower engine", location=Location.LOWER_ENGINE),
     Task(name="Replace compression coil in lower engine", location=Location.LOWER_ENGINE),
     Task(name="Process data in communications", location=Location.COMMUNICATIONS),
-    Task(name="Fix wiring in reactor", location=Location.REACTOR)
+    Task(name="Fix wiring in reactor", location=Location.REACTOR),
+    Task(name="Check reactor", location=Location.REACTOR),
 ]

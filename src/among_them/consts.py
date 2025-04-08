@@ -4,6 +4,9 @@ NUM_ACTIONS_WITHOUT_REPORT = 7
 IMPOSTOR_COOLDOWN = 0
 STATE_FILE = "data/game_state.json"
 
+# Map size: 0 = small, 1 = medium, 2 = large
+MAP_SIZE = 1
+
 TOKEN_COSTS = {
     # OPENAI
     "openai/gpt-4o": {  # 128k context

@@ -1,4 +1,5 @@
 from enum import Enum
+from ..consts import MAP_SIZE
 
 
 class Location(Enum):
@@ -21,7 +22,99 @@ class Location(Enum):
         return self.value
 
 
-DOORS: dict[Location, list] = {
+# Small map - 4 rooms
+SMALL_MAP_LOCATIONS = [
+    Location.CAFETERIA,
+    Location.STORAGE,
+    Location.ELECTRICAL,
+    Location.MEDBAY,
+]
+
+# Medium map - 7 rooms
+MEDIUM_MAP_LOCATIONS = [
+    Location.CAFETERIA,
+    Location.STORAGE,
+    Location.ELECTRICAL,
+    Location.MEDBAY,
+    Location.SECURITY,
+    Location.ADMIN,
+    Location.WEAPONS,
+]
+
+# Large map - all 14 rooms (original)
+LARGE_MAP_LOCATIONS = [
+    Location.CAFETERIA,
+    Location.REACTOR,
+    Location.UPPER_ENGINE,
+    Location.LOWER_ENGINE,
+    Location.SECURITY,
+    Location.MEDBAY,
+    Location.ELECTRICAL,
+    Location.STORAGE,
+    Location.ADMIN,
+    Location.COMMUNICATIONS,
+    Location.O2,
+    Location.WEAPONS,
+    Location.SHIELDS,
+    Location.NAVIGATION,
+]
+
+# Small map - 4 rooms
+DOORS_SMALL: dict[Location, list] = {
+    Location.CAFETERIA: [
+        Location.STORAGE,
+        Location.MEDBAY,
+    ],
+    Location.STORAGE: [
+        Location.CAFETERIA,
+        Location.ELECTRICAL,
+    ],
+    Location.ELECTRICAL: [
+        Location.STORAGE,
+        Location.MEDBAY,
+    ],
+    Location.MEDBAY: [
+        Location.CAFETERIA,
+        Location.ELECTRICAL,
+    ],
+}
+
+# Medium map - 7 rooms
+DOORS_MEDIUM: dict[Location, list] = {
+    Location.CAFETERIA: [
+        Location.MEDBAY,
+        Location.ADMIN,
+        Location.WEAPONS,
+    ],
+    Location.STORAGE: [
+        Location.ELECTRICAL,
+        Location.ADMIN,
+    ],
+    Location.ELECTRICAL: [
+        Location.STORAGE,
+        Location.SECURITY,
+    ],
+    Location.MEDBAY: [
+        Location.CAFETERIA,
+        Location.SECURITY,
+        Location.ELECTRICAL,
+        Location.STORAGE,
+    ],
+    Location.SECURITY: [
+        Location.ELECTRICAL,
+        Location.MEDBAY,
+    ],
+    Location.ADMIN: [
+        Location.CAFETERIA,
+        Location.STORAGE,
+    ],
+    Location.WEAPONS: [
+        Location.CAFETERIA,
+    ],
+}
+
+# Large map - full 14 rooms (original implementation)
+DOORS_LARGE: dict[Location, list] = {
     Location.CAFETERIA: [
         Location.MEDBAY,
         Location.ADMIN,
@@ -89,7 +182,27 @@ DOORS: dict[Location, list] = {
     ],
 }
 
-ROOM_COORDINATES = {
+# Coordinates for small map - 4 rooms
+ROOM_COORDINATES_SMALL = {
+    Location.CAFETERIA: (1.0, 1.0),
+    Location.STORAGE: (2.0, 1.0),
+    Location.ELECTRICAL: (2.0, 2.0),
+    Location.MEDBAY: (1.0, 2.0),
+}
+
+# Coordinates for medium map - 7 rooms
+ROOM_COORDINATES_MEDIUM = {
+    Location.CAFETERIA: (1.0, 2.0),
+    Location.STORAGE: (2.0, 1.0),
+    Location.ELECTRICAL: (3.0, 1.0),
+    Location.MEDBAY: (2.0, 2.0),
+    Location.SECURITY: (3.0, 2.0),
+    Location.ADMIN: (1.5, 1.0),
+    Location.WEAPONS: (0.5, 1.5),
+}
+
+# Original coordinates for large map - 14 rooms
+ROOM_COORDINATES_LARGE = {
     Location.CAFETERIA: (2.2, 1.8),
     Location.REACTOR: (0.4, 1.2),
     Location.UPPER_ENGINE: (0.75, 1.75),
@@ -105,3 +218,17 @@ ROOM_COORDINATES = {
     Location.SHIELDS: (3.1, 0.6),
     Location.NAVIGATION: (3.8, 1.3),
 }
+
+# Select map based on MAP_SIZE from consts.py
+if MAP_SIZE == 0:
+    DOORS = DOORS_SMALL
+    ROOM_COORDINATES = ROOM_COORDINATES_SMALL
+    ACTIVE_LOCATIONS = SMALL_MAP_LOCATIONS
+elif MAP_SIZE == 1:
+    DOORS = DOORS_MEDIUM
+    ROOM_COORDINATES = ROOM_COORDINATES_MEDIUM
+    ACTIVE_LOCATIONS = MEDIUM_MAP_LOCATIONS
+else:  # MAP_SIZE == 2 or any other value defaults to large
+    DOORS = DOORS_LARGE
+    ROOM_COORDINATES = ROOM_COORDINATES_LARGE
+    ACTIVE_LOCATIONS = LARGE_MAP_LOCATIONS
