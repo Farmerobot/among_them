@@ -3,12 +3,12 @@ from typing import List, Optional
 from unittest.mock import patch, MagicMock
 
 from among_them.models.action import Action, ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.history import History, initialize_history
 from among_them.models.location import Location
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
 from among_them.models.tasks import Task
-from among_them.consts import IMPOSTOR_COOLDOWN
 
 
 def create_base_history(
@@ -17,7 +17,8 @@ def create_base_history(
     location: Location = Location.CAFETERIA,
     tasks: Optional[List[Task]] = None,
     phase: GamePhase = GamePhase.TASK,
-    actions_until_phase_ends: int = 10
+    actions_until_phase_ends: int = 10,
+    game_config: GameConfig = GameConfig()
 ) -> List[History]:
     """
     Create a consistent base history for tests.
@@ -38,7 +39,7 @@ def create_base_history(
     cafeteria_task = Task(name="Fix something", location=location)
     
     # Start with initialized history
-    initial_hist = initialize_history(all_players)
+    initial_hist = initialize_history(all_players, game_config)
     first_entry = initial_hist[0]
     
     # Create a basic action for the acting player (usually WAIT)
@@ -68,7 +69,7 @@ def create_base_history(
         phase=phase,
         actions_until_phase_ends=actions_until_phase_ends,
         location=location,
-        impostor_cooldown=IMPOSTOR_COOLDOWN,
+        impostor_cooldown=0,
         actions_agent_could_take=[],
         spectators_who_saw=spectators,
         llm_cot="",

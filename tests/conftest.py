@@ -2,7 +2,7 @@
 import pytest
 from typing import List
 
-from among_them.models.phase import GamePhase
+from among_them.models.game_config import GameConfig
 from among_them.models.player import Player
 from among_them.models.location import Location
 from among_them.models.player_role import PlayerRole
@@ -10,7 +10,6 @@ from among_them.models.action import Action
 from among_them.models.action_type import ActionType
 from among_them.models.history import History, initialize_history
 from among_them.models.tasks import Task
-from among_them.consts import IMPOSTOR_COOLDOWN
 from tests.utils import create_base_history
 
 
@@ -149,4 +148,16 @@ def base_history_entry(all_generic_test_players: List[Player], crewmate_player: 
 def generic_initial_history(all_generic_test_players: List[Player]) -> List[History]:
     """Create the initial history entry using generic test players."""
     return initialize_history(all_generic_test_players)
+
+@pytest.fixture
+def game_config() -> GameConfig:
+    return GameConfig(
+        num_tasks=4,
+        num_players=5,
+        num_impostors=1,
+        map_size=2,
+        num_task_phase_actions_per_player=7,
+        num_discuss_phase_actions_per_player=2,
+        impostor_cooldown=0
+    )
 

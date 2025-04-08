@@ -2,6 +2,7 @@ import pytest
 from typing import Dict, List
 
 from among_them.models.action import Action, ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.phase import GamePhase
 from among_them.models.history import History, initialize_history
 from among_them.models.location import Location
@@ -9,13 +10,13 @@ from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 from among_them.models.tasks import Task
 from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
-from among_them.consts import IMPOSTOR_COOLDOWN
 
 
 # --- Tests for get_task_phase_actions ---
 
 def test_get_task_phase_actions_base(crewmate_player: Player, cafeteria_location: Location,
-                                     base_history_entry: List[History], generic_test_players: List[Player]):
+                                     base_history_entry: List[History], generic_test_players: List[Player],
+                                     game_config: GameConfig):
     """Test basic actions available to a crewmate."""
     acting_player = crewmate_player
     current_location = cafeteria_location  # For readability in the test
@@ -23,7 +24,7 @@ def test_get_task_phase_actions_base(crewmate_player: Player, cafeteria_location
     # Ensure the base history reflects the player being in the location
     history = base_history_entry  # Assuming base_history_entry sets the initial location correctly
 
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players)
+    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players, game_config)
     action_types = {action.type for action in actions}
 
     assert ActionType.WAIT in action_types
@@ -35,7 +36,8 @@ def test_get_task_phase_actions_base(crewmate_player: Player, cafeteria_location
 
 def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_location: Location,
                                        base_history_entry: List[History], generic_test_players: List[Player],
-                                       dead_player: Player, impostor_player: Player, kill_action: Action):
+                                       dead_player: Player, impostor_player: Player, kill_action: Action,
+                                       game_config: GameConfig):
     """Test that REPORT action is available when a dead body is present."""
     acting_player = crewmate_player
     target_dead_player = dead_player  # For readability
@@ -67,7 +69,7 @@ def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_locati
         location=current_location,
         action_taken=specific_kill_action,
         player_names_to_play_next=[p for p in impostor_move_hist.player_names_to_play_next if p != impostor_player.name],
-        impostor_cooldown=IMPOSTOR_COOLDOWN  # Reset cooldown after kill
+        impostor_cooldown=1  # Reset cooldown after kill
     )
     history.append(kill_history)
 
@@ -84,7 +86,7 @@ def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_locati
     history.append(wait_history)
 
     # Call the function with the constructed history
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, players_list_with_dead)
+    actions = get_task_phase_actions(acting_player, current_location, 0, history, players_list_with_dead, game_config)
     report_actions = [a for a in actions if a.type == ActionType.REPORT]
     assert len(report_actions) == 1, "REPORT action should be available"
     assert report_actions[0].target_player_name == target_dead_player.name  # Check it reports the correct player
@@ -92,7 +94,8 @@ def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_locati
 
 def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Player, cafeteria_location: Location,
                                                            base_history_entry: List[History], generic_test_players: List[Player],
-                                                           dead_player: Player, weapons_location: Location):
+                                                           dead_player: Player, weapons_location: Location,
+                                                           game_config: GameConfig):
     """Test REPORT is not available if the body is in a different location."""
     acting_player = crewmate_player
     current_location = cafeteria_location
@@ -140,7 +143,7 @@ def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Pla
     hist_entry_dead_at_weapons = History(
         player_names_to_play_next=[], phase=GamePhase.TASK, actions_until_phase_ends=10,
         location=weapons_location,  # Location of kill
-        impostor_cooldown=IMPOSTOR_COOLDOWN,
+        impostor_cooldown=1,
         actions_agent_could_take=[], spectators_who_saw=[],
         llm_cot="", llm_response="", token_usage={},
         action_taken=kill_at_weapons, tasks_left_to_do={},
@@ -148,20 +151,20 @@ def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Pla
     )
     history_with_body_elsewhere = history + [hist_entry_dead_at_weapons, move_history]  # Add the kill event
 
-    actions = get_task_phase_actions(acting_player, current_location, 0, history_with_body_elsewhere, players_list_with_dead)
+    actions = get_task_phase_actions(acting_player, current_location, 0, history_with_body_elsewhere, players_list_with_dead, game_config)
     report_actions = [a for a in actions if a.type == ActionType.REPORT]
     assert len(report_actions) == 0, "REPORT action should NOT be available"
 
 
 def test_get_task_phase_actions_task(crewmate_player: Player, cafeteria_location: Location,
                                      base_history_entry: List[History], generic_test_players: List[Player],
-                                     task_in_cafeteria: Task):
+                                     task_in_cafeteria: Task, game_config: GameConfig):
     """Test DO_TASK action is available when a task is at the current location."""
     acting_player = crewmate_player
     current_location = cafeteria_location
     task_at_location = task_in_cafeteria  # For readability
 
-    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, generic_test_players)
+    actions = get_task_phase_actions(acting_player, current_location, 0, base_history_entry, generic_test_players, game_config)
     task_actions = [a for a in actions if a.type == ActionType.TASK]
 
     assert len(task_actions) == 1
@@ -169,7 +172,8 @@ def test_get_task_phase_actions_task(crewmate_player: Player, cafeteria_location
 
 
 def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, weapons_location: Location,
-                                                     base_history_entry: List[History], generic_test_players: List[Player]):
+                                                     base_history_entry: List[History], generic_test_players: List[Player],
+                                                     game_config: GameConfig):
     """Test DO_TASK is not available if the task is elsewhere."""
     acting_player = crewmate_player
     other_location = weapons_location  # For readability
@@ -191,14 +195,14 @@ def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, we
     )
     history.append(move_history)
 
-    actions = get_task_phase_actions(acting_player, other_location, 0, history, generic_test_players)
+    actions = get_task_phase_actions(acting_player, other_location, 0, history, generic_test_players, game_config)
     task_actions = [a for a in actions if a.type == ActionType.TASK]
     assert len(task_actions) == 0
 
 
 def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player, crewmate_player: Player,
                                                       cafeteria_location: Location, base_history_entry: List[History],
-                                                      generic_test_players: List[Player]):
+                                                      generic_test_players: List[Player], game_config: GameConfig):
     """Test KILL action is available for impostor when cooldown is 0 and target is present."""
     acting_player = impostor_player
     target_player = crewmate_player
@@ -243,7 +247,7 @@ def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player,
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players)
+    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players, game_config)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
 
     assert len(kill_actions) >= 1  # Should be at least one kill action
@@ -254,7 +258,7 @@ def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player,
 
 def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, crewmate_player: Player,
                                                       cafeteria_location: Location, base_history_entry: List[History],
-                                                      generic_test_players: List[Player]):
+                                                      generic_test_players: List[Player], game_config: GameConfig):
     """Test KILL action is NOT available for impostor when cooldown > 0."""
     acting_player = impostor_player
     current_location = cafeteria_location
@@ -299,7 +303,7 @@ def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, 
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, current_location, 5, history, generic_test_players)
+    actions = get_task_phase_actions(acting_player, current_location, 5, history, generic_test_players, game_config)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
     
     assert len(kill_actions) == 0, "KILL action should not be available when cooldown > 0"
@@ -307,7 +311,8 @@ def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, 
 
 def test_get_task_phase_actions_impostor_kill_target_elsewhere(impostor_player: Player, crewmate_player: Player,
                                                                cafeteria_location: Location, weapons_location: Location,
-                                                               base_history_entry: List[History], generic_test_players: List[Player]):
+                                                               base_history_entry: List[History], generic_test_players: List[Player],
+                                                               game_config: GameConfig):
     """Test KILL action is NOT available for impostor if target is elsewhere."""
     acting_player = impostor_player
     target_player = crewmate_player
@@ -354,29 +359,31 @@ def test_get_task_phase_actions_impostor_kill_target_elsewhere(impostor_player: 
     history.append(impostor_move_history)
 
     # Check available actions
-    actions = get_task_phase_actions(acting_player, impostor_location, 0, history, generic_test_players)
+    actions = get_task_phase_actions(acting_player, impostor_location, 0, history, generic_test_players, game_config)
     kill_actions = [a for a in actions if a.type == ActionType.KILL]
         
     assert len(kill_actions) == 0, "KILL action should not be available when no target is present"
 
 
 def test_get_task_phase_actions_impostor_pretend(impostor_player: Player, weapons_location: Location, 
-                                                base_history_entry: List[History], generic_test_players: List[Player]):
+                                                base_history_entry: List[History], generic_test_players: List[Player],
+                                                game_config: GameConfig):
     """Test PRETEND_TASK action is available for impostor."""
     acting_player = impostor_player
     
-    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players)
+    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players, game_config)
     pretend_actions = [a for a in actions if a.type == ActionType.PRETEND]
     
     assert len(pretend_actions) >= 1, "PRETEND_TASK action should be available for impostor"
 
 
 def test_get_task_phase_actions_crewmate_no_impostor_actions(crewmate_player: Player, weapons_location: Location, 
-                                                           base_history_entry: List[History], generic_test_players: List[Player]):
+                                                           base_history_entry: List[History], generic_test_players: List[Player],
+                                                           game_config: GameConfig):
     """Test that crewmates cannot KILL or PRETEND_TASK."""
     acting_player = crewmate_player
 
-    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players)
+    actions = get_task_phase_actions(acting_player, weapons_location, 0, base_history_entry, generic_test_players, game_config)
     impostor_action_types = [ActionType.KILL, ActionType.PRETEND]
 
     for action in actions:
