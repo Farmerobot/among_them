@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import tiktoken
 from ollama import chat
@@ -83,6 +83,40 @@ class Player:
                 except ValueError:
                     print("Invalid input. Please enter a number.")
     
+    def _handle_manual_action(self, actions: List[Action]) -> Tuple[int, str, str, Dict[str, int]]:
+        """Handles manual action selection when AI generation is interrupted."""
+        print("\nAI action generation interrupted. Please choose an action manually:")
+        for i, action in enumerate(actions):
+            print(f"{i + 1}. {action.text}")
+
+        if actions[0].type == ActionType.SPEAK:
+            return 0, input("Your message to others:"), "", {}
+        while True:
+            try:
+                choice = input(f"Enter the number of your choice (1-{len(actions)}): ")
+                choice_idx = int(choice) - 1
+                if 0 <= choice_idx < len(actions):
+                    selected_action = actions[choice_idx]
+                    print(f"You chose: {selected_action.text}")
+                    return (
+                        choice_idx,
+                        selected_action.text,
+                        "",
+                        {},
+                    )
+                else:
+                    print("Invalid choice. Please enter a number within the range.")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+            except EOFError: # Handle Ctrl+D or similar EOF signals gracefully
+                print("\nInput stream closed. Defaulting to first action.")
+                return (
+                    0,
+                    actions[0].text,
+                    "",
+                    {},
+                )
+
     def _handle_ai_action(
         self, actions: List[Action], history_str: str
     ) -> Tuple[int, str, str, Dict[str, int]]:
@@ -102,24 +136,31 @@ class Player:
         print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
 
         # Invoke LLM
-        stream = chat(
-            model=self.llm_model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            stream=True,
-        )
-
-        # Process the response
-        cot = None
         response_text = ""
-        for chunk in stream:
-            print(
-                "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
+        cot = None
+        try:
+            stream = chat(
+                model=self.llm_model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                stream=True,
             )
-            response_text += chunk["message"]["content"]
-        print("")
+
+            # Process the response
+            for chunk in stream:
+                print(
+                    "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
+                )
+                response_text += chunk["message"]["content"]
+            print("")
+
+        except KeyboardInterrupt:
+            print("\n\033[93mKeyboardInterrupt detected! Switching to manual action selection.\033[0m")
+            # If interrupted, fall back to manual selection
+            selected_action = self._handle_manual_action(actions)
+            return selected_action
 
         cot_match = re.search(r"<think>.*?</think>", response_text, re.DOTALL)
         if cot_match:
