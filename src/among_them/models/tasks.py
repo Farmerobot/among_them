@@ -73,4 +73,5 @@ SHORT_TASKS = [
     Task(name="Check catalyzer in lower engine", location=Location.LOWER_ENGINE),
     Task(name="Replace compression coil in lower engine", location=Location.LOWER_ENGINE),
     Task(name="Process data in communications", location=Location.COMMUNICATIONS),
+    Task(name="Fix wiring in reactor", location=Location.REACTOR)
 ]
