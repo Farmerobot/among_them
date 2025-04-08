@@ -1,6 +1,7 @@
 import os
 
 from among_them.config import OLLAMA_LLM_MODEL_NAME, STATE_FILE
+from among_them.game_config import GameConfig
 from among_them.game_engine import GameEngine
 from among_them.models.player import Player
 
@@ -15,7 +16,16 @@ from among_them.models.player import Player
 # Blue - llm response
 
 def main():
-    game_engine = GameEngine()
+    game_config = GameConfig(
+        num_tasks=4,
+        num_players=6,
+        num_impostors=1,
+        map_size=0,
+        num_task_phase_actions_per_player=10,
+        num_discuss_phase_actions_per_player=3,
+        impostor_cooldown=0
+    )
+    game_engine = GameEngine(game_config)
     if os.path.exists(STATE_FILE):
         game_engine.load_state()
         print(f"Game loaded from state file with {len(game_engine.history)} history entries")

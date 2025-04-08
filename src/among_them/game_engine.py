@@ -34,11 +34,12 @@ class GameEngine:
     game_config: GameConfig = GameConfig()
     file_path: str = STATE_FILE
 
-    def __init__(self):
+    def __init__(self, game_config: GameConfig = GameConfig()):
         player_names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack", "Jill", "Katie", "Liam", "Mia", "Nathan", "Olivia", "Pete", "Quinn", "Riley", "Samantha", "Tom", "Uma", "Victor", "Wendy", "Xander", "Yara", "Zack"]
-        self.players = [Player(name) for name in player_names[:self.game_config.num_players]]
-        self.check_players_set_impostors(self.game_config.num_impostors)
-        self.history = initialize_history(self.players, self.game_config)
+        self.players = [Player(name) for name in player_names[:game_config.num_players]]
+        self.check_players_set_impostors(game_config.num_impostors)
+        self.history = initialize_history(self.players, game_config)
+        self.game_config = game_config
 
 
     def perform_step(self) -> tuple[bool, Optional[EndGameReason]]:
