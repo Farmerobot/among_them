@@ -159,17 +159,8 @@ def get_game_engine_from_file(file_path: str) -> GameEngine:
     """
     Creates and initializes a GameEngine from a game state file
     """
-    # Create placeholder players to satisfy minimum player requirement
-    placeholder_players = [
-        Player(name="Alice", role=PlayerRole.CREWMATE, manual_human_control=False),
-        Player(name="Bob", role=PlayerRole.CREWMATE, manual_human_control=False),
-        Player(name="Charlie", role=PlayerRole.IMPOSTOR, manual_human_control=False),
-        Player(name="David", role=PlayerRole.CREWMATE, manual_human_control=False),
-        Player(name="Eve", role=PlayerRole.CREWMATE, manual_human_control=False),
-    ]
-    
-    # Initialize GameEngine with placeholder players
-    game_engine = GameEngine(placeholder_players, 1)
+    # Initialize empty GameEngine
+    game_engine = GameEngine()
     game_engine.file_path = file_path  # Set the file path
     
     # Load state (this will overwrite the placeholder players)
