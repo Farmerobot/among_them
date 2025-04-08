@@ -19,10 +19,10 @@ def main():
     game_config = GameConfig(
         num_tasks=4,
         num_players=6,
-        num_impostors=1,
+        num_impostors=2,
         map_size=0,
         num_task_phase_actions_per_player=10,
-        num_discuss_phase_actions_per_player=3,
+        num_discuss_phase_actions_per_player=2,
         impostor_cooldown=0
     )
     game_engine = GameEngine(game_config)

@@ -5,7 +5,7 @@ import tiktoken
 from ollama import chat
 
 from among_them.config import OLLAMA_LLM_MODEL_NAME
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
+from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
 
@@ -117,34 +117,40 @@ class Player:
                     {},
                 )
 
-    def _handle_ai_action(
-        self, actions: List[Action], history_str: str
-    ) -> Tuple[int, str, str, Dict[str, int]]:
-        """Handle action selection for AI-controlled player"""
-        system_prompt = UNIVERSAL_SYSTEM_PROMPT
-        prompt = history_str
-
-        # Add available actions to prompt if needed
-        if actions and actions[0].type != ActionType.SPEAK:
-            actions_text = "<actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</actions>"
-            prompt += f"\n\nAvailable actions you can take at the moment:\n{actions_text}\nChosen action:"
-        elif actions and actions[0].type == ActionType.SPEAK:
-            prompt += "\n\nRespond in the following format: [Your name]: message"
-
-        # Print prompts for debugging
-        print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
-        print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
-
+    def _invoke_llm(
+        self, system_prompt: str, prompt: str, previous_messages: Optional[List[Dict[str, str]]] = None
+    ) -> Tuple[str, Optional[str]]:
+        """
+        Invoke the LLM with the given prompts and handle exceptions.
+        
+        Args:
+            system_prompt: The system prompt to use
+            prompt: The user prompt to send to the LLM
+            previous_messages: Optional list of previous messages to include in the conversation
+        
+        Returns:
+            Tuple of (response_text, chain_of_thought)
+        
+        Raises:
+            ValueError: If no chain of thought is found in the response
+        """
+        # Initialize messages
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        
+        # Add previous messages if provided
+        if previous_messages:
+            messages.extend(previous_messages)
+        
         # Invoke LLM
         response_text = ""
-        cot = None
+        cot = ""
         try:
             stream = chat(
                 model=self.llm_model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
+                messages=messages,
                 stream=True,
             )
 
@@ -160,21 +166,50 @@ class Player:
 
         except KeyboardInterrupt:
             print("\n\033[93mKeyboardInterrupt detected! Switching to manual action selection.\033[0m")
-            # If interrupted, fall back to manual selection
-            selected_action = self._handle_manual_action(actions)
-            return selected_action
+            raise KeyboardInterrupt("User interrupted LLM generation")
 
+        # Extract chain of thought
         cot_match = re.search(r"<think>.*?</think>", response_text, re.DOTALL)
         if cot_match:
             cot = cot_match.group(0)
             response_text = re.sub(
                 r"<think>.*?</think>", "", response_text, flags=re.DOTALL
             )
-        else:
+        elif previous_messages is None:
             raise ValueError("No chain of thought found in response")
 
         # Clean up the response
         response_text = response_text.strip()
+        
+        return response_text, cot
+
+    def _handle_ai_action(
+        self, actions: List[Action], history_str: str
+    ) -> Tuple[int, str, str, Dict[str, int]]:
+        """Handle action selection for AI-controlled player"""
+        system_prompt = UNIVERSAL_SYSTEM_PROMPT
+        prompt = history_str
+        prompt += RULES
+
+        # Add available actions to prompt if needed
+        if actions and actions[0].type != ActionType.SPEAK:
+            actions_text = "<available_actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</available_actions>"
+            prompt += f"\n\n{actions_text}\n"
+            prompt += "\n\nRespond in the following format: <action>action</action>"
+        elif actions and actions[0].type == ActionType.SPEAK:
+            prompt += "\n\nRespond to others in the following format: <response>message</response>"
+
+        # Print prompts for debugging
+        print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
+        print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
+
+        try:
+            # Invoke LLM and get response
+            response_text, cot = self._invoke_llm(system_prompt, prompt)
+        except KeyboardInterrupt:
+            # If interrupted, fall back to manual selection
+            selected_action = self._handle_manual_action(actions)
+            return selected_action
 
         # Determine the chosen action index
         action_idx = None
@@ -184,47 +219,52 @@ class Player:
                     [action.text for action in actions], response_text
                 )
             except ValueError:
-                stream = chat(
-                    model=self.llm_model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
+                # Try again with a more explicit prompt
+                retry_prompt = f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be "
+                print(f"\033[91m{retry_prompt}\033[0m")
+                
+                try:
+                    # Create previous messages for the retry
+                    previous_messages = [
                         {
                             "role": "assistant",
                             "content": f"<think>{cot}</think>\n{response_text}",
                         },
                         {
                             "role": "assistant",
-                            "content": f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be ",
+                            "content": retry_prompt,
                         },
-                    ],
-                    stream=True,
-                )
-                print(
-                    f"\033[91m<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be \033[0m"
-                )
-
-                # Process the response
-                response_text = ""
-                for chunk in stream:
-                    print(
-                        "\033[94m" + chunk["message"]["content"] + "\033[0m",
-                        end="",
-                        flush=True,
+                    ]
+                    
+                    # Invoke LLM again with the retry prompt
+                    response_text, _ = self._invoke_llm(system_prompt, prompt, previous_messages)
+                    
+                    # Try to extract the action again
+                    action_idx, _ = self._normalize_and_check_action_valid(
+                        [action.text for action in actions], response_text
                     )
-                    response_text += chunk["message"]["content"]
-                print("")
-
-                # Clean up the response
-                response_text = response_text.strip()
-                action_idx, _ = self._normalize_and_check_action_valid(
-                    [action.text for action in actions], response_text
-                )
+                except KeyboardInterrupt:
+                    # If interrupted during retry, fall back to manual selection
+                    selected_action = self._handle_manual_action(actions)
+                    return selected_action
         elif actions[0].type == ActionType.SPEAK:
-            # Extract text after "[something]: "
-            match = re.search(r'\[(.*?)\]:\s*(.*)', response_text)
+            # Extract text after "[name]: " or "name: " using the player's name
+            player_name = actions[0].player_name
+            # Try to match both formats with the player's name
+            pattern = r'<response>(.*?)</response>'
+            match = re.search(pattern, response_text, re.DOTALL)
+            
             if match:
-                response_text = match.group(2)
+                # Extract just the message part
+                response_text = match.group(1)
+            else:
+                # Fallback to generic pattern if player name format not found
+                generic_match = re.search(fr'(?:\[{re.escape(player_name)}\]|^{re.escape(player_name)}):\s*(.*)', response_text, re.DOTALL)
+                if generic_match:
+                    # Groups: 1=name in brackets, 2=name without brackets, 3=message
+                    response_text = generic_match.group(3)
+                else:
+                    raise Exception("LLM did not provide a message with correct format")
             action_idx = 0
 
         # Calculate token usage with tiktoken

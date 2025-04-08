@@ -133,52 +133,81 @@ def get_action_history_str(history: List[History], player: Player, players_in_ro
 
     # Agent description
     history_str = "<player_info>\n"
-    history_str += f"You are {player.name} in a text-based social deduction game.\n You ({player.name}) are assigned the role of {player.role.value}.\n"
+    history_str += f"<player_name>{player.name}</player_name>\n<current_role>{player.role.value}</current_role>\n<current_location>{location.value}</current_location>\n"
     other_impostors = [p for p in alive_players if p.role == PlayerRole.IMPOSTOR and p.name != player.name]
     if player.role == PlayerRole.IMPOSTOR:
         other_crewmates = [p for p in alive_players if p.role == PlayerRole.CREWMATE and p.name != player.name]
         if other_impostors:
-            if len(other_impostors) == 1:
-                history_str += f"{other_impostors[0].name} is the only other impostor. Work with them to vote out or kill all crewmates.\n"
-            else:
-                history_str += ", ".join([p.name for p in other_impostors]) + " are other impostors. Work with them to vote out or kill all crewmates.\n"
+            history_str += "<other_impostors>\n"
+            for imp in other_impostors:
+                history_str += f"<impostor>{imp.name}</impostor>\n"
+            history_str += "</other_impostors>\n"
         else:
-            history_str += "You are the only impostor. Vote out or kill all crewmates.\n"
+            history_str += "<other_impostors>none</other_impostors>\n"
+        
         if other_crewmates:
-            history_str += ", ".join([p.name for p in other_crewmates]) + " are crewmates. Vote out or kill them to win.\n"
+            history_str += "<crewmates>\n"
+            for crew in other_crewmates:
+                history_str += f"<crewmate>{crew.name}</crewmate>\n"
+            history_str += "</crewmates>\n"
     else:
         other_players = [p.name for p in alive_players if p.name != player.name]
-        history_str += f"You are a crewmate. Vote out all impostors to win. There is {len(other_impostors)} impostor(s) among ({', '.join(other_players)})\n"
+        history_str += f"<impostor_count>{len(other_impostors)}</impostor_count>\n"
+        history_str += "<potential_impostors>\n"
+        for other_player in other_players:
+            history_str += f"<player>{other_player}</player>\n"
+        history_str += "</potential_impostors>\n"
     
-    # Player tasks
-    player_tasks = history[-1].tasks_left_to_do[player.name]
-    history_str += f"You ({player.name}) have {len(player_tasks)} tasks left:\n"
-    for task in player_tasks:
-        history_str += f"{task}\n"
-    history_str += "</player_info>\n"
+    # Tasks left
+    tasks_left = []
+    for h in history:
+        if player.name in h.tasks_left_to_do:
+            tasks_left = h.tasks_left_to_do[player.name]
+            break
+    
+    if tasks_left:
+        history_str += "<tasks_left>\n"
+        for task in tasks_left:
+            history_str += f"<task>\n<name>{task.name}</name>\n<location>{task.location.value if task.location else 'N/A'}</location>\n</task>\n"
+        history_str += "</tasks_left>\n"
+    history_str += "</player_info>\n\n"
 
-    # History
-    history_str += "\n<history>\n"
-    for history_item in history:
-        if history_item.action_taken.player_name == player.name:
-            cot_without_think_tags = "At this point, you thought to yourself:" + history_item.llm_cot.replace("<think>", "\n").replace("</think>", "\n")
-            history_str += cot_without_think_tags + "\nAnd after thinking\n"
-            history_str += history_item.action_taken.result + "\n"
-        else:
-            if player.name in history_item.spectators_who_saw:
-                if history_item.action_taken.type == ActionType.SPEAK:
-                    history_str += "Discussion: " + history_item.action_taken.spectator + "\n"
+    # Game history
+    history_str += "<game_history>\n"
+    for h in history:
+        if h.action_taken:
+            if h.action_taken.player_name == player.name:
+                if hasattr(h, 'llm_cot') and h.llm_cot:
+                    cot_without_think_tags = h.llm_cot.replace("<think>", "<thought>").replace("</think>", "</thought>")
+                    history_str += f"<player_thought>{cot_without_think_tags}</player_thought>\n"
+                if h.action_taken.type == ActionType.SPEAK:
+                    history_str += f"<action type=\"player_message\">{h.action_taken.spectator}</action>\n"
                 else:
-                    history_str += "You saw: " + history_item.action_taken.spectator + "\n"
-    history_str += "</history>\n"
-    
-    # Player location and phase
+                    history_str += f"<action type=\"player_action\">{h.action_taken.result}</action>\n"
+            elif player.name in h.spectators_who_saw:
+                if h.action_taken.type == ActionType.SPEAK:
+                    history_str += f"<action type=\"discussion\">{h.action_taken.spectator}</action>\n"
+                else:
+                    history_str += f"<action type=\"observed\">{h.action_taken.spectator}</action>\n"
+    history_str += "</game_history>\n\n"
+
+    # Current game state
+    history_str += "<current_state>\n"
     other_players = [p.name for p in players_in_room if p.name != player.name]
     if phase == GamePhase.TASK:
-        history_str += (f"You ({player.name}) are currently alone in {location.value}" if len(other_players) == 0 else f"You ({player.name}) are currently with {', '.join(other_players)}") + " in " + location.value + "\n"
-        history_str += "Shhh... You can not speak now. It is against the rules\n"
+        if len(other_players) == 0:
+            history_str += "<companions>none</companions>\n"
+            history_str += f"<location>{location.value}</location>\n"
+        else:
+            history_str += "<companions>\n"
+            for other_player in other_players:
+                history_str += f"<player>{other_player}</player>\n"
+            history_str += "</companions>\n"
+            history_str += f"<location>{location.value}</location>\n"
+        history_str += "<phase>Task</phase>\n<note>You cannot speak during this phase.</note>\n"
     elif phase == GamePhase.VOTE:
-        history_str += "It is voting phase now.\n"
+        history_str += "<phase>Voting</phase>\n"
     else:
-        history_str += "It is discussion phase now. You can speak now. Respond to the crewmates.\n"
+        history_str += "<phase>Discussion</phase>\n<note>You can speak now. Respond to the crewmates.</note>\n"
+    history_str += "</current_state>\n"
     return history_str
