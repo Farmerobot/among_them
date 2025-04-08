@@ -1,10 +1,10 @@
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import tiktoken
-from ollama import chat, Client
+from ollama import chat
 
-from among_them.config import OLLAMA_LLM_MODEL_NAME, PUT_JWT
+from among_them.config import OLLAMA_LLM_MODEL_NAME
 from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
@@ -102,11 +102,7 @@ class Player:
         print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
 
         # Invoke LLM
-        client = Client(
-            host="http://localhost:11434", # https://ezasoby-put.poznan.pl/ollama
-            # headers={"Authorization": f"Bearer {PUT_JWT}"},
-        )
-        stream = client.chat(
+        stream = chat(
             model=self.llm_model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -145,7 +141,7 @@ class Player:
                     [action.text for action in actions], response_text
                 )
             except ValueError:
-                stream = client.chat(
+                stream = chat(
                     model=self.llm_model_name,
                     messages=[
                         {"role": "system", "content": system_prompt},

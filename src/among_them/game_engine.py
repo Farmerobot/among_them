@@ -2,7 +2,7 @@ import json
 import random
 from typing import List, Optional
 
-from among_them.consts import STATE_FILE
+from among_them.config import STATE_FILE
 from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook
 from among_them.models.action import Action
 from among_them.models.action_type import ActionType
@@ -20,7 +20,7 @@ from among_them.utils.player_utils import (get_alive_players,
                                            get_last_player_action,
                                            get_next_random_player,
                                            get_players_in_room)
-
+from among_them.models.game_config import GameConfig
 
 class GameEngine:
     """Manages
@@ -31,12 +31,13 @@ class GameEngine:
 
     history: List[History] = []
     players: List[Player] = []
+    game_config: GameConfig = GameConfig()
     file_path: str = STATE_FILE
 
     def __init__(self, players: List[Player], impostor_count: int = 1) -> None:
         self.players = players
         self.check_players_set_impostors(impostor_count)
-        self.history = initialize_history(self.players)
+        self.history = initialize_history(self.players, self.game_config)
 
 
     def perform_step(self) -> tuple[bool, Optional[EndGameReason]]:
@@ -49,7 +50,7 @@ class GameEngine:
             True and end game reason if the game is over or in MAIN_MENU stage, False otherwise
         """
         alive_players = get_alive_players(self.history, self.players)
-        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, alive_players)
+        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, alive_players, self.game_config)
         end_game_reason = get_end_game_reason(self.history, self.players)
         if phase == GamePhase.MAIN_MENU or end_game_reason is not None:
             return True, end_game_reason
@@ -60,7 +61,7 @@ class GameEngine:
         players_in_room = get_players_in_room(self.history, self.players, last_player_action.location)
         if phase == GamePhase.TASK:
             location = last_player_action.location
-            actions_player_can_take = get_task_phase_actions(current_player, last_player_action.location, last_player_action.impostor_cooldown, self.history, self.players)
+            actions_player_can_take = get_task_phase_actions(current_player, last_player_action.location, last_player_action.impostor_cooldown, self.history, self.players, self.game_config)
             spectators_who_saw = [p.name for p in players_in_room]
         elif phase == GamePhase.DISCUSS:
             # Set some variables
@@ -137,16 +138,29 @@ class GameEngine:
         return False, None
 
     def save_state(self):
+        """Saves the current game state (history, players, config) to a JSON file."""
         with open(self.file_path, 'w') as f:
-            json_str = json.dumps((self.history, self.players), indent=2, cls=GameJSONEncoder)
+            # Save history, players, and game_config
+            json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
             f.write(json_str)
             
     def load_state(self):
+        """Loads the game state (history, players, config) from a JSON file."""
         with open(self.file_path, 'r') as f:
             json_str = f.read()
-            self.history, self.players = json.loads(json_str, object_hook=game_object_hook)
+            # Load history, players, and game_config
+            loaded_data = json.loads(json_str, object_hook=game_object_hook)
+            if len(loaded_data) == 3:
+                self.history, self.players, self.game_config = loaded_data
+            elif len(loaded_data) == 2: # Handle old save files without config
+                print("Loading old save file format. Using default GameConfig.")
+                self.history, self.players = loaded_data
+                self.game_config = GameConfig() # Initialize with defaults
+            else:
+                raise ValueError("Invalid save file format")
             return True
-    
+        return False
+
     def check_players_set_impostors(
         self, impostor_count: int = 1
     ):

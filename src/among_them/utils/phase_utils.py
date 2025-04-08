@@ -1,8 +1,7 @@
-from ast import Dict
 from typing import List
 
-from among_them.consts import NUM_ACTIONS_WITHOUT_REPORT, NUM_CHATS
 from among_them.models.action_type import ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.history import History, create_vote_history_entry
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
@@ -15,22 +14,22 @@ def get_last_discussion_action_idx(history: List[History]) -> int:
     return 0
 
 
-def get_phase_and_when_it_ends(history: List[History], alive_players: List[Player]) -> tuple[GamePhase, int]:
+def get_phase_and_when_it_ends(history: List[History], alive_players: List[Player], game_config: GameConfig) -> tuple[GamePhase, int]:
     """
     Handles sudden phase changes - first phase, report - and automatic phase change using actions_until_phase_ends.
     Returns the next phase and the number of actions until the phase ends.
     """
     if len(history) == 1: # First phase
-        return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
+        return GamePhase.TASK, (game_config.num_task_phase_actions_per_player * len(alive_players)) - 1
     previous_phase = history[-1].phase
     if history[-1].action_taken.type == ActionType.REPORT: # if report start discussion
-        return GamePhase.DISCUSS, (NUM_CHATS * len(alive_players)) - 1
+        return GamePhase.DISCUSS, (game_config.num_discuss_phase_actions_per_player * len(alive_players)) - 1
     if history[-1].actions_until_phase_ends == 0:
-        return handle_phase_change(history, alive_players, previous_phase)
+        return handle_phase_change(history, alive_players, previous_phase, game_config)
     return previous_phase, history[-1].actions_until_phase_ends - 1
 
 
-def handle_phase_change(history: List[History], alive_players: List[Player], previous_phase: GamePhase) -> tuple[GamePhase, int]:
+def handle_phase_change(history: List[History], alive_players: List[Player], previous_phase: GamePhase, game_config: GameConfig) -> tuple[GamePhase, int]:
     """
     This is for automatic phase change when actions_until_phase_ends is 0.
     Returns the next phase and the number of actions until the phase ends.
@@ -49,8 +48,9 @@ def handle_phase_change(history: List[History], alive_players: List[Player], pre
             ejected_player=ejected_player,
             action_result=f"{ejected_player} was voted out.",
             action_type=action_type,
+            game_config=game_config
         ))
-        return GamePhase.TASK, (NUM_ACTIONS_WITHOUT_REPORT * len(alive_players)) - 1
+        return GamePhase.TASK, (game_config.num_task_phase_actions_per_player * len(alive_players)) - 1
     elif previous_phase == GamePhase.MAIN_MENU:
         return GamePhase.MAIN_MENU, 0
 

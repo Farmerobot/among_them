@@ -1,8 +1,9 @@
 from typing import List
 
 from among_them.models.action import Action, ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.history import History
-from among_them.models.location import DOORS, Location
+from among_them.models.location import get_map, Location
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
@@ -15,6 +16,7 @@ def get_task_phase_actions(
     cooldown: int,
     history: List[History],
     players: List[Player],
+    game_config: GameConfig,
 ) -> list[Action]:
     """Creates available actions based on the circumstances.
 
@@ -38,7 +40,7 @@ def get_task_phase_actions(
         )
 
     # actions for MOVE
-    for room in DOORS[location]:
+    for room in get_map(game_config.map_size)[0][location]:
         actions.append(
             Action(type=ActionType.MOVE, player_name=player.name, target_location=room)
         )

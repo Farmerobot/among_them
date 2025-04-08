@@ -1,8 +1,8 @@
 from typing import Dict, List
 
-from among_them.consts import IMPOSTOR_COOLDOWN
 from among_them.models.action import Action
 from among_them.models.action_type import ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.location import Location
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
@@ -73,7 +73,7 @@ class History:
         return History(**data)
 
 
-def initialize_history(players: List[Player]) -> List[History]:
+def initialize_history(players: List[Player], game_config: GameConfig) -> List[History]:
     tasks = {}
     for player in players:
         tasks[player.name] = get_impostor_tasks() if player.role == PlayerRole.IMPOSTOR else get_crewmate_tasks()
@@ -83,7 +83,7 @@ def initialize_history(players: List[Player]) -> List[History]:
         phase = GamePhase.MAIN_MENU,
         actions_until_phase_ends = 0,
         location = Location.CAFETERIA,
-        impostor_cooldown = IMPOSTOR_COOLDOWN,
+        impostor_cooldown = game_config.impostor_cooldown,
         actions_agent_could_take = [],
         spectators_who_saw = [player.name for player in players],
         llm_cot = "",
@@ -101,6 +101,7 @@ def create_vote_history_entry(
     ejected_player: str,
     action_result: str,
     action_type: ActionType,
+    game_config: GameConfig
 ) -> History:
     """
     Create a new history entry for a vote action. 
@@ -116,7 +117,7 @@ def create_vote_history_entry(
         phase = GamePhase.MAIN_MENU,
         actions_until_phase_ends = 0,
         location = Location.CAFETERIA,
-        impostor_cooldown = IMPOSTOR_COOLDOWN,
+        impostor_cooldown = game_config.impostor_cooldown,
         actions_agent_could_take = [],
         spectators_who_saw = [p.name for p in alive_players],
         llm_cot = "",

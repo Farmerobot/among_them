@@ -2,8 +2,8 @@ from enum import Enum
 import random
 from typing import Optional
 
-from among_them import consts
-from among_them.models.location import Location, ACTIVE_LOCATIONS
+from among_them.models.location import Location, get_map
+from among_them.models.game_config import GameConfig
 
 
 class Task:
@@ -24,18 +24,18 @@ class Task:
         return f"{'[DONE]' if self.completed else '[TODO]'} | {self.name}"
 
 
-def get_crewmate_tasks() -> list[Task]:
-    return get_short_tasks()
+def get_crewmate_tasks(game_config: GameConfig) -> list[Task]:
+    return get_short_tasks(game_config)
 
 
 def get_impostor_tasks() -> list[Task]:
     return [Task(name="Vote out or kill all crewmates", location=None)]
 
 
-def get_impostor_pretend_tasks_at_location(location: Location) -> list[Task]:
+def get_impostor_pretend_tasks_at_location(location: Location, game_config: GameConfig) -> list[Task]:
     # Get tasks for this location that are in active locations
     tasks_at_location = [task for task in SHORT_TASKS 
-                         if task.location == location and location in ACTIVE_LOCATIONS]
+                         if task.location == location and location in get_map(game_config.map_size)[2]]
     
     # If no tasks available at this location, raise error
     if not tasks_at_location:
@@ -45,13 +45,13 @@ def get_impostor_pretend_tasks_at_location(location: Location) -> list[Task]:
     return [tasks_at_location[0]]
 
 
-def get_short_tasks() -> list[Task]:
+def get_short_tasks(game_config: GameConfig) -> list[Task]:
     # Filter tasks to only include those in active locations
-    active_tasks = [task for task in SHORT_TASKS if task.location in ACTIVE_LOCATIONS]
+    active_tasks = [task for task in SHORT_TASKS if task.location in game_config.map_size]
     # If we need more tasks than available, raise error
-    if consts.NUM_TASKS > len(active_tasks):
+    if game_config.num_tasks > len(active_tasks):
         raise ValueError("Not enough tasks available for the selected map size")
-    return random.sample(active_tasks, k=consts.NUM_TASKS)
+    return random.sample(active_tasks, k=game_config.num_tasks)
 
 
 SHORT_TASKS = [

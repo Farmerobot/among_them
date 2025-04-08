@@ -13,11 +13,12 @@ import pandas as pd
 import streamlit as st
 from matplotlib.path import Path
 
-from among_them.consts import NUM_TASKS, STATE_FILE
+from among_them.config import STATE_FILE
 from among_them.game_jsonencoder import game_object_hook
 from among_them.models.action_type import ActionType
+from among_them.models.game_config import GameConfig
 from among_them.models.history import History
-from among_them.models.location import ROOM_COORDINATES, Location, DOORS
+from among_them.models.location import get_map, Location
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
@@ -66,14 +67,14 @@ st.sidebar.write(f"Last Modified: {last_modified_str}")
 
 # Load game state
 @st.cache_data(ttl=refresh_interval)
-def load_game_state(file_path, last_modified_time) -> Tuple[List[History], List[Player], float]:
+def load_game_state(file_path, last_modified_time) -> Tuple[List[History], List[Player], float, GameConfig]:
     with open(file_path, 'r') as f:
         state_str = f.read()
-        history, players = json.loads(state_str, object_hook=game_object_hook)
-    return history, players, last_modified_time
+        history, players, game_config = json.loads(state_str, object_hook=game_object_hook)
+    return history, players, last_modified_time, game_config
 
 try:
-    history, players, _ = load_game_state(file_path, last_modified_time)
+    history, players, _, game_config = load_game_state(file_path, last_modified_time)
     
     # Check if auto-refresh is enabled
     if auto_refresh:
@@ -91,16 +92,17 @@ try:
         fig, ax = plt.subplots(figsize=(10, 8))
         
         # Draw the map (rooms and connections)
-        for room_name, (x, y) in ROOM_COORDINATES.items():
+        for room_name, (x, y) in get_map(game_config.map_size)[1].items():
             circle = plt.Circle((x, y), 0.15, fill=True, alpha=0.2, color='lightgray')
             ax.add_patch(circle)
             ax.text(x, y, room_name.value, ha='center', va='center', fontsize=8)
         
         # Draw connections
-        for room_name, connected_rooms in DOORS.items():
-            room_x, room_y = ROOM_COORDINATES[room_name]
+        doors, room_coordinates, _ = get_map(game_config.map_size)
+        for room_name, connected_rooms in doors.items():
+            room_x, room_y = room_coordinates[room_name]
             for connected_room in connected_rooms:
-                conn_x, conn_y = ROOM_COORDINATES[connected_room]
+                conn_x, conn_y = room_coordinates[connected_room]
                 ax.plot([room_x, conn_x], [room_y, conn_y], 'k-', alpha=0.3, linewidth=1)
         
         # Get the latest history entry
@@ -146,7 +148,7 @@ try:
         for player_name, location in player_positions.items():
             if location:
                 location_name = location.value if hasattr(location, 'value') else location
-                x, y = ROOM_COORDINATES[location]
+                x, y = get_map(game_config.map_size)[1][location]
                 
                 # Offset player positions slightly to prevent overlap
                 x += np.random.uniform(-0.05, 0.05)
@@ -318,8 +320,8 @@ try:
                 if not tasks:
                     st.write("No tasks remaining! 🎉")
                 else:
-                    task_complete = NUM_TASKS - len(tasks)
-                    task_total = NUM_TASKS
+                    task_complete = game_config.num_tasks - len(tasks)
+                    task_total = game_config.num_tasks
                     
                     # Count completed tasks
                     for task in tasks:

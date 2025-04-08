@@ -1,5 +1,4 @@
 from enum import Enum
-from ..consts import MAP_SIZE
 
 
 class Location(Enum):
@@ -220,15 +219,11 @@ ROOM_COORDINATES_LARGE = {
 }
 
 # Select map based on MAP_SIZE from consts.py
-if MAP_SIZE == 0:
-    DOORS = DOORS_SMALL
-    ROOM_COORDINATES = ROOM_COORDINATES_SMALL
-    ACTIVE_LOCATIONS = SMALL_MAP_LOCATIONS
-elif MAP_SIZE == 1:
-    DOORS = DOORS_MEDIUM
-    ROOM_COORDINATES = ROOM_COORDINATES_MEDIUM
-    ACTIVE_LOCATIONS = MEDIUM_MAP_LOCATIONS
-else:  # MAP_SIZE == 2 or any other value defaults to large
-    DOORS = DOORS_LARGE
-    ROOM_COORDINATES = ROOM_COORDINATES_LARGE
-    ACTIVE_LOCATIONS = LARGE_MAP_LOCATIONS
+def get_map(map_size: int) -> tuple[dict[Location, list[Location]], dict[Location, tuple[float, float]], list[Location]]:
+    """Returns the doors, room coordinates, and active locations for a given map size."""   
+    if map_size == 0:
+        return DOORS_SMALL, ROOM_COORDINATES_SMALL, SMALL_MAP_LOCATIONS
+    elif map_size == 1:
+        return DOORS_MEDIUM, ROOM_COORDINATES_MEDIUM, MEDIUM_MAP_LOCATIONS
+    else:  # MAP_SIZE == 2 or any other value defaults to large
+        return DOORS_LARGE, ROOM_COORDINATES_LARGE, LARGE_MAP_LOCATIONS
