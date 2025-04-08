@@ -154,6 +154,8 @@ class Player:
                     "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
                 )
                 response_text += chunk["message"]["content"]
+                if re.search(re.escape("</history>"), response_text):
+                    raise Exception("LLM did hallucinate")
             print("")
 
         except KeyboardInterrupt:
