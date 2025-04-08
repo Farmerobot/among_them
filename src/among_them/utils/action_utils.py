@@ -1,7 +1,7 @@
 from typing import List
 
 from among_them.models.action import Action, ActionType
-from among_them.models.game_config import GameConfig
+from among_them.game_config import GameConfig
 from among_them.models.history import History
 from among_them.models.location import get_map, Location
 from among_them.models.player import Player

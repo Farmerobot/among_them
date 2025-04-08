@@ -3,7 +3,7 @@ import random
 from typing import Optional
 
 from among_them.models.location import Location, get_map
-from among_them.models.game_config import GameConfig
+from among_them.game_config import GameConfig
 
 
 class Task:

@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from among_them.models.action import Action
 from among_them.models.action_type import ActionType
-from among_them.models.game_config import GameConfig
+from among_them.game_config import GameConfig
 from among_them.models.location import Location
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player

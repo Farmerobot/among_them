@@ -1,7 +1,7 @@
 from typing import List
 
 from among_them.models.action_type import ActionType
-from among_them.models.game_config import GameConfig
+from among_them.game_config import GameConfig
 from among_them.models.history import History, create_vote_history_entry
 from among_them.models.phase import GamePhase
 from among_them.models.player import Player

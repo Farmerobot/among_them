@@ -41,7 +41,7 @@ The game uses a history-based approach to state management, with the `History` c
 #### History Structure
 
 Each `History` object contains:
-- **Player state**: Who acted, who will act next, player locations
+- **Player state**: Who acted, who will act next
 - **Game phase**: Current phase and actions until phase ends
 - **Action details**: Type of action, target, result text
 - **Spectator information**: Which players witnessed the action
@@ -102,17 +102,16 @@ The central component that manages game logic, player actions, state transitions
 
 The engine deliberately maintains no mutable state outside of the history list, ensuring all game logic can be derived from history entries.
 
-#### AI Agents (`agents/unified_agent.py`)
+#### AI Agents (`models.player.py`)
 AI-controlled player behavior using Large Language Models (LLMs):
-- `act()`: Core function that generates prompts and processes responses
 - `normalize_and_check_action_valid()`: Validates LLM outputs against available actions
 
 The agent is designed with error recovery, attempting to self-correct when invalid responses are given.
 
 #### Player Types
 The game supports both AI and human players:
-- **AIPlayer**: LLM-powered agents that make decisions based on game state
-- **HumanPlayer**: Console interface for human players to interact with the game
+- **AI Player**: LLM-powered agents that make decisions based on game state
+- **Human Player**: Console interface for human players to interact with the game
 
 #### Action Generation (`action_utils.py`)
 Functions that determine available actions based on game state:
@@ -135,6 +134,7 @@ The game uses an append-only history list rather than mutable state objects. Thi
 - Allows game replay and analysis
 - Makes state transitions explicit and traceable
 - Supports save/load functionality without additional logic
+- Simply deleting last entry is enough to revert the game state
 
 #### 2. Function-Based Action Generation
 Instead of hardcoding available actions, the system uses functions to generate actions dynamically:
@@ -142,28 +142,20 @@ Instead of hardcoding available actions, the system uses functions to generate a
 - Enforces game rules consistently
 - Makes adding new action types easier
 
-#### 3. Separation of Agent and Player Logic
-The system clearly separates:
-- Player logic (what actions are available)
-- Agent logic (how decisions are made)
-- Game progression (how actions affect state)
-
-This allows for different agent implementations without changing game rules.
-
-#### 4. Location-Based Task System
+#### 3. Location-Based Task System
 Tasks are tied to specific locations:
 - Forces players to move around the map
 - Creates opportunities for player interaction
 - Mirrors the gameplay of the original Among Us inspiration
 
-#### 5. Room-Based Observation Model
-Actions are only visible to players in the same room:
+#### 4. Room-Based Observation Model
+Actions are only visible to players in the same room (if moved, players from both rooms see the action):
 - Creates information asymmetry critical for deduction
 - Encourages strategic movement
 - Makes alibis and witness testimony meaningful
 
-#### 6. JSON Serialization
-Game state is serialized using jsonpickle:
+#### 5. JSON Serialization
+Game state is serialized using json:
 - Allows game state to be saved and restored
 - Supports archiving completed games
 - Makes debugging and analysis easier
@@ -200,25 +192,19 @@ The game requires Ollama to be installed and running with the specified model.
 
 ## Environment Variables
 
-The project uses a `.env` file for configuration (via `python-dotenv`):
-
-```
-# API key for OpenRouter (optional)
-OPENROUTER_API_KEY=your_api_key_here
-
-# Whether to run the game locally (default: True)
-RUN_LOCALLY=True
-```
+The project uses a `.env` file for configuration (via `python-dotenv`). The example environment file is provided in `.env.example`.
 
 ## Configuration Constants
 
-The `consts.py` file defines important game parameters:
-- `NUM_TASKS` (4): Number of tasks assigned to each player
-- `NUM_CHATS` (5): Number of discussion messages per player
-- `NUM_ACTIONS_WITHOUT_REPORT` (5): Maximum actions without reporting. After this the game will end.
-- `IMPOSTOR_COOLDOWN` (1): Turns between impostor kill actions
-- `STATE_FILE`: Location for saving game state
-- `TOKEN_COSTS`: Cost mapping for different LLM models
+The `game_config.py` file defines important game parameters:
+
+- `num_tasks`: Number of tasks assigned to each player
+- `num_players`: Number of all players in the game
+- `num_impostors`: Number of impostors in the game
+- `map_size`: Map size: 0 = small, 1 = medium, 2 = large
+- `num_task_phase_actions_per_player`: Number of actions per player in the task phase
+- `num_discuss_phase_actions_per_player`: Number of actions per player in the discuss phase
+- `impostor_cooldown`: Turns between impostor kill actions
 
 ## Game Progression and Win Conditions
 
@@ -242,6 +228,5 @@ The game can end in several ways (`end_game.py`):
 - **State Persistence**: Game state is saved after each action
 - **LLM-Powered Agents**: AI players make decisions using language models
 - **Local LLM Support**: Uses Ollama to run models locally without requiring cloud API access
-- **Persuasion Analysis**: The codebase includes tools for analyzing persuasion techniques used in discussions
 
 This project demonstrates how LLMs can be used to create emergent gameplay in a social deduction setting, with AI agents exhibiting complex reasoning and social interaction.

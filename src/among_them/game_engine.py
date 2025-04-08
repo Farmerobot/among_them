@@ -20,7 +20,7 @@ from among_them.utils.player_utils import (get_alive_players,
                                            get_last_player_action,
                                            get_next_random_player,
                                            get_players_in_room)
-from among_them.models.game_config import GameConfig
+from among_them.game_config import GameConfig
 
 class GameEngine:
     """Manages
