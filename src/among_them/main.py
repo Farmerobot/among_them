@@ -1,7 +1,6 @@
 import os
 
-from among_them.config import OLLAMA_LLM_MODEL_NAME
-from among_them.consts import STATE_FILE
+from among_them.config import OLLAMA_LLM_MODEL_NAME, STATE_FILE
 from among_them.game_engine import GameEngine
 from among_them.models.player import Player
 
@@ -16,14 +15,7 @@ from among_them.models.player import Player
 # Blue - llm response
 
 def main():
-    players = [
-        Player(name="Alice"),
-        Player(name="Bob"),
-        Player(name="Charlie"),
-        Player(name="David"),
-        Player(name="Eve"),
-    ]
-    game_engine = GameEngine(players, 1)
+    game_engine = GameEngine()
     if os.path.exists(STATE_FILE):
         game_engine.load_state()
         print(f"Game loaded from state file with {len(game_engine.history)} history entries")

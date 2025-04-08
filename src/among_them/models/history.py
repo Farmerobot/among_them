@@ -76,7 +76,7 @@ class History:
 def initialize_history(players: List[Player], game_config: GameConfig) -> List[History]:
     tasks = {}
     for player in players:
-        tasks[player.name] = get_impostor_tasks() if player.role == PlayerRole.IMPOSTOR else get_crewmate_tasks()
+        tasks[player.name] = get_impostor_tasks() if player.role == PlayerRole.IMPOSTOR else get_crewmate_tasks(game_config)
 
     first_entry = History(
         player_names_to_play_next = [p.name for p in players],

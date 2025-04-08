@@ -47,7 +47,7 @@ def get_impostor_pretend_tasks_at_location(location: Location, game_config: Game
 
 def get_short_tasks(game_config: GameConfig) -> list[Task]:
     # Filter tasks to only include those in active locations
-    active_tasks = [task for task in SHORT_TASKS if task.location in game_config.map_size]
+    active_tasks = [task for task in SHORT_TASKS if task.location in get_map(game_config.map_size)[2]]
     # If we need more tasks than available, raise error
     if game_config.num_tasks > len(active_tasks):
         raise ValueError("Not enough tasks available for the selected map size")

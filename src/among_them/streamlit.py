@@ -70,8 +70,16 @@ st.sidebar.write(f"Last Modified: {last_modified_str}")
 def load_game_state(file_path, last_modified_time) -> Tuple[List[History], List[Player], float, GameConfig]:
     with open(file_path, 'r') as f:
         state_str = f.read()
-        history, players, game_config = json.loads(state_str, object_hook=game_object_hook)
-    return history, players, last_modified_time, game_config
+        loaded_data = json.loads(state_str, object_hook=game_object_hook)
+        if len(loaded_data) == 3:
+            history, players, game_config = loaded_data
+        elif len(loaded_data) == 2: # Handle old save files without config
+            print("Loading old save file format. Using default GameConfig.")
+            history, players = loaded_data
+            game_config = GameConfig() # Initialize with defaults
+        else:
+            raise ValueError("Invalid save file format")
+        return history, players, last_modified_time, game_config
 
 try:
     history, players, _, game_config = load_game_state(file_path, last_modified_time)

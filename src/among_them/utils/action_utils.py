@@ -67,7 +67,7 @@ def get_task_phase_actions(
 
     # actions for impostros PRETEND
     if player.role == PlayerRole.IMPOSTOR:
-        for task in get_impostor_pretend_tasks_at_location(location):
+        for task in get_impostor_pretend_tasks_at_location(location, game_config):
             actions.append(
                 Action(
                     type=ActionType.PRETEND, player_name=player.name, target_task=task
