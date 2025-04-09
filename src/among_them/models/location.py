@@ -109,6 +109,7 @@ DOORS_MEDIUM: dict[Location, list] = {
     ],
     Location.WEAPONS: [
         Location.CAFETERIA,
+        Location.ADMIN,
     ],
 }
 

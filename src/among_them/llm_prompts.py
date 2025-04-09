@@ -108,7 +108,7 @@ UNIVERSAL_SYSTEM_PROMPT = """
 
   <mechanics>
     <mechanic type="Corpse Reporting">
-      - Any player can report corpses
+      - Any player can report corpses during task phase
       - Triggers discussion phase
       - No automatic death alerts
     </mechanic>

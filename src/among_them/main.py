@@ -18,9 +18,9 @@ from among_them.models.player import Player
 def main():
     game_config = GameConfig(
         num_tasks=4,
-        num_players=6,
+        num_players=7,
         num_impostors=2,
-        map_size=0,
+        map_size=1,
         num_task_phase_actions_per_player=10,
         num_discuss_phase_actions_per_player=2,
         impostor_cooldown=0
