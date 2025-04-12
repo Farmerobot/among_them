@@ -168,7 +168,7 @@ def get_action_history_str(history: List[History], player: Player, players_in_ro
     if tasks_left:
         history_str += "<tasks_left>\n"
         for task in tasks_left:
-            history_str += f"<task>\n<name>{task.name}</name>\n<location>{task.location.value if task.location else 'N/A'}</location>\n</task>\n"
+            history_str += f"<task><name>{task.name}</name><location>{task.location.value if task.location else 'N/A'}</location></task>\n"
         history_str += "</tasks_left>\n"
     history_str += "</player_info>\n\n"
 

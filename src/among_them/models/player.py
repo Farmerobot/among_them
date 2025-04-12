@@ -197,7 +197,7 @@ class Player:
             prompt += f"\n\n{actions_text}\n"
             prompt += "\n\nRespond in the following format: <action>action</action>"
         elif actions and actions[0].type == ActionType.SPEAK:
-            prompt += "\n\nRespond to others in the following format: <response>message</response>"
+            prompt += "\n\nRespond to others in the following format: <message>message</message>"
 
         # Print prompts for debugging
         print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
@@ -251,7 +251,7 @@ class Player:
             # Extract text after "[name]: " or "name: " using the player's name
             player_name = actions[0].player_name
             # Try to match both formats with the player's name
-            pattern = r'<response>(.*?)</response>'
+            pattern = r'<message>(.*?)</message>'
             match = re.search(pattern, response_text, re.DOTALL)
             
             if match:

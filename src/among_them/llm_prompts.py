@@ -62,7 +62,7 @@ UNIVERSAL_SYSTEM_PROMPT = """
       <rules>
         - Movement and actions permitted  
         - No verbal communication
-        - All visible actions logged for co-located players
+        - All actions taken seen by co-located players
       </rules>
     </phase>
     <phase type="Discussion">
@@ -90,13 +90,13 @@ UNIVERSAL_SYSTEM_PROMPT = """
       </objectives>
       <constraints>
         - Cannot kill players
-        - Fake tasks appear genuine
+        - Cannot detect impostor faking tasks
       </constraints>
     </role>
     
     <role type="Impostor">
       <objectives>
-        - Eliminate crewmates]
+        - Eliminate crewmates
         - Avoid detection
       </objectives>
       <abilities>
@@ -107,6 +107,16 @@ UNIVERSAL_SYSTEM_PROMPT = """
   </roles>
 
   <mechanics>
+    <mechanic type="Places">
+      - Players can move between places 
+      - There is nothing else players can do in places
+      - All actions taken seen by co-located players
+    </mechanic>
+    <mechanic type="Tasks">
+      - Tasks are assigned to each player and completed tasks are removed from the list
+      - Tasks are independent of each other and of other players
+      - All tasks must be completed to win
+    </mechanic>
     <mechanic type="Corpse Reporting">
       - Any player can report corpses during task phase
       - Triggers discussion phase
@@ -114,8 +124,13 @@ UNIVERSAL_SYSTEM_PROMPT = """
     </mechanic>
     <mechanic type="Victory Conditions">
       - Crewmates win at 100% tasks
-      - Impostors win when numbers equal
-      - Ejection affects team ratios
+      - Impostors win when kill all crewmates
+      - Ejection affects team ratios. Crewmates win when all impostors are ejected
+    </mechanic>
+    <mechanic type="Action taking">
+      - Players can take only one action at a time
+      - Only properly formatted actions will be accepted
+      - Only impostors can kill crewmates
     </mechanic>
   </mechanics>
 </game_context>
