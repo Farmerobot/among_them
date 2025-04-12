@@ -1,6 +1,6 @@
 import json
 import random
-from typing import List, Optional, ClassVar
+from typing import List, Optional
 
 from among_them.config import STATE_FILE
 from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook

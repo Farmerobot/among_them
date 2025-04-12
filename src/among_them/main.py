@@ -1,9 +1,8 @@
 import os
 
-from among_them.config import OLLAMA_LLM_MODEL_NAME, STATE_FILE
+from among_them.config import STATE_FILE
 from among_them.game_config import GameConfig
 from among_them.game_engine import GameEngine
-from among_them.models.player import Player
 
 # To run this script, you need to
 # `poetry install`

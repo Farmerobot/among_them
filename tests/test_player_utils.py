@@ -202,7 +202,7 @@ def test_get_dead_players_multiple_kills(discuss_phase_history: History, imposto
     # Both players killed after the discussion should be reported
     dead_players = get_dead_players(history)
     assert len(dead_players) == 2
-    dead_names = [p for p, l in dead_players.items()]
+    dead_names = [p for p, _ in dead_players.items()]
     assert dead_player.name in dead_names
     assert other_player.name in dead_names
 

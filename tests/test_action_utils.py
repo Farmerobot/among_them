@@ -124,7 +124,6 @@ def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, 
                                                       generic_test_players: List[Player], game_config: GameConfig):
     """Test KILL action is NOT available for impostor when cooldown > 0."""
     acting_player = impostor_player
-    target_player = crewmate_player
     current_location = cafeteria_location
 
     # Build history using fixtures - impostor_kill_history has cooldown > 0

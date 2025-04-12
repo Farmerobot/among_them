@@ -1,5 +1,5 @@
 """Common fixtures for all tests."""
-from typing import Callable, Dict, List
+from typing import List
 from unittest.mock import patch
 
 import pytest
