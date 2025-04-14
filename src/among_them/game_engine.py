@@ -91,7 +91,7 @@ class GameEngine:
             location = Location.CAFETERIA
             actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
             spectators_who_saw = alive_player_names
-        elif phase == GamePhase.VOTE:
+        elif phase == GamePhase.VOTING:
             location = Location.CAFETERIA
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
             spectators_who_saw = alive_player_names
@@ -132,12 +132,12 @@ class GameEngine:
             action_taken.result = f"[{current_player.name}]: {response}"
             action_taken.spectator = f"[{current_player.name}]: {response}"
 
-        tasks_left_to_do = self.history[-1].tasks_left_to_do
+        tasks_left_to_do = self.history[-1].tasks_left_to_do.copy()
         if action_taken.type == ActionType.TASK:
             tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
         elif action_taken.type == ActionType.MOVE:
             location = action_taken.target_location # type: ignore
-            new_players_in_room = get_players_in_room(self.history, self.players, current_player)
+            new_players_in_room = get_players_in_room(self.history, self.players, current_player, location)
             spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
 
         if action_taken.type == ActionType.KILL:

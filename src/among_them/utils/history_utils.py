@@ -169,7 +169,7 @@ def get_action_history_str(history: List[History], players: List[Player], player
             history_str += "</companions>\n"
             history_str += f"<location>{location.value}</location>\n"
         history_str += "<phase>Task</phase>\n<note>You cannot speak during this phase.</note>\n"
-    elif phase == GamePhase.VOTE:
+    elif phase == GamePhase.VOTING:
         history_str += "<phase>Voting</phase>\n"
     else:
         history_str += "<phase>Discussion</phase>\n<note>You can speak now. Respond to the crewmates.</note>\n"

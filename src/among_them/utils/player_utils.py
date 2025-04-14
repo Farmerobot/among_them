@@ -1,8 +1,9 @@
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from among_them.models.action_type import ActionType
 from among_them.models.history import History
+from among_them.models.location import Location
 from among_them.models.player import Player
 from among_them.utils.phase_utils import get_last_voting_action_idx
 
@@ -48,7 +49,7 @@ def get_dead_players(history: List[History]) -> Dict[str, str]:
 
 
 def get_players_in_room(
-    history: List[History], players: List[Player], player: Player
+    history: List[History], players: List[Player], player: Player, location: Optional[Location] = None
 ) -> List[Player]:
     """Returns the list of alive players in a specific location.
 
@@ -56,11 +57,13 @@ def get_players_in_room(
         history: List of history items
         players: List of all players
         player: The player to check
+        location: The location to check - if None, uses the last player action location
     Returns:
         List of alive players in the player location
     """
     other_alive = [p for p in players if p.name in history[-1].alive_player_names and p.name != player.name]
-    location = get_last_player_action(history, player).location
+    if location is None:
+        location = get_last_player_action(history, player).location
     in_room = []
     for other_player in other_alive:
         last_player_action = get_last_player_action(history, other_player)

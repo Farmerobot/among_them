@@ -23,6 +23,7 @@ def get_phase_and_when_it_ends(history: List[History], game_config: GameConfig, 
     if get_end_game_reason(history, players) is not None:
         return GamePhase.GAME_END, 0
     previous_phase = history[-1].phase
+    
     if history[-1].action_taken.type == ActionType.REPORT: # if report start discussion
         return GamePhase.DISCUSS, (game_config.num_discuss_phase_actions_per_player * len(history[-1].alive_player_names)) - 1
     
@@ -40,8 +41,8 @@ def handle_phase_change(history: List[History], previous_phase: GamePhase, game_
     if previous_phase == GamePhase.TASK:
         return GamePhase.GAME_END, 0 # signal end of game
     elif previous_phase == GamePhase.DISCUSS:
-        return GamePhase.VOTE, len(history[-1].alive_player_names) - 1
-    elif previous_phase == GamePhase.VOTE:
+        return GamePhase.VOTING, len(history[-1].alive_player_names) - 1
+    elif previous_phase == GamePhase.VOTING:
         return GamePhase.VOTE_RESULTS, 0
     elif previous_phase == GamePhase.VOTE_RESULTS or previous_phase == GamePhase.GAME_START:
         return GamePhase.TASK, (game_config.num_task_phase_actions_per_player * len(history[-1].alive_player_names)) - 1

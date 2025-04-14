@@ -3240,7 +3240,7 @@
         "David"
       ],
       "phase": {
-        "__enum__": "Vote"
+        "__enum__": "Voting"
       },
       "actions_until_phase_ends": 3,
       "location": {
@@ -3434,7 +3434,7 @@
         "Charlie"
       ],
       "phase": {
-        "__enum__": "Vote"
+        "__enum__": "Voting"
       },
       "actions_until_phase_ends": 2,
       "location": {
@@ -3627,7 +3627,7 @@
         "Charlie"
       ],
       "phase": {
-        "__enum__": "Vote"
+        "__enum__": "Voting"
       },
       "actions_until_phase_ends": 1,
       "location": {
@@ -3818,7 +3818,7 @@
     {
       "player_names_to_play_next": [],
       "phase": {
-        "__enum__": "Vote"
+        "__enum__": "Voting"
       },
       "actions_until_phase_ends": 0,
       "location": {

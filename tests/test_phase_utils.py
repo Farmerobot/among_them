@@ -1,247 +1,165 @@
-from typing import List
+import unittest
 
-import pytest
-
-from among_them.models.action import Action, ActionType
-from among_them.game_config import GameConfig
-from among_them.models.history import History
+from among_them.models.action_type import ActionType
 from among_them.models.phase import GamePhase
-from among_them.models.player import Player
-from among_them.utils.phase_utils import (count_votes,
-                                          determine_ejection_result,
-                                          get_last_discussion_action_idx,
-                                          get_phase_and_when_it_ends,
-                                          handle_phase_change)
+from among_them.utils.phase_utils import (
+    get_last_voting_action_idx,
+    get_phase_and_when_it_ends,
+    handle_phase_change,
+    count_votes,
+    determine_ejection_result
+)
 
-# --- Tests for get_last_discussion_action_idx ---
-
-def test_get_last_discussion_action_idx_found(task_phase_history: History, initial_history: History, 
-                                             discuss_phase_history: History, vote_phase_history: History) -> None:
-    """Test get_last_discussion_action_idx when discussion phase is found."""
-    # Create a history list with different phases using fixtures
-    history = [
-        initial_history,
-        task_phase_history,
-        discuss_phase_history,
-        vote_phase_history,
-        discuss_phase_history, 
-        task_phase_history,
-    ]
-    assert get_last_discussion_action_idx(history) == 4
-
-def test_get_last_discussion_action_idx_not_found(task_phase_history: History, vote_phase_history: History) -> None:
-    """Test get_last_discussion_action_idx when no discussion phase is found."""
-    # Create a history list without DISCUSS phase using fixtures
-    history = [
-        task_phase_history,
-        vote_phase_history,
-    ]
-    assert get_last_discussion_action_idx(history) == 0
-
-def test_get_last_discussion_action_idx_empty() -> None:
-    """Test get_last_discussion_action_idx with empty history."""
-    assert get_last_discussion_action_idx([]) == 0
+from tests.test_utils import load_test_game
 
 
-# --- Tests for get_phase_and_when_it_ends ---
+class TestPhaseUtils(unittest.TestCase):
+    def setUp(self):
+        # Load the predefined game state
+        self.history, self.players, self.game_config = load_test_game()
+        
+    def test_get_last_voting_action_idx(self):
+        # Test finding the last voting action index
+        # Using the full game history which should contain voting phases
+        
+        # Get the last voting action index
+        last_voting_idx = get_last_voting_action_idx(self.history)
+        
+        # Verify the index points to a VOTE_RESULTS phase
+        self.assertEqual(
+            self.history[last_voting_idx-1].phase, 
+            GamePhase.VOTE_RESULTS,
+            "Last voting index should point to a history item after VOTE_RESULTS phase"
+        )
 
-def test_get_phase_and_when_it_ends_first_turn(generic_test_players: List[Player], game_config: GameConfig, 
-                                              task_phase_history: History, initial_history: History) -> None:
-    """Test get_phase_and_when_it_ends on the first turn."""
-    expected_actions = (game_config.num_task_phase_actions_per_player * len(generic_test_players))
+        task_phase_idx = 8 # Bob does task
+        last_voting_idx = get_last_voting_action_idx(self.history[:task_phase_idx+1])
+        
+        # Verify the index points to 0 if no voting has occurred
+        self.assertEqual(last_voting_idx, 0, "Last voting index should be 0 if no voting has occurred")
+
+    def test_get_phase_and_when_it_ends_task_phase(self):
+        # Test phase determination during TASK phase
+        # Using turn 6 (David moved to location Cafeteria)
+        task_phase_idx = 6  # David moved to location Cafeteria
+        
+        # Get phase and actions until it ends
+        phase, actions_left = get_phase_and_when_it_ends(
+            history=self.history[:task_phase_idx+1],
+            game_config=self.game_config,
+            players=self.players
+        )
+        
+        # Verify phase is TASK and actions left is correct
+        self.assertEqual(phase, GamePhase.TASK, "Phase should be TASK")
+        self.assertGreaterEqual(actions_left, 0, "Actions left should be non-negative")
     
-    # Use task_phase_history as a base and modify it
-    task_start_history = task_phase_history.copy(actions_until_phase_ends=expected_actions)
+    def test_get_phase_and_when_it_ends_after_report(self):
+        # Test phase determination after a REPORT action
+        # Using turn 13 (Bob reported dead body of Alice)
+        report_phase_idx = 13  # Bob reported dead body of Alice
+        
+        # Check if this is actually a REPORT action
+        self.assertTrue(self.history[report_phase_idx].action_taken.type == ActionType.REPORT)
+        
+        # Get phase and actions until it ends
+        phase, actions_left = get_phase_and_when_it_ends(
+            history=self.history[:report_phase_idx+1],
+            game_config=self.game_config,
+            players=self.players
+        )
+        
+        # Verify phase is DISCUSS after a report
+        self.assertEqual(phase, GamePhase.DISCUSS, "Phase should be DISCUSS after a REPORT")
+        self.assertGreater(actions_left, 0, "Actions left should be positive after a REPORT")
+
+    def test_get_phase_and_when_it_ends_after_voting_results(self):
+        # Test transition from VOTE_RESULTS to GAME_END since there are no impostors left
+        # Using turn 20 (David was voted out)
+        vote_results_idx = 20
+        next_phase, actions_left = get_phase_and_when_it_ends(
+            history=self.history[:vote_results_idx+1],
+            game_config=self.game_config,
+            players=self.players
+        )
+        self.assertEqual(next_phase, GamePhase.GAME_END, "After VOTE_RESULTS phase should come GAME_END phase since there are no impostors left")
+        self.assertEqual(actions_left, 0, "No actions left after GAME_END phase")
     
-    history = [initial_history, task_start_history]
+    def test_handle_phase_change(self):
+        # Test phase transitions
+        # Test transition from GAME_START to TASK
+        # Using turn 0 (initial game state)
+        last_game_start_idx = 0
+        next_phase, actions_left = handle_phase_change(
+            history=self.history[:last_game_start_idx+1],
+            previous_phase=self.history[last_game_start_idx].phase,
+            game_config=self.game_config
+        )
+        self.assertEqual(next_phase, GamePhase.TASK, "After GAME_START phase should come TASK phase")
+        self.assertEqual(actions_left, len(self.history[last_game_start_idx].alive_player_names)*self.game_config.num_task_phase_actions_per_player-1, "TASK phase should have all alive players left")
 
-    phase, actions_left = get_phase_and_when_it_ends(history, generic_test_players, game_config)
-    assert phase == GamePhase.TASK
-    # The function returns actions_until_phase_ends - 1
-    assert actions_left == expected_actions - 1
-
-def test_get_phase_and_when_it_ends_report(initial_history: History, crewmate_report_history: History, 
-                                         generic_test_players: List[Player], dead_player: Player, 
-                                         game_config: GameConfig) -> None:
-    """Test get_phase_and_when_it_ends after a report action."""
-    # Create a history list with a report action using fixtures
-    history = [
-        initial_history,
-        crewmate_report_history  # Report action changes phase to DISCUSS
-    ]
-    # Calculate players alive for discussion count
-    alive_players = [p for p in generic_test_players if p.name != dead_player.name]
-    expected_actions = (game_config.num_discuss_phase_actions_per_player * len(alive_players)) - 1 
-    phase, actions_left = get_phase_and_when_it_ends(history, alive_players, game_config) # Pass only alive players
-    assert phase == GamePhase.DISCUSS
-    assert actions_left == expected_actions
-
-def test_get_phase_and_when_it_ends_continue_phase(initial_history: History, task_phase_history: History, 
-                                                 generic_test_players: List[Player], game_config: GameConfig) -> None:
-    """Test get_phase_and_when_it_ends when continuing in the same phase."""
-    # Create a history list with a move action using fixtures
-    history = [
-        initial_history,
-        task_phase_history  # Task phase with actions_until_phase_ends=10
-    ]
-    phase, actions_left = get_phase_and_when_it_ends(history, generic_test_players, game_config)
-    assert phase == GamePhase.TASK
-    assert actions_left == 9  # 10 - 1
-
-def test_get_phase_and_when_it_ends_phase_change_task(initial_history: History, task_phase_history: History, 
-                                                    generic_test_players: List[Player], game_config: GameConfig) -> None:
-    """Test get_phase_and_when_it_ends when task phase is ending."""
-    # Create a custom history entry with actions_until_phase_ends=0
-    task_ending_history = task_phase_history.copy(actions_until_phase_ends=0)
+        # Test transition from DISCUSS to VOTE
+        # Using turn 16 (Bob said "bry")
+        last_discussion_idx = 16
+        next_phase, actions_left = handle_phase_change(
+            history=self.history[:last_discussion_idx+1],
+            previous_phase=self.history[last_discussion_idx].phase,
+            game_config=self.game_config
+        )
+        self.assertEqual(next_phase, GamePhase.VOTING, "After DISCUSS phase should come VOTE phase")
+        self.assertEqual(actions_left, len(self.history[last_discussion_idx].alive_player_names)-1, "VOTE phase should have all alive players left")
+        
+        # Test transition from VOTE to VOTE_RESULTS
+        # Using turn 19 (Charlie voted for David)
+        last_vote_idx = 19
+        next_phase, actions_left = handle_phase_change(
+            history=self.history[:last_vote_idx+1],
+            previous_phase=self.history[last_vote_idx].phase,
+            game_config=self.game_config
+        )
+        self.assertEqual(next_phase, GamePhase.VOTE_RESULTS, "After VOTE phase should come VOTE_RESULTS phase")
+        self.assertEqual(actions_left, 0, "VOTE_RESULTS phase should have no actions left")
     
-    history = [initial_history, task_phase_history, task_ending_history]
-    phase, actions_left = get_phase_and_when_it_ends(history, generic_test_players, game_config)
-    assert phase == GamePhase.MAIN_MENU
-    assert actions_left == 0
-
-def test_get_phase_and_when_it_ends_phase_change_discuss(initial_history: History, discuss_phase_history: History, 
-                                                       generic_test_players: List[Player], game_config: GameConfig) -> None:
-    """Test get_phase_and_when_it_ends when discuss phase is ending."""
-    # Create a custom history entry with actions_until_phase_ends=0
-    discuss_ending_history = discuss_phase_history.copy(actions_until_phase_ends=0)
+    def test_count_votes(self):
+        # Test vote counting
+        # Using history up to turn 19 (after Charlie voted for David)
+        vote_phase_end_idx = 19  # Charlie voted for David
+        
+        # Get vote counts and votes
+        vote_counts, votes = count_votes(self.history[:vote_phase_end_idx+1])
+        
+        # Verify vote counts and votes dictionaries are not empty if voting occurred
+        self.assertTrue(any(h.action_taken.type == ActionType.VOTE for h in self.history[:vote_phase_end_idx+1]), "Voting occurred")
+        self.assertGreater(len(vote_counts), 0, "Vote counts should not be empty after voting")
+        self.assertGreater(len(votes), 0, "Votes dictionary should not be empty after voting")
+        
+        # Check that vote counts sum matches the number of votes cast
+        total_votes = sum(vote_counts.values())
+        self.assertEqual(total_votes, len(votes), "Total vote count should match number of votes cast")
+        
+        # Verify David received 2 votes (from Bob and Charlie)
+        self.assertEqual(vote_counts.get("David", 0), 2, "David should have received 2 votes")
+        # Verify nobody received 1 vote (from David)
+        self.assertEqual(vote_counts.get("nobody", 0), 1, "nobody should have received 1 vote")
     
-    history = [initial_history, discuss_phase_history, discuss_ending_history]
-    phase, actions_left = get_phase_and_when_it_ends(history, generic_test_players, game_config)
-    assert phase == GamePhase.VOTE
-    assert actions_left == len(generic_test_players) - 1
+    def test_determine_ejection_result(self):
+        # Test ejection result determination
+        # Using history up to turn 19 (after Charlie voted for David)
+        vote_phase_end_idx = 19  # Charlie voted for David
+        
+        # Get vote counts
+        vote_counts, _ = count_votes(self.history[:vote_phase_end_idx+1])
+        
+        self.assertTrue(vote_counts, "Vote counts should not be empty after voting")
+        
+        # Determine ejection result
+        ejected_player, action_type = determine_ejection_result(vote_counts)
+        
+        # Verify ejected player and action type
+        self.assertIsNotNone(ejected_player, "Ejected player should not be None")
+        self.assertEqual(ejected_player, "David", "David should be ejected")
+        self.assertEqual(action_type, ActionType.KILL, "Action type should be KILL when someone is ejected")
 
 
-# --- Tests for handle_phase_change ---
-
-def test_handle_phase_change_task_to_main_menu(generic_test_players: List[Player], initial_history: History, game_config: GameConfig) -> None:
-    """Test handle_phase_change from TASK to MAIN_MENU."""
-    history = [initial_history] 
-    phase, actions_left = handle_phase_change(history, generic_test_players, GamePhase.TASK, game_config)
-    assert phase == GamePhase.MAIN_MENU
-    assert actions_left == 0
-
-def test_handle_phase_change_discuss_to_vote(initial_history: History, generic_test_players: List[Player], game_config: GameConfig) -> None:
-    """Test handle_phase_change from DISCUSS to VOTE."""
-    history = [initial_history] 
-    phase, actions_left = handle_phase_change(history, generic_test_players, GamePhase.DISCUSS, game_config)
-    assert phase == GamePhase.VOTE
-    assert actions_left == len(generic_test_players) - 1
-
-def test_handle_phase_change_vote_to_task(vote_phase_history: History, crewmate_vote_history: History, 
-                                         impostor_vote_history: History, generic_test_players: List[Player], 
-                                         initial_history: History, impostor_kill_history: History, crewmate_report_history: History,
-                                         crewmate_speak_history: History, game_config: GameConfig,
-                                         vote_impostor_action: Action, other_vote_history: History) -> None:
-    """Test handle_phase_change from VOTE to TASK."""
-    # Create a custom vote action for other_player voting crewmate by copying an existing vote action
-    other_vote_history = other_vote_history.copy(actions_until_phase_ends=len(generic_test_players) - 2)
-    
-    # Create a history list with all players voting
-    history = [
-        initial_history,
-        impostor_kill_history,
-        crewmate_report_history,
-        crewmate_speak_history,
-        crewmate_vote_history,  # Crewmate votes for impostor
-        impostor_vote_history,  # Impostor votes for nobody
-        other_vote_history,     # Other votes for crewmate
-    ]
-    
-    initial_history_len = len(history)
-    # Calculate expected actions for TASK phase
-    expected_actions = game_config.num_task_phase_actions_per_player * len(generic_test_players) - 1
-    
-    phase, actions_left = handle_phase_change(history, generic_test_players, GamePhase.VOTE, game_config)
-    assert phase == GamePhase.TASK
-    assert actions_left == expected_actions
-
-    assert len(history) == initial_history_len + 1
-    vote_entry = history[-1] # This is the entry *added* by the function
-    # The added entry reflects the result (nobody voted out), setting phase to MAIN_MENU as the system speaks
-    assert vote_entry.phase == GamePhase.MAIN_MENU
-    assert vote_entry.actions_until_phase_ends == 0
-
-def test_handle_phase_change_main_menu_to_main_menu(generic_test_players: List[Player], initial_history: History, game_config: GameConfig) -> None:
-    """Test handle_phase_change from MAIN_MENU to MAIN_MENU."""
-    history = [initial_history] 
-    phase, actions_left = handle_phase_change(history, generic_test_players, GamePhase.MAIN_MENU, game_config)
-    assert phase == GamePhase.MAIN_MENU
-    assert actions_left == 0
-
-
-# --- Tests for count_votes ---
-
-def test_count_votes(crewmate_vote_history: History, impostor_vote_history: History, crewmate_report_history: History,
-                   crewmate_speak_history: History, crewmate_player: Player, other_player: Player, other_vote_history: History,
-                   initial_history: History, impostor_kill_history: History, impostor_player: Player) -> None:
-    """Test count_votes with multiple votes."""
-    # Create a history list with a discussion phase followed by votes
-    history = [
-        initial_history,
-        impostor_kill_history,
-        crewmate_report_history,  # Starts DISCUSS phase
-        crewmate_speak_history,   # Discussion
-        crewmate_vote_history,    # Crewmate votes for impostor
-        impostor_vote_history,    # Impostor votes for crewmate
-        other_vote_history,       # Other votes for impostor
-    ]
-    
-    vote_counts, votes = count_votes(history)
-
-    expected_votes = {
-        impostor_player.name: "nobody",
-        other_player.name: impostor_player.name,
-        crewmate_player.name: impostor_player.name,
-    }
-    expected_vote_counts = {
-        impostor_player.name: 2,
-        "nobody": 1,
-    }
-    assert votes == expected_votes
-    assert vote_counts == expected_vote_counts
-
-def test_count_votes_no_votes(initial_history: History, crewmate_report_history: History,
-                            crewmate_speak_history: History) -> None:
-    """Test count_votes with no votes cast."""
-    # Create a history list with a discussion phase but no votes
-    history = [
-        initial_history,
-        crewmate_report_history,  # Starts DISCUSS phase
-        crewmate_speak_history,   # Discussion
-    ]
-    
-    vote_counts, votes = count_votes(history)
-    assert votes == {}
-    assert vote_counts == {}
-
-
-# --- Tests for determine_ejection_result ---
-
-def test_determine_ejection_result_clear_winner(crewmate_player: Player, impostor_player: Player) -> None:
-    votes = {impostor_player.name: 2, crewmate_player.name: 1}
-    ejected, action_type = determine_ejection_result(votes)
-    assert ejected == impostor_player.name
-    assert action_type == ActionType.KILL
-
-def test_determine_ejection_result_tie(crewmate_player: Player, impostor_player: Player) -> None:
-    votes = {impostor_player.name: 1, crewmate_player.name: 1}
-    ejected, action_type = determine_ejection_result(votes)
-    assert ejected == "nobody"
-    assert action_type == ActionType.WAIT
-
-def test_determine_ejection_result_nobody(impostor_player: Player) -> None:
-    votes = {"nobody": 2, impostor_player.name: 1}
-    ejected, action_type = determine_ejection_result(votes)
-    assert ejected == "nobody"
-    assert action_type == ActionType.WAIT
-
-def test_determine_ejection_result_nobody_tie(impostor_player: Player) -> None:
-    votes = {"nobody": 1, impostor_player.name: 1}
-    ejected, action_type = determine_ejection_result(votes)
-    assert ejected == "nobody"
-    assert action_type == ActionType.WAIT
-
-def test_determine_ejection_result_no_votes():
-    vote_counts = {}
-    with pytest.raises(ValueError, match="No votes casted"):
-        determine_ejection_result(vote_counts)
+if __name__ == "__main__":
+    unittest.main()

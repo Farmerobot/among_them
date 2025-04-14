@@ -369,7 +369,7 @@ def extract_discussion_messages(history: List[Any], player_roles: Dict[str, str]
     vote_indices = []
     for idx, item in enumerate(history):
         phase = get_enum_value(safe_get(item, "phase", {}))
-        if phase == "Vote" or phase == "GamePhase.VOTE":
+        if phase == "Vote" or phase == "GamePhase.VOTING":
             vote_indices.append(idx)
     
     print(f"Found {len(discussion_indices)} discussion messages at indices: {discussion_indices}")
@@ -453,7 +453,7 @@ def extract_discussion_messages(history: List[Any], player_roles: Dict[str, str]
                         
                         # If we hit the next discussion phase, stop
                         vote_phase = get_enum_value(safe_get(vote_item, "phase", {}))
-                        if vote_phase != "Vote" and vote_phase != "GamePhase.VOTE":
+                        if vote_phase != "Vote" and vote_phase != "GamePhase.VOTING":
                             break
                         
                         # Extract votes from this voting phase

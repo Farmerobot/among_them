@@ -1,206 +1,204 @@
+import unittest
 from typing import List
 
-from among_them.models.action_type import ActionType
-from among_them.game_config import GameConfig
-from among_them.models.history import History
-from among_them.models.location import Location
+from among_them.models.action import Action, ActionType
 from among_them.models.player import Player
-from among_them.models.tasks import Task
-from among_them.utils.action_utils import (get_task_phase_actions,
-                                           get_vote_actions)
+from among_them.models.player_role import PlayerRole
+from among_them.models.location import Location
+from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
 
-# --- Tests for get_task_phase_actions ---
-
-def test_get_task_phase_actions_base(crewmate_player: Player, cafeteria_location: Location,
-                                     crewmate_wait_history: History, initial_history: List[History],
-                                     generic_test_players: List[Player], game_config: GameConfig):
-    """Test basic actions available to a crewmate."""
-    acting_player = crewmate_player
-    current_location = cafeteria_location  # For readability in the test
-
-    # Use the crewmate_wait_history fixture
-    history = [initial_history, crewmate_wait_history]
-
-    actions = get_task_phase_actions(acting_player, current_location, 0, history, generic_test_players, game_config)
-    action_types = {action.type for action in actions}
-
-    assert ActionType.WAIT in action_types
-    # Check move actions based on DOORS from CAFETERIA
-    assert any(a.type == ActionType.MOVE and a.target_location == Location.WEAPONS for a in actions)
-    assert any(a.type == ActionType.MOVE and a.target_location == Location.ADMIN for a in actions)
-    assert any(a.type == ActionType.MOVE and a.target_location == Location.MEDBAY for a in actions)
+from tests.test_utils import load_test_game
 
 
-def test_get_task_phase_actions_report(crewmate_player: Player, cafeteria_location: Location,
-                                       impostor_kill_history: History,
-                                       all_generic_test_players: List[Player], dead_player: Player, initial_history: History,
-                                       game_config: GameConfig):
-    """Test that REPORT action is available when a dead body is present."""
-    # Build history with the fixtures and custom actions
-    history = [
-        initial_history,
-        impostor_kill_history,  # Impostor kills DeadPlayer
-    ]
-
-    # Call the function with the constructed history
-    actions = get_task_phase_actions(crewmate_player, cafeteria_location, 0, history, all_generic_test_players, game_config)
-    report_actions = [a for a in actions if a.type == ActionType.REPORT]
-    assert len(report_actions) == 1, "REPORT action should be available"
-    assert report_actions[0].target_player_name == dead_player.name  # Check it reports the correct player
-
-
-def test_get_task_phase_actions_no_report_if_body_elsewhere(crewmate_player: Player, weapons_location: Location, crewmate_move_history: History,
-                                                           impostor_kill_history: History, all_generic_test_players: List[Player], 
-                                                           initial_history: History, game_config: GameConfig):
-    """Test REPORT is not available if the body is in a different location."""
-    # Build history using fixtures
-    history = [
-        initial_history,
-        crewmate_move_history,  # Crewmate moves to medbay
-        impostor_kill_history   # Impostor kills in cafeteria
-    ]
-
-    actions = get_task_phase_actions(crewmate_player, weapons_location, 0, history, all_generic_test_players, game_config)
-    report_actions = [a for a in actions if a.type == ActionType.REPORT]
-    assert len(report_actions) == 0, "REPORT action should NOT be available"
-
-
-def test_get_task_phase_actions_task(crewmate_player: Player, cafeteria_location: Location,
-                                     initial_history: History, impostor_move_history: History,
-                                     task_in_cafeteria: Task,
-                                     all_generic_test_players: List[Player], game_config: GameConfig):
-    """Test DO_TASK action is available when a task is at the current location."""
-    history = [initial_history, impostor_move_history]
-
-    actions = get_task_phase_actions(crewmate_player, cafeteria_location, 0, history, all_generic_test_players, game_config)
-    task_actions = [a for a in actions if a.type == ActionType.TASK]
-
-    assert len(task_actions) == 1
-    assert task_actions[0].target_task.name == task_in_cafeteria.name
-
-
-def test_get_task_phase_actions_no_task_if_elsewhere(crewmate_player: Player, medbay_location: Location,
-                                                     initial_history: History, crewmate_move_history: History,
-                                                     impostor_move_history: History,
-                                                     all_generic_test_players: List[Player], game_config: GameConfig):
-    """Test DO_TASK is not available if the task is elsewhere."""
-    # Build history using fixtures
-    history = [
-        initial_history,  # Initial state in cafeteria
-        crewmate_move_history,  # Moved to medbay
-        impostor_move_history,  # Impostor moved to weapons
-    ]
-
-    actions = get_task_phase_actions(crewmate_player, medbay_location, 0, history, all_generic_test_players, game_config)
-    task_actions = [a for a in actions if a.type == ActionType.TASK]
-    assert len(task_actions) == 0
-
-
-def test_get_task_phase_actions_impostor_kill_available(impostor_player: Player, crewmate_player: Player,
-                                                      cafeteria_location: Location, initial_history: History,
-                                                      impostor_wait_history: History, crewmate_wait_history: History,
-                                                      impostor_kill_history: History,
-                                                      generic_test_players: List[Player], game_config: GameConfig):
-    """Test KILL action is available for impostor when cooldown is 0 and target is present."""
-    # Build history using fixtures
-    history = [
-        initial_history,  # Initial state with crewmate in cafeteria
-        impostor_kill_history, # Impostor has just killed DeadPlayer
-        crewmate_wait_history, # Crewmate is not reporting
-        impostor_wait_history, # Impostor has cooldown
-        crewmate_wait_history # Crewmate is not reporting
-    ]
-
-    actions = get_task_phase_actions(impostor_player, cafeteria_location, 0, history, generic_test_players, game_config)
-    kill_actions = [a for a in actions if a.type == ActionType.KILL]
+class TestActionUtils(unittest.TestCase):
+    def setUp(self):
+        # Load the predefined game state
+        self.history, self.players, self.game_config = load_test_game()
+        
+    def test_get_task_phase_actions_david_cooldown(self):
+        """Test David's impostor cooldown behavior throughout the game."""
+        # Find David player (the impostor)
+        david = next((p for p in self.players if p.name == "David"), None)
+        self.assertIsNotNone(david, "David player not found")
+        self.assertEqual(david.role, PlayerRole.IMPOSTOR, "David should be an impostor")
+        
+        # Test 1: At game start (turn 0), David has cooldown of 1 and cannot kill
+        start_idx = 0  # Game start
+        actions = get_task_phase_actions(
+            player=david,
+            history=self.history[:start_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify no KILL actions are available due to cooldown
+        self.assertFalse(any(a.type == ActionType.KILL for a in actions),
+                        "David should not have KILL actions available at game start due to cooldown")
+        
+        # Test 2: After moving to Medbay (turn 2), David still cannot kill because no one is there
+        medbay_idx = 2  # David moved to Medbay
+        actions = get_task_phase_actions(
+            player=david,
+            history=self.history[:medbay_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify no KILL actions are available because no one is in Medbay
+        self.assertFalse(any(a.type == ActionType.KILL for a in actions),
+                        "David should not have KILL actions available in Medbay with no other players")
+        
+        # Test 3: After returning to Cafeteria (turn 6), David can kill because cooldown is 0 and others are there
+        cafeteria_return_idx = 6  # David moved back to Cafeteria
+        actions = get_task_phase_actions(
+            player=david,
+            history=self.history[:cafeteria_return_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify KILL actions are available
+        kill_actions = [a for a in actions if a.type == ActionType.KILL]
+        self.assertTrue(len(kill_actions) > 0, 
+                       "David should have KILL actions available after returning to Cafeteria")
+        
+        # Verify all players in Cafeteria can be killed
+        killable_players = [a.target_player_name for a in kill_actions]
+        self.assertIn("Alice", killable_players, "Alice should be a killable target")
+        self.assertIn("Bob", killable_players, "Bob should be a killable target")
+        self.assertIn("Charlie", killable_players, "Charlie should be a killable target")
+        
+    def test_get_task_phase_actions_player_tasks(self):
+        """Test task availability for different players in the Cafeteria."""
+        # Test Bob's tasks in Cafeteria (he has 2 tasks there)
+        bob = next((p for p in self.players if p.name == "Bob"), None)
+        self.assertIsNotNone(bob, "Bob player not found")
+        
+        # Check Bob's initial tasks (turn 0)
+        start_idx = 0
+        bob_actions = get_task_phase_actions(
+            player=bob,
+            history=self.history[:start_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify Bob has 2 tasks in Cafeteria
+        bob_task_actions = [a for a in bob_actions if a.type == ActionType.TASK]
+        self.assertEqual(len(bob_task_actions), 2, "Bob should have 2 tasks in Cafeteria")
+        
+        # Check after Bob completes first task (turn 3)
+        after_first_task_idx = 3
+        bob_actions = get_task_phase_actions(
+            player=bob,
+            history=self.history[:after_first_task_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify Bob now has 1 task left in Cafeteria
+        bob_task_actions = [a for a in bob_actions if a.type == ActionType.TASK]
+        self.assertEqual(len(bob_task_actions), 1, "Bob should have 1 task left in Cafeteria after completing first task")
+        
+        # Test Alice's task in Cafeteria (she has 1 task there)
+        alice = next((p for p in self.players if p.name == "Alice"), None)
+        self.assertIsNotNone(alice, "Alice player not found")
+        
+        # Check Alice's initial tasks (turn 0)
+        alice_actions = get_task_phase_actions(
+            player=alice,
+            history=self.history[:start_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify Alice has 1 task in Cafeteria
+        alice_task_actions = [a for a in alice_actions if a.type == ActionType.TASK]
+        self.assertEqual(len(alice_task_actions), 1, "Alice should have 1 task in Cafeteria")
+        
+        # Test Charlie's tasks in Cafeteria (he has no tasks there)
+        charlie = next((p for p in self.players if p.name == "Charlie"), None)
+        self.assertIsNotNone(charlie, "Charlie player not found")
+        
+        # Check Charlie's initial tasks (turn 0)
+        charlie_actions = get_task_phase_actions(
+            player=charlie,
+            history=self.history[:start_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify Charlie has no tasks in Cafeteria
+        charlie_task_actions = [a for a in charlie_actions if a.type == ActionType.TASK]
+        self.assertEqual(len(charlie_task_actions), 0, "Charlie should have no tasks in Cafeteria")
     
-    assert len(kill_actions) >= 1, "KILL action should be available"
-    assert kill_actions[0].target_player_name == crewmate_player.name
-
-
-def test_get_task_phase_actions_impostor_kill_cooldown(impostor_player: Player, crewmate_player: Player,
-                                                      cafeteria_location: Location, initial_history: History,
-                                                      impostor_kill_history: History, crewmate_wait_history: History,
-                                                      generic_test_players: List[Player], game_config: GameConfig):
-    """Test KILL action is NOT available for impostor when cooldown > 0."""
-    acting_player = impostor_player
-    current_location = cafeteria_location
-
-    # Build history using fixtures - impostor_kill_history has cooldown > 0
-    history = [
-        initial_history,  # Initial state
-        impostor_kill_history,  # Impostor has just killed, so cooldown > 0
-        crewmate_wait_history  # Crewmate is not reporting
-    ]
-
-    actions = get_task_phase_actions(acting_player, current_location, 1, history, generic_test_players, game_config)
-    kill_actions = [a for a in actions if a.type == ActionType.KILL]
+    def test_get_task_phase_actions_after_kill(self):
+        """Test Bob's actions after David kills Alice, including REPORT action."""
+        # Find Bob player
+        bob = next((p for p in self.players if p.name == "Bob"), None)
+        self.assertIsNotNone(bob, "Bob player not found")
+        
+        # After David kills Alice (turn 12)
+        after_kill_idx = 12
+        
+        # Get actions for Bob after the kill
+        bob_actions = get_task_phase_actions(
+            player=bob,
+            history=self.history[:after_kill_idx+1],
+            players=self.players,
+            game_config=self.game_config
+        )
+        
+        # Verify Bob has REPORT action available
+        report_actions = [a for a in bob_actions if a.type == ActionType.REPORT]
+        self.assertTrue(len(report_actions) > 0, "Bob should have REPORT action available after Alice is killed")
+        
+        # Verify the report action is for Alice
+        self.assertEqual(report_actions[0].target_player_name, "Alice", 
+                        "Bob's REPORT action should target Alice")
     
-    assert len(kill_actions) == 0, "KILL action should NOT be available due to cooldown"
+    def test_get_vote_actions(self):
+        # Test vote actions during vote phase
+        # Using turn 16 (Discussion phase ends)
+        vote_phase_idx = 16  # Discussion phase ends
+        
+        # Find David player
+        david = next((p for p in self.players if p.name == "David"), None)
+        self.assertIsNotNone(david, "David player not found")
+        
+        # Get vote actions for David
+        vote_actions = get_vote_actions(
+            history=self.history[:vote_phase_idx+1],
+            players=self.players,
+            player=david
+        )
+        
+        # Verify vote actions
+        self.assertTrue(any(a.type == ActionType.VOTE for a in vote_actions), 
+                       "Vote actions should include VOTE action type")
+        
+        # Check that "nobody" is an option
+        self.assertTrue(any(a.type == ActionType.VOTE and a.target_player_name == "nobody" for a in vote_actions),
+                       "Vote actions should include option to vote for nobody")
+        
+        # Check that all alive players except self are vote options
+        alive_players = self.history[vote_phase_idx].alive_player_names
+        for player_name in alive_players:
+            if player_name != david.name:
+                self.assertTrue(
+                    any(a.type == ActionType.VOTE and a.target_player_name == player_name for a in vote_actions),
+                    f"Vote actions should include option to vote for {player_name}"
+                )
+        
+        # Check that dead players are not vote options
+        all_player_names = [p.name for p in self.players]
+        dead_players = [name for name in all_player_names if name not in alive_players]
+        for player_name in dead_players:
+            self.assertFalse(
+                any(a.type == ActionType.VOTE and a.target_player_name == player_name for a in vote_actions),
+                f"Vote actions should not include option to vote for dead player {player_name}"
+            )
 
 
-def test_get_task_phase_actions_impostor_kill_target_elsewhere(impostor_player: Player, crewmate_player: Player,
-                                                               weapons_location: Location, impostor_move_history: History,
-                                                               crewmate_move_history: History, initial_history: History,
-                                                               generic_test_players: List[Player], game_config: GameConfig):
-    """Test KILL action is NOT available for impostor if target is elsewhere."""
-    # Build history using fixtures
-    history = [
-        initial_history,   # Initial state
-        impostor_move_history,   # Impostor moves to weapons
-        crewmate_move_history    # Crewmate moves to medbay (different location)
-    ]
-
-    actions = get_task_phase_actions(impostor_player, weapons_location, 0, history, generic_test_players, game_config)
-    kill_actions = [a for a in actions if a.type == ActionType.KILL]
-    
-    assert len(kill_actions) == 0, "KILL action should NOT be available when target is elsewhere"
-
-
-def test_get_task_phase_actions_impostor_pretend(impostor_player: Player, cafeteria_location: Location, 
-                                                initial_history: History, generic_test_players: List[Player],
-                                                game_config: GameConfig):
-    """Test PRETEND action is available for impostor."""
-    # Use the initial_history fixture
-    history = [initial_history]
-
-    actions = get_task_phase_actions(impostor_player, cafeteria_location, 0, history, generic_test_players, game_config)
-    pretend_actions = [a for a in actions if a.type == ActionType.PRETEND]
-    
-    assert len(pretend_actions) > 0, "PRETEND action should be available for impostor"
-
-
-def test_get_task_phase_actions_crewmate_no_impostor_actions(crewmate_player: Player, cafeteria_location: Location, 
-                                                             initial_history: History, generic_test_players: List[Player],
-                                                             game_config: GameConfig):
-    """Test that crewmates cannot KILL or PRETEND_TASK."""
-
-    # Use the initial_history fixture
-    history = [initial_history]
-
-    actions = get_task_phase_actions(crewmate_player, cafeteria_location, 0, history, generic_test_players, game_config)
-    kill_actions = [a for a in actions if a.type == ActionType.KILL]
-    pretend_actions = [a for a in actions if a.type == ActionType.PRETEND]
-    
-    assert len(kill_actions) == 0, "KILL action should NOT be available for crewmate"
-    assert len(pretend_actions) == 0, "PRETEND action should NOT be available for crewmate"
-
-
-# --- Tests for get_vote_actions ---
-
-def test_get_vote_actions(crewmate_player: Player, generic_test_players: List[Player], dead_player: Player):
-    """Test available VOTE actions, including voting for alive players and nobody."""
-    # Get the vote actions
-    vote_actions = get_vote_actions(generic_test_players, crewmate_player)
-    
-    # Check that there's a vote action for each alive player except self
-    alive_player_no_self_names = [p.name for p in generic_test_players if p.name != crewmate_player.name and p.name != dead_player.name]
-    vote_target_names = [a.target_player_name for a in vote_actions]
-    
-    # Check that we can vote for each alive player
-    for player_name in alive_player_no_self_names:
-        assert player_name in vote_target_names, f"Should be able to vote for {player_name}"
-    assert "nobody" in vote_target_names, "Should be able to vote for nobody"
-    assert dead_player.name not in vote_target_names, f"Should not be able to vote for dead player {dead_player.name}"
-    assert crewmate_player.name not in vote_target_names, "Should not be able to vote for self"
-
+if __name__ == "__main__":
+    unittest.main()

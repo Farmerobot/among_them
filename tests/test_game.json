@@ -1,0 +1,3431 @@
+[
+  [
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Game Start"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 1,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "System",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "The game started",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Start the coffee maker in the cafeteria",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Alice",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 39,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Charlie] are waiting",
+        "spectator": "Charlie waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Start the coffee maker in the cafeteria",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Alice"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 38,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "",
+      "llm_response": "move to location Medbay",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Medbay"
+        },
+        "target_task": null,
+        "text": "move to location Medbay",
+        "result": "You [David] moved to location Medbay",
+        "spectator": "David moved to location Medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Charlie",
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 37,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay",
+        "complete task: Empty the cafeteria trash",
+        "complete task: Start the coffee maker in the cafeteria"
+      ],
+      "llm_cot": "",
+      "llm_response": "complete task: Start the coffee maker in the cafeteria",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Start the coffee maker in the cafeteria",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Start the coffee maker in the cafeteria",
+        "result": "You [Bob] completed task: Start the coffee maker in the cafeteria",
+        "spectator": "Bob completed task: Start the coffee maker in the cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 36,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay",
+        "complete task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "",
+      "llm_response": "complete task: Empty the cafeteria trash",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Empty the cafeteria trash",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Empty the cafeteria trash",
+        "result": "You [Alice] completed task: Empty the cafeteria trash",
+        "spectator": "Alice completed task: Empty the cafeteria trash",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Alice",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 35,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Charlie] are waiting",
+        "spectator": "Charlie waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Empty the cafeteria trash",
+            "completed": false,
+            "location": {
+              "__enum__": "Cafeteria"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Alice"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 34,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Cafeteria",
+        "move to location Electrical",
+        "pretend doing task: Fix wiring in medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "move to location Cafeteria",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Cafeteria"
+        },
+        "target_task": null,
+        "text": "move to location Cafeteria",
+        "result": "You [David] moved to location Cafeteria",
+        "spectator": "David moved to location Cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 33,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Alice] are waiting",
+        "spectator": "Alice waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 32,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay",
+        "complete task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "",
+      "llm_response": "complete task: Empty the cafeteria trash",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Empty the cafeteria trash",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Empty the cafeteria trash",
+        "result": "You [Bob] completed task: Empty the cafeteria trash",
+        "spectator": "Bob completed task: Empty the cafeteria trash",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 31,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Alice] are waiting",
+        "spectator": "Alice waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 30,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Bob] are waiting",
+        "spectator": "Bob waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 29,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "wait",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "wait",
+        "result": "You [Charlie] are waiting",
+        "spectator": "Charlie waited",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice",
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 28,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "move to location Storage",
+        "move to location Medbay",
+        "kill Bob",
+        "kill Alice",
+        "kill Charlie",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "",
+      "llm_response": "kill Alice",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Kill"
+        },
+        "player_name": "David",
+        "target_player_name": "Alice",
+        "target_location": null,
+        "target_task": null,
+        "text": "kill Alice",
+        "result": "You [David] killed Alice",
+        "spectator": "David killed Alice",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 27,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "wait",
+        "report dead body of Alice and start a discussion",
+        "move to location Storage",
+        "move to location Medbay"
+      ],
+      "llm_cot": "",
+      "llm_response": "report dead body of Alice and start a discussion",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Report"
+        },
+        "player_name": "Bob",
+        "target_player_name": "Alice",
+        "target_location": null,
+        "target_task": null,
+        "text": "report dead body of Alice and start a discussion",
+        "result": "You [Bob] reported dead body of Alice to other players and started discussion",
+        "spectator": "Bob reported dead body of Alice to everyone and started discussion",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Discuss"
+      },
+      "actions_until_phase_ends": 2,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "speak"
+      ],
+      "llm_cot": "",
+      "llm_response": "helolo",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Speak"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "speak",
+        "result": "[Charlie]: helolo",
+        "spectator": "[Charlie]: helolo",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {
+        "Bob": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "David": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "Charlie": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        }
+      },
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Discuss"
+      },
+      "actions_until_phase_ends": 1,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "speak"
+      ],
+      "llm_cot": "",
+      "llm_response": "hi",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Speak"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "speak",
+        "result": "[David]: hi",
+        "spectator": "[David]: hi",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {
+        "Bob": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "David": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "Charlie": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        }
+      },
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Discuss"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "speak"
+      ],
+      "llm_cot": "",
+      "llm_response": "bry",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Speak"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "speak",
+        "result": "[Bob]: bry",
+        "spectator": "[Bob]: bry",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {
+        "Bob": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "David": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        },
+        "Charlie": {
+          "voted_player": "nobody",
+          "chain_of_thought": ""
+        }
+      },
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Bob",
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Voting"
+      },
+      "actions_until_phase_ends": 2,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "vote for nobody",
+        "vote for Bob",
+        "vote for Charlie"
+      ],
+      "llm_cot": "",
+      "llm_response": "vote for nobody",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Vote"
+        },
+        "player_name": "David",
+        "target_player_name": "nobody",
+        "target_location": null,
+        "target_task": null,
+        "text": "vote for nobody",
+        "result": "You [David] voted for nobody",
+        "spectator": "David voted for nobody",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Voting"
+      },
+      "actions_until_phase_ends": 1,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "vote for nobody",
+        "vote for David",
+        "vote for Charlie"
+      ],
+      "llm_cot": "",
+      "llm_response": "vote for David",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Vote"
+        },
+        "player_name": "Bob",
+        "target_player_name": "David",
+        "target_location": null,
+        "target_task": null,
+        "text": "vote for David",
+        "result": "You [Bob] voted for David",
+        "spectator": "Bob voted for David",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Voting"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "vote for nobody",
+        "vote for Bob",
+        "vote for David"
+      ],
+      "llm_cot": "",
+      "llm_response": "vote for David",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Vote"
+        },
+        "player_name": "Charlie",
+        "target_player_name": "David",
+        "target_location": null,
+        "target_task": null,
+        "text": "vote for David",
+        "result": "You [Charlie] voted for David",
+        "spectator": "Charlie voted for David",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Vote Results"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 1,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Kill"
+        },
+        "player_name": "System",
+        "target_player_name": "David",
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "David was voted out.",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Game End"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 1,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Wait"
+        },
+        "player_name": "System",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "The game ended (No impostors left)",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Bob": [
+          {
+            "name": "Fix wiring in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Submit scan in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Empty the storage trash chute",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Fix wiring in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    }
+  ],
+  [
+    {
+      "name": "Bob",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": true,
+      "llm_model_name": "deepseek-r1:1.5b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Alice",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": true,
+      "llm_model_name": "deepseek-r1:1.5b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "David",
+      "role": {
+        "__enum__": "Impostor"
+      },
+      "manual_human_control": true,
+      "llm_model_name": "deepseek-r1:1.5b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Charlie",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": true,
+      "llm_model_name": "deepseek-r1:1.5b",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    }
+  ],
+  {
+    "num_tasks": 4,
+    "num_players": 4,
+    "num_impostors": 1,
+    "map_size": 0,
+    "num_task_phase_actions_per_player": 10,
+    "num_discuss_phase_actions_per_player": 1,
+    "impostor_cooldown": 1,
+    "__class__": "GameConfig",
+    "__module__": "among_them.game_config"
+  }
+]
