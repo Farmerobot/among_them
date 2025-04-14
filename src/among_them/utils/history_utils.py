@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import List, Optional
 from among_them.models.player import Player
 from among_them.game_config import GameConfig
 from among_them.models.history import History
@@ -88,9 +88,10 @@ def create_vote_history_entry(
         alive_player_names = [p.name for p in alive_players if p.name != ejected_player],
     )
 
-def get_action_history_str(history: List[History], players: List[Player], player: Player, game_config: GameConfig) -> str:
+def get_action_history_str(history: List[History], players: List[Player], player: Player, game_config: GameConfig, phase: Optional[GamePhase] = None) -> str:
     """Returns all actions seen by agent and actions that agent saw/spectated in history in order."""
-    phase, _ = get_phase_and_when_it_ends(history, game_config, players)
+    if phase is None:
+        phase, _ = get_phase_and_when_it_ends(history, game_config, players)
     players_in_room = get_players_in_room(history, players, player)
     alive_players = [p for p in players if p.name in history[-1].alive_player_names]
     location = get_last_player_action(history, player).location

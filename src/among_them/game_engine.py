@@ -106,7 +106,7 @@ class GameEngine:
                     retry_count += 1
                     try:
                         fake_voting_actions_player_can_take = get_vote_actions(self.history, self.players, player)
-                        fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config)
+                        fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
                         fake_action_taken_idx, _, fake_action_chain_of_thought, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
                         fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
                         votes_before_this_discussion_message[player.name] = {"voted_player": fake_action_taken.target_player_name, "chain_of_thought": fake_action_chain_of_thought}
@@ -122,8 +122,26 @@ class GameEngine:
             print(f"Votes before this discussion message: {votes_before_this_discussion_message}")
 
         history_str = get_action_history_str(self.history, self.players, current_player, self.game_config)
-        action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
-        action_taken = actions_player_can_take[action_taken_idx]
+        if phase == GamePhase.DISCUSS:
+            retry_count = 0
+            while True:
+                try:
+                    action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
+                    action_taken = actions_player_can_take[action_taken_idx]
+                    break
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count > 3:
+                        raise e
+                    if "LLM did" in str(e):
+                        print(f"Error: {e}")
+                        print(f"Model failed to respond. Retry count: {retry_count}")
+                        continue
+                    else:
+                        raise e
+        else:
+            action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
+            action_taken = actions_player_can_take[action_taken_idx]
 
         if action_taken.type == ActionType.REPORT:
             spectators_who_saw = alive_player_names

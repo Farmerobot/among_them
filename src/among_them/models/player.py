@@ -200,9 +200,9 @@ class Player:
         if actions and actions[0].type != ActionType.SPEAK:
             actions_text = "<available_actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</available_actions>"
             prompt += f"\n\n{actions_text}\n"
-            prompt += "\n\nRespond in the following format: <action>action</action>"
+            prompt += "\n\nChoose one action. Respond in the following xml format: <action>action</action>"
         elif actions and actions[0].type == ActionType.SPEAK:
-            prompt += "\n\nRespond to others in the following format: <message>message</message>"
+            prompt += "\n\nIt is discussion phase now. Respond to others in the following xml format: <message>message</message>"
 
         # Print prompts for debugging
         print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
