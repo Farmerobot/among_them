@@ -34,7 +34,7 @@ class Action:
             self.result = f"You [{self.player_name}] moved to location {self.target_location.value}"
             self.spectator = f"{self.player_name} moved to location {self.target_location.value}"
         elif self.type == ActionType.WAIT:
-            self.text = f"wait"
+            self.text = "wait"
             self.result = f"You [{self.player_name}] are waiting"
             self.spectator = f"{self.player_name} waited"
         elif self.type == ActionType.TASK:
@@ -58,7 +58,7 @@ class Action:
             self.result = f"You [{self.player_name}] pretended {self.target_task.name}"
             self.spectator = f"{self.player_name} doing task {self.target_task.name}"
         elif self.type == ActionType.SPEAK:
-            self.text = f"speak"
+            self.text = "speak"
         else:
             raise ValueError(f"Unknown action type: {self.type}")
 

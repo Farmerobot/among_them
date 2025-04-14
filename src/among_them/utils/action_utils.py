@@ -7,13 +7,11 @@ from among_them.models.location import get_map, Location
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
-from among_them.utils.player_utils import get_dead_players, get_players_in_room
+from among_them.utils.player_utils import get_dead_players, get_players_in_room, get_last_player_action
 
 
 def get_task_phase_actions(
     player: Player,
-    location: Location,
-    cooldown: int,
     history: List[History],
     players: List[Player],
     game_config: GameConfig,
@@ -23,6 +21,10 @@ def get_task_phase_actions(
     Returns:
         A list of actions
     """
+    last_player_action = get_last_player_action(history, player)
+    location = last_player_action.location
+    cooldown = last_player_action.impostor_cooldown
+
     actions = []
 
     # actions for WAIT
@@ -78,30 +80,30 @@ def get_task_phase_actions(
 
 
 def get_vote_actions(
-    history: List[History], players: List[Player], current_player: Player
+    history: List[History], players: List[Player], player: Player
 ) -> list[Action]:
     """Creates voting options.
 
     Args:
         history: List of history items
         players: List of all players
-        current_player: The player who is voting
+        player: The player who is voting
     Returns:
         A list of game actions
     """
-    other_alive_players = [p for p in players if p.name in history[-1].alive_player_names and p.name != current_player.name]
+    other_alive_players = [p for p in players if p.name in history[-1].alive_player_names and p.name != player.name]
     
     actions = []
     actions.append(
         Action(
-            type=ActionType.VOTE, player_name=current_player.name, target_player_name="nobody"
+            type=ActionType.VOTE, player_name=player.name, target_player_name="nobody"
         )
     )
     for other_player in other_alive_players:
         actions.append(
             Action(
                 type=ActionType.VOTE,
-                player_name=current_player.name,
+                player_name=player.name,
                 target_player_name=other_player.name,
             )
         )

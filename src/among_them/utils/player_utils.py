@@ -4,7 +4,7 @@ from typing import Dict, List
 from among_them.models.action_type import ActionType
 from among_them.models.history import History
 from among_them.models.player import Player
-from among_them.utils.phase_utils import get_last_discussion_action_idx
+from among_them.utils.phase_utils import get_last_voting_action_idx
 
 
 def get_next_random_player(
@@ -21,11 +21,6 @@ def get_next_random_player(
         The list of players who will play in next round.
     """
     alive_players = [p for p in players if p.name in history[-1].alive_player_names]
-    
-    if not history:
-        next_player = random.choice(alive_players)
-        return next_player, [p.name for p in alive_players if p != next_player]
-    
     players_to_play_next = history[-1].player_names_to_play_next
 
     # Remove any player who is not alive from players_to_play_next
@@ -47,7 +42,7 @@ def get_last_player_action(history: List[History], player: Player) -> History:
 
 def get_dead_players(history: List[History]) -> Dict[str, str]:
     """Returns the dictionary of dead players and their location that can be reported (without ghosts)"""
-    search_from = get_last_discussion_action_idx(history)
+    search_from = get_last_voting_action_idx(history)
     kill_history = [history_item for history_item in history[search_from:] if history_item.action_taken.type == ActionType.KILL]
     return {history_item.action_taken.target_player_name: history_item.location.value for history_item in kill_history} # type: ignore
 
