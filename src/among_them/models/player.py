@@ -160,7 +160,8 @@ class Player:
                     "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
                 )
                 response_text += chunk["message"]["content"]
-                if re.search(re.escape("</history>"), response_text):
+                # Check for any XML-like tags in the response which would indicate hallucination
+                if re.search(r"<(?!/?(?:action|message|think))[^>]+>", response_text, re.DOTALL):
                     raise Exception("LLM did hallucinate")
             print("")
 
