@@ -16,8 +16,7 @@ from among_them.models.player_role import PlayerRole
 from among_them.utils.action_utils import (get_task_phase_actions,
                                            get_vote_actions)
 from among_them.utils.phase_utils import get_phase_and_when_it_ends
-from among_them.utils.player_utils import (get_alive_players,
-                                           get_last_player_action,
+from among_them.utils.player_utils import (get_last_player_action,
                                            get_next_random_player,
                                            get_players_in_room)
 from among_them.game_config import GameConfig
@@ -51,16 +50,17 @@ class GameEngine:
         Returns:
             True and end game reason if the game is over or in MAIN_MENU stage, False otherwise
         """
-        alive_players = get_alive_players(self.history, self.players)
-        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, alive_players, self.game_config)
+        alive_player_names = self.history[-1].alive_player_names.copy()
+        alive_players = [p for p in self.players if p.name in alive_player_names]
+        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, self.players, self.game_config)
         end_game_reason = get_end_game_reason(self.history, self.players)
         if phase == GamePhase.MAIN_MENU or end_game_reason is not None:
             return True, end_game_reason
 
-        current_player, next_players = get_next_random_player(self.history, alive_players)
+        current_player, next_players = get_next_random_player(self.history, self.players)
 
         last_player_action = get_last_player_action(self.history, current_player)
-        players_in_room = get_players_in_room(self.history, self.players, last_player_action.location)
+        players_in_room = get_players_in_room(self.history, self.players, current_player)
         if phase == GamePhase.TASK:
             location = last_player_action.location
             actions_player_can_take = get_task_phase_actions(current_player, last_player_action.location, last_player_action.impostor_cooldown, self.history, self.players, self.game_config)
@@ -69,11 +69,11 @@ class GameEngine:
             # Set some variables
             location = Location.CAFETERIA
             actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
-            spectators_who_saw = [p.name for p in alive_players]
+            spectators_who_saw = alive_player_names
         elif phase == GamePhase.VOTE:
             location = Location.CAFETERIA
-            actions_player_can_take = get_vote_actions(alive_players, current_player)
-            spectators_who_saw = [p.name for p in alive_players]
+            actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
+            spectators_who_saw = alive_player_names
 
         # Force a new vote BEFORE each discussion message.
         # It does not affect the game logic. It is just extra data.
@@ -84,7 +84,7 @@ class GameEngine:
                 while True:
                     retry_count += 1
                     try:
-                        fake_voting_actions_player_can_take = get_vote_actions(alive_players, player)
+                        fake_voting_actions_player_can_take = get_vote_actions(self.history, self.players, player)
                         fake_history_str = get_action_history_str(self.history, player, players_in_room=alive_players, alive_players=alive_players, location=Location.CAFETERIA, phase=GamePhase.VOTE)
                         fake_action_taken_idx, _, fake_action_chain_of_thought, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
                         fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
@@ -105,7 +105,7 @@ class GameEngine:
         action_taken = actions_player_can_take[action_taken_idx]
 
         if action_taken.type == ActionType.REPORT:
-            spectators_who_saw = [p.name for p in alive_players]
+            spectators_who_saw = alive_player_names
 
         if action_taken.type == ActionType.SPEAK:
             action_taken.result = f"[{current_player.name}]: {response}"
@@ -116,8 +116,11 @@ class GameEngine:
             tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
         elif action_taken.type == ActionType.MOVE:
             location = action_taken.target_location # type: ignore
-            new_players_in_room = get_players_in_room(self.history, self.players, location)
+            new_players_in_room = get_players_in_room(self.history, self.players, current_player)
             spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
+
+        if action_taken.type == ActionType.KILL:
+            alive_player_names.remove(action_taken.target_player_name) # type: ignore
 
         new_history_item = History(
             player_names_to_play_next=next_players,
@@ -132,7 +135,8 @@ class GameEngine:
             token_usage=token_usage,
             action_taken=action_taken,
             tasks_left_to_do=tasks_left_to_do,
-            votes_before_this_discussion_message=votes_before_this_discussion_message
+            votes_before_this_discussion_message=votes_before_this_discussion_message,
+            alive_player_names=alive_player_names
         )
 
         self.history.append(new_history_item)

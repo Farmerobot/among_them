@@ -3,13 +3,12 @@ from typing import Dict, List
 
 from among_them.models.action_type import ActionType
 from among_them.models.history import History
-from among_them.models.location import Location
 from among_them.models.player import Player
 from among_them.utils.phase_utils import get_last_discussion_action_idx
 
 
 def get_next_random_player(
-    history: List[History], alive_players: List[Player]
+    history: List[History], players: List[Player]
 ) -> tuple[Player, List[str]]:
     """Given a history of actions it selects random player from last history item with players_to_play_next.
     If this variable is empty, it selects random player from all alive players.
@@ -21,25 +20,22 @@ def get_next_random_player(
         The next player to act
         The list of players who will play in next round.
     """
+    alive_players = [p for p in players if p.name in history[-1].alive_player_names]
+    
     if not history:
         next_player = random.choice(alive_players)
         return next_player, [p.name for p in alive_players if p != next_player]
+    
     players_to_play_next = history[-1].player_names_to_play_next
 
     # Remove any player who is not alive from players_to_play_next
-    players_to_play_next = [p for p in players_to_play_next if p in [player.name for player in alive_players]]
+    players_to_play_next = [p for p in players_to_play_next if p in history[-1].alive_player_names]
     if not players_to_play_next or history[-1].action_taken.type == ActionType.REPORT:
         players_to_play_next = [p.name for p in alive_players]
 
     next_player_name = random.choice(players_to_play_next)
     next_player = [player for player in alive_players if player.name == next_player_name][0]
     return next_player, [p for p in players_to_play_next if p != next_player_name]
-
-
-def get_alive_players(history: List[History], players: List[Player]) -> List[Player]:
-    kill_history = [history_item for history_item in history if history_item.action_taken.type == ActionType.KILL]
-    dead_players = [history_item.action_taken.target_player_name for history_item in kill_history]
-    return [player for player in players if player.name not in dead_players]
 
 
 def get_last_player_action(history: List[History], player: Player) -> History:
@@ -57,13 +53,23 @@ def get_dead_players(history: List[History]) -> Dict[str, str]:
 
 
 def get_players_in_room(
-    history: List[History], players: List[Player], location: Location
+    history: List[History], players: List[Player], player: Player
 ) -> List[Player]:
-    alive = get_alive_players(history, players)
+    """Returns the list of alive players in a specific location.
+
+    Args:
+        history: List of history items
+        players: List of all players
+        player: The player to check
+    Returns:
+        List of alive players in the player location
+    """
+    other_alive = [p for p in players if p.name in history[-1].alive_player_names and p.name != player.name]
+    location = get_last_player_action(history, player).location
     in_room = []
-    for player in alive:
-        last_player_action = get_last_player_action(history, player)
+    for other_player in other_alive:
+        last_player_action = get_last_player_action(history, other_player)
         last_player_location = last_player_action.location
         if last_player_location == location:
-            in_room.append(player)
+            in_room.append(other_player)
     return in_room

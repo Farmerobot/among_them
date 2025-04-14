@@ -54,7 +54,7 @@ def get_task_phase_actions(
 
     # actions for impostors KILL
     if player.role == PlayerRole.IMPOSTOR and cooldown == 0:
-        targets = get_players_in_room(history, players, location)
+        targets = get_players_in_room(history, players, player)
         for target in targets:
             if target.name != player.name:
                 actions.append(
@@ -78,26 +78,31 @@ def get_task_phase_actions(
 
 
 def get_vote_actions(
-    alive_players: List[Player], player: Player
+    history: List[History], players: List[Player], current_player: Player
 ) -> list[Action]:
     """Creates voting options.
 
+    Args:
+        history: List of history items
+        players: List of all players
+        current_player: The player who is voting
     Returns:
         A list of game actions
     """
+    other_alive_players = [p for p in players if p.name in history[-1].alive_player_names and p.name != current_player.name]
+    
     actions = []
     actions.append(
         Action(
-            type=ActionType.VOTE, player_name=player.name, target_player_name="nobody"
+            type=ActionType.VOTE, player_name=current_player.name, target_player_name="nobody"
         )
     )
-    for other_player in alive_players:
-        if other_player != player:
-            actions.append(
-                Action(
-                    type=ActionType.VOTE,
-                    player_name=player.name,
-                    target_player_name=other_player.name,
-                )
+    for other_player in other_alive_players:
+        actions.append(
+            Action(
+                type=ActionType.VOTE,
+                player_name=current_player.name,
+                target_player_name=other_player.name,
             )
+        )
     return actions

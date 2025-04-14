@@ -90,7 +90,11 @@ class Player:
             print(f"{i + 1}. {action.text}")
 
         if actions[0].type == ActionType.SPEAK:
-            return 0, input("Your message to others:"), "", {}
+            try:
+                return 0, input("Your message to others:"), "", {}
+            except EOFError: # Handle Ctrl+D or similar EOF signals gracefully
+                print("\nInput stream closed. Defaulting to \"Who did it?\"")
+                return 0, "Who did it?", "", {}
         while True:
             try:
                 choice = input(f"Enter the number of your choice (1-{len(actions)}): ")
