@@ -9,7 +9,7 @@
         "David"
       ],
       "phase": {
-        "__enum__": "Main Menu"
+        "__enum__": "Game Start"
       },
       "actions_until_phase_ends": 0,
       "location": {
