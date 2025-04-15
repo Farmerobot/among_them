@@ -4185,9 +4185,7 @@
           }
         ]
       },
-      "votes_before_this_discussion_message": {
-        "Charlie": "David"
-      },
+      "votes_before_this_discussion_message": {},
       "__class__": "History",
       "__module__": "among_them.models.history"
     },

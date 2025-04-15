@@ -198,11 +198,20 @@ class GameEngine:
             if len(loaded_data) == 3:
                 self.history, self.players, self.game_config = loaded_data
             elif len(loaded_data) == 2: # Handle old save files without config
-                print("Loading old save file format. Using default GameConfig.")
+                # print("\033[38;5;244mLoading old save file format. Using default GameConfig.\033[0m")
                 self.history, self.players = loaded_data
                 self.game_config = GameConfig() # Initialize with defaults
             else:
                 raise ValueError("Invalid save file format")
+                
+            # Add alive_player_names to each history item if missing
+            dead_players = []
+            for h in self.history:
+                if h.action_taken.type == ActionType.KILL:
+                    dead_players.append(h.action_taken.target_player_name)
+                if not hasattr(h, 'alive_player_names'):
+                    h.alive_player_names = [p.name for p in self.players if p.name not in dead_players]
+                    
             return True
         return False
 
@@ -249,4 +258,3 @@ class GameEngine:
                 "or equal to the number of crewmates."
             )
         random.shuffle(self.players)
-        print("Players:", {p.name: p.role.value for p in self.players})

@@ -1764,10 +1764,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "Charlie"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "Charlie", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -1960,10 +1960,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "Charlie"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "Charlie", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -2155,10 +2155,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "Charlie"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "Charlie", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -2348,10 +2348,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Bob",
-        "David": "nobody"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Bob", "chain_of_thought": "" },
+        "David": {"voted_player": "nobody", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -2545,10 +2545,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "Bob"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "Bob", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -2741,10 +2741,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "nobody",
-        "Alice": "Charlie",
-        "David": "Charlie"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "nobody", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "Charlie", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -2936,10 +2936,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "Bob",
-        "Alice": "Charlie",
-        "David": "nobody"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "Bob", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "David": {"voted_player": "nobody", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
@@ -3129,10 +3129,10 @@
         ]
       },
       "votes_before_this_discussion_message": {
-        "Bob": "Charlie",
-        "Charlie": "nobody",
-        "Alice": "Bob",
-        "David": "Alice"
+        "Bob": {"voted_player": "Charlie", "chain_of_thought": "" },
+        "Charlie": {"voted_player": "nobody", "chain_of_thought": "" },
+        "Alice": {"voted_player": "Bob", "chain_of_thought": "" },
+        "David": {"voted_player": "Alice", "chain_of_thought": "" }
       },
       "__class__": "History",
       "__module__": "among_them.models.history"
