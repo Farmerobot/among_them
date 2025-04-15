@@ -6,6 +6,7 @@
 .idea/
 src/among_them/game/dummy.py
 .windsurfrules
+model/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

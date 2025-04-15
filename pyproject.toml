@@ -22,6 +22,7 @@ dependencies = [
     "pandas (>=2.2.3,<3.0.0)",
     "networkx (>=3.4.2,<4.0.0)",
     "matplotlib (>=3.10.1,<4.0.0)",
+    "mlx-lm>=0.22.5",
 ]
 
 [build-system]
