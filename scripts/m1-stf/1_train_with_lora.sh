@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mlx_lm.lora \
-    --model "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B-4bit" \
+    --model "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B" \
     --train \
     --data "data/sft" \
     --iters 1 \

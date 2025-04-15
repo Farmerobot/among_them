@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mlx_lm.generate \
-    --model "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B-4bit" \
+    --model "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B" \
     --max-tokens 2000 \
     --adapter-path adapters \
     --prompt "<purpose>

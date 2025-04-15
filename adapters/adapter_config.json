@@ -15,7 +15,7 @@
     "lr_schedule": null,
     "mask_prompt": true,
     "max_seq_length": 8000,
-    "model": "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B-4bit",
+    "model": "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B",
     "num_layers": 4,
     "optimizer": "adam",
     "optimizer_config": {
