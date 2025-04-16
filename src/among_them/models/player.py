@@ -257,17 +257,21 @@ class Player:
             player_name = actions[0].player_name
             # Try to match both formats with the player's name
             pattern = r'<message>(.*?)</message>'
+            pattern2 = r'<action type="player_message">(.*?)</action>'
             match = re.search(pattern, response_text, re.DOTALL)
+            match2 = re.search(pattern2, response_text, re.DOTALL)
             
             if match:
                 # Extract just the message part
                 response_text = match.group(1)
+            elif match2:
+                response_text = match2.group(1)
             else:
                 # Fallback to generic pattern if player name format not found
                 generic_match = re.search(fr'(?:\[{re.escape(player_name)}\]|^{re.escape(player_name)}):\s*(.*)', response_text, re.DOTALL)
                 if generic_match:
-                    # Groups: 1=name in brackets, 2=name without brackets, 3=message
-                    response_text = generic_match.group(3)
+                    # Groups: 1=message
+                    response_text = generic_match.group(1)
                 else:
                     raise Exception("LLM did not provide a message with correct format")
             action_idx = 0
