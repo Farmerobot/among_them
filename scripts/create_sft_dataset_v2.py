@@ -107,6 +107,65 @@ def write_jsonl(data, output_file):
             f.write(json.dumps({"messages": conversation}) + "\n")
 
 
+def write_alpaca_json(data, output_file):
+    """Write data to a JSON file in the Alpaca format required for training."""
+    alpaca_data = []
+    
+    # Track the maximum token lengths
+    max_instruction_tokens = 0
+    max_output_tokens = 0
+    max_system_tokens = 0
+    
+    # Track total tokens
+    total_instruction_tokens = 0
+    total_output_tokens = 0
+    total_system_tokens = 0
+    
+    # Assuming 4 characters = 1 token
+    chars_per_token = 4
+    
+    for item in data:
+        alpaca_item = {
+            "instruction": item["prompt"],
+            "output": item["model_cot_and_cleaned_output"],
+            "system": UNIVERSAL_SYSTEM_PROMPT,
+        }
+        
+        # Calculate token lengths
+        instruction_tokens = len(item["prompt"]) // chars_per_token
+        output_tokens = len(item["model_cot_and_cleaned_output"]) // chars_per_token
+        system_tokens = len(UNIVERSAL_SYSTEM_PROMPT) // chars_per_token
+        
+        # Update max token lengths
+        max_instruction_tokens = max(max_instruction_tokens, instruction_tokens)
+        max_output_tokens = max(max_output_tokens, output_tokens)
+        max_system_tokens = max(max_system_tokens, system_tokens)
+        
+        # Add to total tokens
+        total_instruction_tokens += instruction_tokens
+        total_output_tokens += output_tokens
+        total_system_tokens += system_tokens
+        
+        # Only add optional fields if they have values
+        # "input" field is skipped since it's always empty in this dataset
+        # "history" field is skipped since it's not needed for this dataset
+        
+        alpaca_data.append(alpaca_item)
+    
+    with open(output_file, 'w') as f:
+        json.dump(alpaca_data, f, indent=2)
+    
+    return {
+        "max_instruction_tokens": max_instruction_tokens,
+        "max_output_tokens": max_output_tokens,
+        "max_system_tokens": max_system_tokens,
+        "total_instruction_tokens": total_instruction_tokens,
+        "total_output_tokens": total_output_tokens,
+        "total_system_tokens": total_system_tokens,
+        "examples_count": len(data)
+    }
+
+
 def main():
     data_dir = Path("data")
     output_file = Path("data/sft_dataset2.csv")
@@ -118,6 +177,13 @@ def main():
     train_file = sft_data_dir / "train.jsonl"
     valid_file = sft_data_dir / "valid.jsonl"
     test_file = sft_data_dir / "test.jsonl"
+    
+    # Create alpaca directory for JSON files
+    alpaca_data_dir = Path("data/alpaca")
+    alpaca_data_dir.mkdir(exist_ok=True, parents=True)
+    
+    alpaca_train_file = alpaca_data_dir / "among_them_train.json"
+    alpaca_eval_file = alpaca_data_dir / "among_them_eval.json"
     
     all_results = []
     
@@ -142,7 +208,7 @@ def main():
                     # Replace newlines with a special token
                     result[key] = value.replace('\n', '\\n')
         
-        with open(output_file, 'w', newline='') as f:
+        with open(output_file, 'w', newline='', encoding='utf-8') as f:
             fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output"]
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
@@ -158,15 +224,68 @@ def main():
         valid_data = all_results[train_size:train_size+valid_size]
         test_data = all_results[train_size+valid_size:]
         
+        # For Alpaca format, combine validation and test into a single eval set
+        eval_data = all_results[train_size:]
+        
         # Write JSONL files
         write_jsonl(train_data, train_file)
         write_jsonl(valid_data, valid_file)
         write_jsonl(test_data, test_file)
         
+        # Write Alpaca JSON files
+        train_stats = write_alpaca_json(train_data, alpaca_train_file)
+        eval_stats = write_alpaca_json(eval_data, alpaca_eval_file)
+        
+        # Create a single dataset_info.json file with both datasets
+        dataset_info = {
+            "among_them_train": {
+                "file_name": "among_them_train.json",
+                "columns": {
+                    "prompt": "instruction",
+                    "response": "output",
+                    "system": "system"
+                },
+                "formatting": "alpaca"
+            },
+            "among_them_eval": {
+                "file_name": "among_them_eval.json",
+                "columns": {
+                    "prompt": "instruction",
+                    "response": "output",
+                    "system": "system"
+                },
+                "formatting": "alpaca"
+            }
+        }
+        
+        info_file = os.path.join(alpaca_data_dir, "dataset_info.json")
+        with open(info_file, 'w') as f:
+            json.dump(dataset_info, f, indent=2)
+        
+        # Calculate overall stats
+        max_instruction_tokens = max(train_stats["max_instruction_tokens"], eval_stats["max_instruction_tokens"])
+        max_output_tokens = max(train_stats["max_output_tokens"], eval_stats["max_output_tokens"])
+        max_system_tokens = max(train_stats["max_system_tokens"], eval_stats["max_system_tokens"])
+        
+        total_instruction_tokens = train_stats["total_instruction_tokens"] + eval_stats["total_instruction_tokens"]
+        total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
+        total_system_tokens = train_stats["total_system_tokens"] + eval_stats["total_system_tokens"]
+        
         print(f"Successfully wrote {len(all_results)} rows to {output_file}")
         print(f"  {len(train_data)} examples to {train_file}")
         print(f"  {len(valid_data)} examples to {valid_file}")
         print(f"  {len(test_data)} examples to {test_file}")
+        print(f"\nAlpaca format datasets:")
+        print(f"  {train_stats['examples_count']} examples to {alpaca_train_file}")
+        print(f"  {eval_stats['examples_count']} examples to {alpaca_eval_file}")
+        print(f"\nMaximum token lengths (assuming 4 chars = 1 token):")
+        print(f"  Longest instruction: {max_instruction_tokens} tokens")
+        print(f"  Longest output: {max_output_tokens} tokens")
+        print(f"  System prompt: {max_system_tokens} tokens")
+        print(f"\nTotal token counts:")
+        print(f"  Total instruction tokens: {total_instruction_tokens}")
+        print(f"  Total output tokens: {total_output_tokens}")
+        print(f"  Total system tokens: {total_system_tokens}")
     else:
         print("No data was processed. Check the input directory and file format.")
 

@@ -1,0 +1,20 @@
+{
+  "among_them_train": {
+    "file_name": "among_them_train.json",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output",
+      "system": "system"
+    },
+    "formatting": "alpaca"
+  },
+  "among_them_eval": {
+    "file_name": "among_them_eval.json",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output",
+      "system": "system"
+    },
+    "formatting": "alpaca"
+  }
+}
