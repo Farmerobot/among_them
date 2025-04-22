@@ -4,6 +4,7 @@ mlx_lm.generate \
     --model "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B" \
     --max-tokens 2000 \
     --adapter-path adapters \
+    --temp 1 \
     --prompt "<purpose>
   Serve as an AI assistant for a player in a text-based social deduction game. 
   Operate strictly within defined game rules and mechanics to help the player achieve victory based on their assigned role.

@@ -9,4 +9,6 @@ mlx_lm.lora \
     --num-layers 4 \
     --mask-prompt \
     --fine-tune-type lora \
+    --grad-checkpoint \
+    --save-every 1 \
     --max-seq-length 8000
