@@ -14,6 +14,8 @@ from pathlib import Path
 import traceback
 import sys
 import random
+import statistics
+import matplotlib.pyplot as plt
 
 from among_them.game_engine import GameEngine
 from among_them.models.phase import GamePhase
@@ -89,7 +91,9 @@ def process_game_file(file_path: str) -> list:
             "votes_before": json.dumps(votes_before),
             "votes_after": json.dumps(votes_after),
             "prompt": history_str,
-            "model_cot_and_cleaned_output": model_output
+            "model_cot_and_cleaned_output": model_output,
+            "input_tokens": event.token_usage.get("input_tokens") if hasattr(event, "token_usage") else None,
+            "output_tokens": event.token_usage.get("output_tokens") if hasattr(event, "token_usage") else None
         })
     
     return results
@@ -166,6 +170,34 @@ def write_alpaca_json(data, output_file):
     }
 
 
+# Separate function for token usage plotting
+def plot_token_usage_distribution(all_results, output_path: Path):
+    """Plot input/output token distributions and print summary stats."""
+    try:
+        input_list = [r["input_tokens"] for r in all_results if r.get("input_tokens") is not None]
+        output_list = [r["output_tokens"] for r in all_results if r.get("output_tokens") is not None]
+        if not input_list or not output_list:
+            print("No token usage data available to plot.")
+            return
+        print("\nToken usage summary:")
+        for name, arr in [("Input", input_list), ("Output", output_list)]:
+            print(f"  {name} tokens: count={len(arr)}, min={min(arr)}, median={statistics.median(arr)}, mean={statistics.mean(arr):.2f}, max={max(arr)}, std={statistics.stdev(arr):.2f}")
+        fig, axs = plt.subplots(1, 2, figsize=(12,5))
+        axs[0].hist(input_list, bins=50, color="C0", alpha=0.7)
+        axs[0].set_title("Input tokens distribution")
+        axs[0].set_xlabel("Tokens")
+        axs[0].set_ylabel("Count")
+        axs[1].hist(output_list, bins=50, color="C1", alpha=0.7)
+        axs[1].set_title("Output tokens distribution")
+        axs[1].set_xlabel("Tokens")
+        plt.tight_layout()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path)
+        print(f"\nSaved token usage plot to {output_path}")
+    except Exception as e:
+        print("Token usage plotting failed:", e)
+
+
 def main():
     data_dir = Path("data")
     output_file = Path("data/sft_dataset.csv")
@@ -209,12 +241,13 @@ def main():
                     result[key] = value.replace('\n', '\\n')
         
         with open(output_file, 'w', newline='', encoding='utf-8') as f:
-            fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output"]
+            fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens"]
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
             writer.writerows(all_results)
         
         # Split data into train/valid/test sets
+        random.seed(42)
         random.shuffle(all_results)
         data_size = len(all_results)
         train_size = int(data_size * 0.8)
@@ -286,6 +319,9 @@ def main():
         print(f"  Total instruction tokens: {total_instruction_tokens}")
         print(f"  Total output tokens: {total_output_tokens}")
         print(f"  Total system tokens: {total_system_tokens}")
+        
+        # Plot token usage distribution
+        plot_token_usage_distribution(all_results, Path("generated/token_usage_distribution.png"))
     else:
         print("No data was processed. Check the input directory and file format.")
 
