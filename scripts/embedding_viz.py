@@ -34,11 +34,11 @@ def main(input_csv, output_html, n_clusters=None, proj='umap'):
     model.eval()
 
     # Tokenize & embed with tqdm progress
-    batch_size = 10
+    batch_size = 1
     all_embeds = []
     for i in tqdm(range(0, len(texts), batch_size), desc="Embedding texts"):
         batch = texts[i:i+batch_size]
-        enc = tokenizer(batch, padding=True, truncation=True, max_length=512, return_tensors='pt')
+        enc = tokenizer(batch, padding=True, truncation=True, max_length=8192, return_tensors='pt')
         ids = enc['input_ids'].to(device)
         mask = enc['attention_mask'].to(device)
         with torch.no_grad():
@@ -96,7 +96,7 @@ def main(input_csv, output_html, n_clusters=None, proj='umap'):
     all_embeds2 = []
     for i in tqdm(range(0, len(cleaned), batch_size), desc="Embedding stripped texts"):
         batch2 = cleaned[i:i+batch_size]
-        enc2 = tokenizer(batch2, padding=True, truncation=True, max_length=512, return_tensors='pt')
+        enc2 = tokenizer(batch2, padding=True, truncation=True, max_length=8192, return_tensors='pt')
         ids2 = enc2['input_ids'].to(device)
         mask2 = enc2['attention_mask'].to(device)
         with torch.no_grad():
