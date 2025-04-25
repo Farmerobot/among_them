@@ -4,9 +4,9 @@
     "config": null,
     "data": "data/sft",
     "fine_tune_type": "lora",
-    "grad_checkpoint": false,
-    "iters": 1,
-    "learning_rate": 1e-05,
+    "grad_checkpoint": true,
+    "iters": 100,
+    "learning_rate": 1e-06,
     "lora_parameters": {
         "rank": 8,
         "dropout": 0.0,
@@ -15,7 +15,7 @@
     "lr_schedule": null,
     "mask_prompt": true,
     "max_seq_length": 8000,
-    "model": "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B",
+    "model": "model/DeepSeek-R1-Distill-Qwen-1.5B-4bit",
     "num_layers": 4,
     "optimizer": "adam",
     "optimizer_config": {
@@ -23,7 +23,7 @@
         "adamw": {}
     },
     "resume_adapter_file": null,
-    "save_every": 100,
+    "save_every": 5,
     "seed": 0,
     "steps_per_eval": 200,
     "steps_per_report": 10,
