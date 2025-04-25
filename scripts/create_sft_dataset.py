@@ -176,13 +176,16 @@ def plot_token_usage_distribution(all_results, output_path: Path):
     try:
         input_list = [r["input_tokens"] for r in all_results if r.get("input_tokens") is not None]
         output_list = [r["output_tokens"] for r in all_results if r.get("output_tokens") is not None]
-        if not input_list or not output_list:
+        # Calculate total tokens (input + output)
+        total_list = [i + o for i, o in zip(input_list, output_list) if i is not None and o is not None]
+        
+        if not input_list or not output_list or not total_list:
             print("No token usage data available to plot.")
             return
         print("\nToken usage summary:")
-        for name, arr in [("Input", input_list), ("Output", output_list)]:
+        for name, arr in [("Input", input_list), ("Output", output_list), ("Total", total_list)]:
             print(f"  {name} tokens: count={len(arr)}, min={min(arr)}, median={statistics.median(arr)}, mean={statistics.mean(arr):.2f}, max={max(arr)}, std={statistics.stdev(arr):.2f}")
-        fig, axs = plt.subplots(1, 2, figsize=(12,5))
+        fig, axs = plt.subplots(1, 3, figsize=(18,5))
         axs[0].hist(input_list, bins=50, color="C0", alpha=0.7)
         axs[0].set_title("Input tokens distribution")
         axs[0].set_xlabel("Tokens")
@@ -190,6 +193,9 @@ def plot_token_usage_distribution(all_results, output_path: Path):
         axs[1].hist(output_list, bins=50, color="C1", alpha=0.7)
         axs[1].set_title("Output tokens distribution")
         axs[1].set_xlabel("Tokens")
+        axs[2].hist(total_list, bins=50, color="C2", alpha=0.7)
+        axs[2].set_title("Total tokens distribution")
+        axs[2].set_xlabel("Tokens")
         plt.tight_layout()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
