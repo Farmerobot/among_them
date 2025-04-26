@@ -1,10 +1,11 @@
 import re
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import tiktoken
+from mlx_lm import stream_generate
 from ollama import chat
 
-from among_them.config import OLLAMA_LLM_MODEL_NAME
+from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
@@ -138,34 +139,35 @@ class Player:
         Raises:
             ValueError: If no chain of thought is found in the response
         """
-        # Initialize messages
+        # Build messages list
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ]
-        
-        # Add previous messages if provided
         if previous_messages:
             messages.extend(previous_messages)
-        
-        # Invoke LLM
-        response_text = ""
-        cot = ""
-        try:
-            stream = chat(
-                model=self.llm_model_name,
-                messages=messages,
-                stream=True,
-            )
 
-            # Process the response
-            for chunk in stream:
-                print(
-                    "\033[94m" + chunk["message"]["content"] + "\033[0m", end="", flush=True
+        # Generate raw output via MLX or streaming chat
+        raw = "<think>" if USE_MLX else ""
+        try:
+            if USE_MLX:
+                from mlx_lm.sample_utils import make_sampler
+                from among_them.config import MLX_MODEL, MLX_TOKENIZER
+                model, tokenizer = (MLX_MODEL, MLX_TOKENIZER)
+                prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+                chunks = stream_generate(
+                    model, tokenizer, prompt=prompt_chat,
+                    max_tokens=2000, sampler=make_sampler(temp=0.0)
                 )
-                response_text += chunk["message"]["content"]
-                # Check for any XML-like tags in the response which would indicate hallucination
-                if re.search(r"<(?!/?(?:action|message|think))[^>]+>", response_text, re.DOTALL):
+            else:
+                # Streaming Ollama chat
+                chunks = chat(model=self.llm_model_name, messages=messages, stream=True)
+
+            for chunk in chunks:
+                content = chunk["message"]["content"] if not USE_MLX else chunk.text
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                raw += content
+                if re.search(r"<(?!/?(?:action|message|think))[^>]+>", raw, re.DOTALL):
                     raise Exception("LLM did hallucinate")
             print("")
 
@@ -173,19 +175,17 @@ class Player:
             print("\n\033[93mKeyboardInterrupt detected! Switching to manual action selection.\033[0m")
             raise KeyboardInterrupt("User interrupted LLM generation")
 
-        # Extract chain of thought
-        cot_match = re.search(r"<think>.*?</think>", response_text, re.DOTALL)
+        # Extract chain of thought and cleanup
+        cot = ""
+        cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
         if cot_match:
             cot = cot_match.group(0)
-            response_text = re.sub(
-                r"<think>.*?</think>", "", response_text, flags=re.DOTALL
-            )
+            response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
         elif previous_messages is None:
             raise ValueError("No chain of thought found in response")
+        else:
+            response_text = raw.strip()
 
-        # Clean up the response
-        response_text = response_text.strip()
-        
         return response_text, cot
 
     def _handle_ai_action(
@@ -200,16 +200,19 @@ class Player:
         if actions and actions[0].type != ActionType.SPEAK:
             actions_text = "<available_actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</available_actions>"
             prompt += f"\n\n{actions_text}\n"
-            prompt += "\n\nChoose one action. Respond in the following xml format: <action>action</action>"
+            if actions[0].type == ActionType.VOTE:
+                prompt += "\n\nChoose one action. Put your selected vote between <action></action> xml tags"
+            else:
+                prompt += "\n\nChoose one action. Put your chosen action between <action></action> xml tags"
         elif actions and actions[0].type == ActionType.SPEAK:
-            prompt += "\n\nIt is discussion phase now. Respond to others in the following xml format: <message>message</message>"
+            prompt += "\n\nIt is discussion phase now. Respond to others. Put your message between <message></message> xml tags"
 
         # Print prompts for debugging
-        print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
+        # print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
         print("\033[92m" + prompt + "\033[0m")  # Light green for user prompt
 
         try:
-            # Invoke LLM and get response
+            # Invoke LLM (Ollama or MLX)
             response_text, cot = self._invoke_llm(system_prompt, prompt)
         except KeyboardInterrupt:
             # If interrupted, fall back to manual selection
