@@ -58,7 +58,7 @@ def get_task_phase_actions(
     if player.role == PlayerRole.IMPOSTOR and cooldown == 0:
         targets = get_players_in_room(history, players, player)
         for target in targets:
-            if target.name != player.name:
+            if target.name != player.name and target.role != PlayerRole.IMPOSTOR: # cannot kill impostors
                 actions.append(
                     Action(
                         type=ActionType.KILL,
