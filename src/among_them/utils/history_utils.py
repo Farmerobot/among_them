@@ -152,7 +152,7 @@ def get_action_history_str(history: List[History], players: List[Player], player
             elif player.name in h.spectators_who_saw:
                 if h.action_taken.type == ActionType.SPEAK:
                     history_str += f"<action type=\"discussion\">{h.action_taken.spectator}</action>\n"
-                else:
+                elif h.action_taken.type != ActionType.VOTE: # players cannot see others voting
                     history_str += f"<action type=\"observed\">{h.action_taken.spectator}</action>\n"
     history_str += "</game_history>\n\n"
 

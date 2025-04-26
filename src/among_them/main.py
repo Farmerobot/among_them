@@ -22,7 +22,7 @@ def main():
         map_size=1,
         num_task_phase_actions_per_player=10,
         num_discuss_phase_actions_per_player=2,
-        impostor_cooldown=0
+        impostor_cooldown=1
     )
     game_engine = GameEngine(game_config)
     if os.path.exists(STATE_FILE):
