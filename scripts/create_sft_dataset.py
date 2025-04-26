@@ -227,7 +227,7 @@ def main():
     
     # Process all JSON files in the data directory
     for file_path in data_dir.glob("*.json"):
-        if file_path.name in ["game_state.json", "14b to be continued.json", "test_game.json"] or file_path.name.endswith("1.5b.json"):
+        if file_path.name in ["game_state.json", "to_be_continued_14b.json", "test_game.json"] or file_path.name.endswith("1.5b.json"):
             continue
         try:
             results = process_game_file(str(file_path))
