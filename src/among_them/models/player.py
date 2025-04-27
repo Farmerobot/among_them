@@ -167,7 +167,9 @@ class Player:
                 content = chunk["message"]["content"] if not USE_MLX else chunk.text
                 print("\033[94m" + content + "\033[0m", end="", flush=True)
                 raw += content
-                if re.search(r"<(?!/?(?:action|message|think))[^>]+>", raw, re.DOTALL):
+                # Count all non-<think> tags; Hallucination Early Check (HEC) System
+                all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
+                if len(all_tags) > 2 and not previous_messages:
                     raise Exception("LLM did hallucinate")
             print("")
 
