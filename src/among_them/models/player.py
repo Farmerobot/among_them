@@ -122,16 +122,13 @@ class Player:
                     {},
                 )
 
-    def _invoke_llm(
-        self, system_prompt: str, prompt: str, previous_messages: Optional[List[Dict[str, str]]] = None
-    ) -> Tuple[str, Optional[str]]:
+    def _invoke_llm(self, system_prompt: str, prompt: str) -> Tuple[str, Optional[str]]:
         """
         Invoke the LLM with the given prompts and handle exceptions.
         
         Args:
             system_prompt: The system prompt to use
             prompt: The user prompt to send to the LLM
-            previous_messages: Optional list of previous messages to include in the conversation
         
         Returns:
             Tuple of (response_text, chain_of_thought)
@@ -141,11 +138,8 @@ class Player:
         """
         # Build messages list
         messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": system_prompt + "\n" + prompt},
         ]
-        if previous_messages:
-            messages.extend(previous_messages)
 
         # Generate raw output via MLX or streaming chat
         raw = "<think>" if USE_MLX else ""
@@ -180,9 +174,13 @@ class Player:
         # Extract chain of thought and cleanup
         cot = ""
         cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
+        cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
         if cot_match:
             cot = cot_match.group(0)
             response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+        elif cot_match_end:
+            cot = cot_match_end.group(0)
+            response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
         elif previous_messages is None:
             raise ValueError("No chain of thought found in response")
         else:
@@ -203,11 +201,11 @@ class Player:
             actions_text = "<available_actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</available_actions>"
             prompt += f"\n\n{actions_text}\n"
             if actions[0].type == ActionType.VOTE:
-                prompt += "\n\nChoose one action. Put your selected vote between <action></action> xml tags"
+                prompt += "\n\nChoose one action. Please put your final answer within <action></action> xml tags"
             else:
-                prompt += "\n\nChoose one action. Put your chosen action between <action></action> xml tags"
+                prompt += "\n\nChoose one action. Please put your final vote within <action></action> xml tags"
         elif actions and actions[0].type == ActionType.SPEAK:
-            prompt += "\n\nIt is discussion phase now. Respond to others. Put your message between <message></message> xml tags"
+            prompt += "\n\nIt is discussion phase now. Respond to others. Please put your message between <message></message> xml tags"
 
         # Print prompts for debugging
         # print("\033[91m" + system_prompt + "\033[0m")  # Light red for system prompt
@@ -224,39 +222,9 @@ class Player:
         # Determine the chosen action index
         action_idx = None
         if actions and not actions[0].type == ActionType.SPEAK:
-            try:
-                action_idx, _ = self._normalize_and_check_action_valid(
-                    [action.text for action in actions], response_text
-                )
-            except ValueError:
-                # Try again with a more explicit prompt
-                retry_prompt = f"<think>But wait, i need to choose one of the available actions without explanations. My actions are:\n{actions_text}\nSo the correct one would be "
-                print(f"\033[91m{retry_prompt}\033[0m")
-                
-                try:
-                    # Create previous messages for the retry
-                    previous_messages = [
-                        {
-                            "role": "assistant",
-                            "content": f"<think>{cot}</think>\n{response_text}",
-                        },
-                        {
-                            "role": "assistant",
-                            "content": retry_prompt,
-                        },
-                    ]
-                    
-                    # Invoke LLM again with the retry prompt
-                    response_text, _ = self._invoke_llm(system_prompt, prompt, previous_messages)
-                    
-                    # Try to extract the action again
-                    action_idx, _ = self._normalize_and_check_action_valid(
-                        [action.text for action in actions], response_text
-                    )
-                except KeyboardInterrupt:
-                    # If interrupted during retry, fall back to manual selection
-                    selected_action = self._handle_manual_action(actions)
-                    return selected_action
+            action_idx, _ = self._normalize_and_check_action_valid(
+                [action.text for action in actions], response_text
+            )
         elif actions[0].type == ActionType.SPEAK:
             # Extract text after "[name]: " or "name: " using the player's name
             player_name = actions[0].player_name
