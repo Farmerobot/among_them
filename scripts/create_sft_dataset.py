@@ -104,8 +104,7 @@ def write_jsonl(data, output_file):
     with open(output_file, 'w') as f:
         for item in data:
             conversation = [
-                {"role": "system", "content": UNIVERSAL_SYSTEM_PROMPT},
-                {"role": "user", "content": item["prompt"]},
+                {"role": "user", "content": UNIVERSAL_SYSTEM_PROMPT + "\n" + item["prompt"]},
                 {"role": "assistant", "content": item["model_cot_and_cleaned_output"]}
             ]
             f.write(json.dumps({"messages": conversation}) + "\n")
@@ -118,37 +117,31 @@ def write_alpaca_json(data, output_file):
     # Track the maximum token lengths
     max_instruction_tokens = 0
     max_output_tokens = 0
-    max_system_tokens = 0
     
     # Track total tokens
     total_instruction_tokens = 0
     total_output_tokens = 0
-    total_system_tokens = 0
     
     # Assuming 4 characters = 1 token
     chars_per_token = 4
     
     for item in data:
         alpaca_item = {
-            "instruction": item["prompt"],
-            "output": item["model_cot_and_cleaned_output"],
-            "system": UNIVERSAL_SYSTEM_PROMPT,
+            "instruction": UNIVERSAL_SYSTEM_PROMPT + "\n" +item["prompt"],
+            "output": item["model_cot_and_cleaned_output"]
         }
         
         # Calculate token lengths
-        instruction_tokens = len(item["prompt"]) // chars_per_token
+        instruction_tokens = len(item["prompt"]+UNIVERSAL_SYSTEM_PROMPT) // chars_per_token
         output_tokens = len(item["model_cot_and_cleaned_output"]) // chars_per_token
-        system_tokens = len(UNIVERSAL_SYSTEM_PROMPT) // chars_per_token
         
         # Update max token lengths
         max_instruction_tokens = max(max_instruction_tokens, instruction_tokens)
         max_output_tokens = max(max_output_tokens, output_tokens)
-        max_system_tokens = max(max_system_tokens, system_tokens)
         
         # Add to total tokens
         total_instruction_tokens += instruction_tokens
         total_output_tokens += output_tokens
-        total_system_tokens += system_tokens
         
         # Only add optional fields if they have values
         # "input" field is skipped since it's always empty in this dataset
@@ -162,10 +155,8 @@ def write_alpaca_json(data, output_file):
     return {
         "max_instruction_tokens": max_instruction_tokens,
         "max_output_tokens": max_output_tokens,
-        "max_system_tokens": max_system_tokens,
         "total_instruction_tokens": total_instruction_tokens,
         "total_output_tokens": total_output_tokens,
-        "total_system_tokens": total_system_tokens,
         "examples_count": len(data)
     }
 
@@ -239,18 +230,12 @@ def main():
     
     # Write results to CSV
     if all_results:
-        # Replace newlines in all string fields to avoid CSV formatting issues
-        for result in all_results:
-            for key, value in result.items():
-                if isinstance(value, str):
-                    # Replace newlines with a special token
-                    result[key] = value.replace('\n', '\\n')
         
         with open(output_file, 'w', newline='', encoding='utf-8') as f:
             fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens"]
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
-            writer.writerows(all_results)
+            writer.writerows({key: value.replace('\n', '\\n') if isinstance(value, str) else value for key, value in result.items()} for result in all_results)
         
         # Split data into train/valid/test sets
         random.seed(42)
@@ -304,11 +289,9 @@ def main():
         # Calculate overall stats
         max_instruction_tokens = max(train_stats["max_instruction_tokens"], eval_stats["max_instruction_tokens"])
         max_output_tokens = max(train_stats["max_output_tokens"], eval_stats["max_output_tokens"])
-        max_system_tokens = max(train_stats["max_system_tokens"], eval_stats["max_system_tokens"])
         
         total_instruction_tokens = train_stats["total_instruction_tokens"] + eval_stats["total_instruction_tokens"]
         total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
-        total_system_tokens = train_stats["total_system_tokens"] + eval_stats["total_system_tokens"]
         
         print(f"Successfully wrote {len(all_results)} rows to {output_file}")
         print(f"  {len(train_data)} examples to {train_file}")
@@ -320,11 +303,9 @@ def main():
         print(f"\nMaximum token lengths (assuming 4 chars = 1 token):")
         print(f"  Longest instruction: {max_instruction_tokens} tokens")
         print(f"  Longest output: {max_output_tokens} tokens")
-        print(f"  System prompt: {max_system_tokens} tokens")
         print(f"\nTotal token counts:")
         print(f"  Total instruction tokens: {total_instruction_tokens}")
         print(f"  Total output tokens: {total_output_tokens}")
-        print(f"  Total system tokens: {total_system_tokens}")
         
         # Plot token usage distribution
         plot_token_usage_distribution(all_results, Path("generated/token_usage_distribution.png"))
