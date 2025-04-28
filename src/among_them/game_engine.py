@@ -131,8 +131,8 @@ class GameEngine:
                     break
                 except Exception as e:
                     retry_count += 1
-                    if retry_count > 3:
-                        raise e
+                    if retry_count > 15:
+                        raise ValueError("Hallucinated more than 15 times")
                     if "LLM did" in str(e):
                         print(f"Error: {e}")
                         print(f"Model failed to respond. Retry count: {retry_count}")

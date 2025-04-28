@@ -181,10 +181,8 @@ class Player:
         elif cot_match_end:
             cot = cot_match_end.group(0)
             response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
-        elif previous_messages is None:
-            raise ValueError("No chain of thought found in response")
         else:
-            response_text = raw.strip()
+            raise ValueError("No chain of thought found in response")
 
         return response_text, cot
 
