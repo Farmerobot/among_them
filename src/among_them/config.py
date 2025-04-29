@@ -1,7 +1,6 @@
 import os
 
 from dotenv import load_dotenv
-from mlx_lm import load
 
 # Always load from .env first, this will override any existing environment variables
 load_dotenv(override=True)
@@ -13,4 +12,5 @@ STATE_FILE = os.getenv("STATE_FILE", "data/game_state.json")
 
 
 if USE_MLX:
+    from mlx_lm import load
     MLX_MODEL, MLX_TOKENIZER = load(MLX_LLM_MODEL_NAME)

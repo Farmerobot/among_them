@@ -2,8 +2,6 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 import tiktoken
-from mlx_lm import stream_generate
-from ollama import chat
 
 from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
@@ -145,6 +143,7 @@ class Player:
         raw = "<think>" if USE_MLX else ""
         try:
             if USE_MLX:
+                from mlx_lm import stream_generate
                 from mlx_lm.sample_utils import make_sampler
                 from among_them.config import MLX_MODEL, MLX_TOKENIZER
                 model, tokenizer = (MLX_MODEL, MLX_TOKENIZER)
@@ -154,6 +153,7 @@ class Player:
                     max_tokens=2000, sampler=make_sampler(temp=0.0)
                 )
             else:
+                from ollama import chat
                 # Streaming Ollama chat
                 chunks = chat(model=self.llm_model_name, messages=messages, stream=True)
 
