@@ -266,8 +266,7 @@ def main():
                 "file_name": "among_them_train.json",
                 "columns": {
                     "prompt": "instruction",
-                    "response": "output",
-                    "system": "system"
+                    "response": "output"
                 },
                 "formatting": "alpaca"
             },
@@ -275,8 +274,7 @@ def main():
                 "file_name": "among_them_eval.json",
                 "columns": {
                     "prompt": "instruction",
-                    "response": "output",
-                    "system": "system"
+                    "response": "output"
                 },
                 "formatting": "alpaca"
             }
