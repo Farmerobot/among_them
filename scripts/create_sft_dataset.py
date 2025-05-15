@@ -82,7 +82,7 @@ def process_game_file(file_path: str) -> list:
         
         # Combine chain of thought and response if both exist
         response = f"<message>{event.llm_response}</message>" if event.action_taken.type == ActionType.SPEAK else f"<action>{event.action_taken.text}</action>"
-        model_output = f"{event.llm_cot}</think>\n{response}" # without first think tag https://huggingface.co/deepseek-ai/DeepSeek-R1/commit/8a58a132790c9935686eb97f042afa8013451c9f
+        model_output = f"{event.llm_cot}\n{response}" # without first think tag https://huggingface.co/deepseek-ai/DeepSeek-R1/commit/8a58a132790c9935686eb97f042afa8013451c9f
         
         results.append({
             "json_file_name": os.path.basename(file_path),
