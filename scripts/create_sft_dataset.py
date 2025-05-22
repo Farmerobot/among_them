@@ -427,8 +427,8 @@ def main():
              f.write(f"- **Longest combined (instruction + output):** {format_num(token_distribution_stats['total']['max'])} tokens\n")
             
         f.write("\n## Total Token Counts\n")
-        f.write(f"- **Total instruction tokens:** {format_num(total_instruction_tokens)}\n")
-        f.write(f"- **Total output tokens:** {format_num(total_output_tokens)}\n")
+        f.write(f"- **Total instruction tokens:** {format_num(total_instruction_tokens)} tokens\n")
+        f.write(f"- **Total output tokens:** {format_num(total_output_tokens)} tokens\n")
         f.write(f"- **Overall total (all instructions + all outputs):** {format_num(total_instruction_tokens + total_output_tokens)} tokens\n")
 
         if token_distribution_stats:

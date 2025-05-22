@@ -12,8 +12,8 @@ Tokenizer used for token counts: `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`
 - **Longest combined (instruction + output):** 8,241 tokens
 
 ## Total Token Counts
-- **Total instruction tokens:** 1,621,599
-- **Total output tokens:** 223,841
+- **Total instruction tokens:** 1,621,599 tokens
+- **Total output tokens:** 223,841 tokens
 - **Overall total (all instructions + all outputs):** 1,845,440 tokens
 
 ## Token Count Distribution Summary
