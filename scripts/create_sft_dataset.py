@@ -415,8 +415,10 @@ def main():
         else:
             f.write("Token counts are estimated (4 characters = 1 token).\n\n")
             
+        total_examples_count = train_stats['examples_count'] + eval_stats['examples_count']
         f.write(f"- **Training examples:** {format_num(train_stats['examples_count'])}\n")
         f.write(f"- **Evaluation examples:** {format_num(eval_stats['examples_count'])}\n")
+        f.write(f"- **Total examples:** {format_num(total_examples_count)}\n")
             
         f.write("\n## Maximum Token Lengths Per Example\n")
         f.write(f"- **Longest instruction:** {format_num(max_instruction_tokens)} tokens\n")

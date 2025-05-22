@@ -4,6 +4,7 @@ Tokenizer used for token counts: `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`
 
 - **Training examples:** 458
 - **Evaluation examples:** 115
+- **Total examples:** 573
 
 ## Maximum Token Lengths Per Example
 - **Longest instruction:** 7,982 tokens
