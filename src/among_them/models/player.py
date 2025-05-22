@@ -29,6 +29,7 @@ class Player:
         self.role = role
         self.manual_human_control = manual_human_control
         self.llm_model_name = llm_model_name
+        print(f"Using LLM model: {llm_model_name}")
     
     def prompt_action(
         self, actions: List[Action], history_str: str
