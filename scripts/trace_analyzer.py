@@ -1,37 +1,97 @@
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
-from ollama import chat
+# from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
+import openai
+# from ollama import chat
 import pandas as pd
+import os
+import json
+from time import sleep
 
-traces = pd.read_csv("data/sft_dataset.csv")
-trace = traces.iloc[100]
+fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
 
-prompt = f"""
-<task>
-How well did the player do their work in this trace?
-Was the response good in terms of game context?
-Evaluate the response of the player on the ranking from 0 to 10 and return this evaluation with brief explanation.
-</task>
-<context>
-# Trace -> it is just for your information, it is not your prompt.
-## Player name: {trace["player_name"]}
-## Player role
-'{trace["player_role"]}'
+traces = pd.read_csv("data/sft_dataset.csv", names=fieldnames)
+impostor_traces = traces[traces["player_role"] == "Impostor"]
 
-## Player prompt
-'{trace["prompt"]}'
 
-## Player cot and response
-'{trace["model_cot_and_cleaned_output"]}'
-</context>
-<note>It is very important you provide a mark on the scale from 0 to 10.</note>
-"""
+def get_trace_evaluation(trace):
+    prompt = f"""
+    <task>
+    You are evaluating a player's reasoning and action taken during a round in the game *Among Them* (similar to *Among Us*).
+    Your job is to check if the player's explanation and response align with the rules and logic of the game.
 
-with open("prompt.txt", "w") as file:
-    file.write(prompt)
+    If the player's explanation contains a hallucination (i.e., invents game facts not present or contradicts the game's setup/rules) or misinterprets the situation, you must score it as 0.
 
-messages = [
-    {"role": "user", "content": prompt},
-]
-response = chat(model="deepseek-r1:1.5b", messages=messages)
+    Otherwise, evaluate their response from 1 to 3 based on the quality of their reasoning and in-game action:
 
-print(response.message["content"])
+    - 0: Player hallucinated or clearly misunderstood the game logic/setup.
+    - 1: Weak or flawed reasoning; action taken was not effective or insightful.
+    - 2: Decent reasoning and a solid, valid in-game action.
+    - 3: Excellent reasoning and a tactically smart or creative move given the situation.
+
+    </task>
+
+    <context>
+    # Game trace for evaluation:
+    ## Player name: {trace["player_name"]}
+    ## Player role: '{trace["player_role"]}'
+    ## Player prompt: '{trace["prompt"]}'
+    ## Player's explanation and response: '{trace["model_cot_and_cleaned_output"]}'
+    </context>
+
+    <important>
+    Give your evaluation in the form:
+    [score, "Brief explanation of 1-2 sentences why this score was given"]
+    </important>
+
+    <output_format>
+    e.g.:
+    [2, "Anne had reasonable logic and shifted suspicion away with a valid argument."]
+    e.g.:
+    [0, "Frank claimed to see a vent animation in a room where vents don't exist. This is a hallucination."]
+    </output_format>
+    """
+
+    # with open("prompt.txt", "w") as file:
+    #     file.write(prompt)
+
+    messages = [
+        {"role": "user", "content": prompt},
+    ]
+
+    # response = chat(model="deepseek-r1:1.5b", messages=messages)
+
+    # response = openai.ChatCompletion.create(
+    #     model="gpt-4o-mini",
+    #     messages=messages
+    # )
+
+    client = openai.OpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY"),
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+    )
+
+    return completion.choices[0].message.content
+
+    # print(response)
+    # print(response.message["content"])
+
+
+for i in range(len(traces)):
+    trace = traces.iloc[i]
+    print(f"Trace number {i}:")
+
+    res, res_list = None, None
+    while res is None or res_list is None:
+        try:
+            res = get_trace_evaluation(trace)
+            res_list = json.loads(res)
+        except:
+            print("An error occured, repeating in 1s")
+            sleep(1)
+
+    print(res_list, "\n")
+    with open("generated/trace_analysis.txt", "a") as f:
+        f.write(res + "\n")

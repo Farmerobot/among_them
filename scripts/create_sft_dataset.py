@@ -59,7 +59,7 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
             else:
                 raise ValueError(f"Player {player_name} not found in game")
         
-        history_until_now = engine.history[:i+1]
+        history_until_now = engine.history[:i]
         history_str = get_action_history_str(
             history_until_now, 
             engine.players, 
@@ -313,6 +313,8 @@ def main():
                 else:
                     row_to_write[field_name] = value
             writer.writerow(row_to_write)
+
+    print(all_results)
         
     # Split data into train/valid/test sets
     random.seed(42)

@@ -91,7 +91,10 @@ def create_vote_history_entry(
 def get_action_history_str(history: List[History], players: List[Player], player: Player, game_config: GameConfig, phase: Optional[GamePhase] = None) -> str:
     """Returns all actions seen by agent and actions that agent saw/spectated in history in order."""
     if phase is None:
-        phase, _ = get_phase_and_when_it_ends(history, game_config, players)
+        try:
+            phase, _ = get_phase_and_when_it_ends(history, game_config, players)
+        except:
+            phase = GamePhase.TASK
     players_in_room = get_players_in_room(history, players, player)
     alive_players = [p for p in players if p.name in history[-1].alive_player_names]
     location = get_last_player_action(history, player).location
