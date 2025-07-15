@@ -24,42 +24,42 @@ def main():
             print(f"Game over! Reason: {end_reason}")
             break
 
-        turn_context = engine.get_turn_context()
-        if not turn_context:
+        turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context()
+        if not turn_context_history:
             continue
 
         pre_discussion_votes = {}
-        if "pre_discussion_vote_prompts" in turn_context:
+        if pre_discussion_vote_prompts:
             print("--- Collecting Pre-Discussion Votes ---")
-            for vote_prompt in turn_context["pre_discussion_vote_prompts"]:
+            for vote_prompt in pre_discussion_vote_prompts:
                 player = vote_prompt["player"]
-                system_prompt = vote_prompt["system_prompt"]
-                user_prompt = vote_prompt["user_prompt"]
-                actions = vote_prompt["actions"]
+                system_prompt_pd = vote_prompt["system_prompt"]
+                user_prompt_pd = vote_prompt["user_prompt"]
+                actions_pd = vote_prompt["actions"]
 
                 try:
                     # Here, you would insert your custom LLM call and log probability logic.
-                    llm_response, cot = invoke_llm(system_prompt, user_prompt, player.llm_model_name)
+                    llm_response, cot = invoke_llm(system_prompt_pd, user_prompt_pd, player.llm_model_name)
                 except KeyboardInterrupt:
-                    action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions)
+                    action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_pd)
 
                 print(f"Simulated LLM Response from {player.name}: {llm_response}")
 
                 # Parse the response and get the action
                 action_idx, _ = parse_llm_response_to_action(
-                    actions, llm_response, player.name
+                    actions_pd, llm_response, player.name
                 )
-                action_taken = actions[action_idx]
+                action_taken = actions_pd[action_idx]
 
                 pre_discussion_votes[player.name] = {
                     "voted_player": action_taken.target_player_name,
                     "chain_of_thought": cot,
                 }
 
-        current_player = turn_context["current_player"]
-        actions_player_can_take = turn_context["actions_player_can_take"]
-        system_prompt = turn_context["system_prompt"]
-        user_prompt = turn_context["user_prompt"]
+        current_player_name = turn_context_history.action_taken.player_name
+        current_player = next((p for p in engine.players if p.name == current_player_name), None)
+        if current_player is None:
+            raise ValueError(f"Current player {current_player_name} not found.")
 
         print(f"--- {current_player.name}'s turn ---")
 
@@ -68,8 +68,6 @@ def main():
             llm_response, cot = invoke_llm(system_prompt, user_prompt, current_player.llm_model_name)
         except KeyboardInterrupt:
             action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_player_can_take)
-
-        print(f"LLM Response: {llm_response}")
 
         # Parse the response and get the action
         action_idx, response_text = parse_llm_response_to_action(
@@ -83,8 +81,10 @@ def main():
         output_tokens = len(encoding.encode(response_text + (cot or "")))
         token_usage = {"input_tokens": input_tokens, "output_tokens": output_tokens}
 
+        print(f"Action taken: {action_taken} Token usage: {token_usage}")
+
         # Step the environment
-        engine.step(turn_context, action_taken, response_text, cot, token_usage, pre_discussion_votes)
+        engine.step(turn_context_history, action_taken, response_text, cot, token_usage, pre_discussion_votes)
 
 if __name__ == "__main__":
     main()

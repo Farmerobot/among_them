@@ -42,15 +42,19 @@ class GameEngine:
         self.history = initialize_history(self.players, game_config)
         self.game_config = game_config
 
-    def get_turn_context(self) -> Optional[dict]:
+    def get_turn_context(self) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
         """Gathers all necessary context for the current player's turn.
 
         This method calculates everything needed for a turn up-front to avoid
         redundant calculations in the step function.
 
         Returns:
-            A dictionary with all the information needed for a player to make a decision,
-            or None if the game is in a state that doesn't require player input.
+            A tuple containing:
+            - An incomplete History object representing the current turn's context.
+            - The system prompt for the LLM.
+            - The user prompt for the LLM.
+            - A list of pre-discussion vote prompts (empty if not in DISCUSS phase).
+            Or None if the game is in a state that doesn't require player input.
         """
         alive_player_names = self.history[-1].alive_player_names.copy()
         alive_players = [p for p in self.players if p.name in alive_player_names]
@@ -63,56 +67,70 @@ class GameEngine:
         last_player_action = get_last_player_action(self.history, current_player)
         players_in_room = get_players_in_room(self.history, self.players, current_player)
 
-        context = {
-            "current_player": current_player,
-            "next_players": next_players,
-            "phase": phase,
-            "actions_until_phase_ends": actions_until_phase_ends,
-            "last_player_action": last_player_action,
-            "alive_players": alive_players,
-            "players_in_room": players_in_room,
-        }
+        # Initialize fields for the History object
+        location = None # Default location
+        actions_player_can_take = []
+        impostor_cooldown = 0
+        if last_player_action:
+            impostor_cooldown = max(0, last_player_action.impostor_cooldown - 1)
 
         if phase == GamePhase.TASK:
             actions_player_can_take = get_task_phase_actions(current_player, self.history, self.players, self.game_config)
-            context["location"] = last_player_action.location
+            if last_player_action:
+                location = last_player_action.location
         elif phase == GamePhase.DISCUSS:
             actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
-            context["location"] = Location.CAFETERIA
-            # Add prompts for pre-discussion voting
-            pre_discussion_vote_prompts = []
-            for player in alive_players:
-                fake_voting_actions = get_vote_actions(self.history, self.players, player)
-                fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
-                system_prompt, user_prompt = create_llm_prompts(fake_voting_actions, fake_history_str)
-                pre_discussion_vote_prompts.append({
-                    "player": player,
-                    "system_prompt": system_prompt,
-                    "user_prompt": user_prompt,
-                    "actions": fake_voting_actions
-                })
-            context["pre_discussion_vote_prompts"] = pre_discussion_vote_prompts
+            location = Location.CAFETERIA
         elif phase == GamePhase.VOTING:
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
-            context["location"] = Location.CAFETERIA
+            location = Location.CAFETERIA
         else:
             return None
+
+        # Create a placeholder action for the current player
+        placeholder_action = Action(player_name=current_player.name, type=ActionType.WAIT)
+
+        # Create the incomplete History object
+        turn_history = History(
+            player_names_to_play_next=next_players,
+            phase=phase,
+            actions_until_phase_ends=actions_until_phase_ends,
+            location=location,
+            impostor_cooldown=impostor_cooldown,
+            actions_agent_could_take=[a.text for a in actions_player_can_take],
+            tasks_left_to_do=self.history[-1].tasks_left_to_do.copy(),
+            alive_player_names=alive_player_names,
+            action_taken=placeholder_action, # Placeholder for current player
+            spectators_who_saw=[p.name for p in players_in_room], # Represents players in room
+            llm_cot=None,
+            llm_response=None,
+            token_usage=None,
+            votes_before_this_discussion_message=None,
+        )
 
         history_str = get_action_history_str(self.history, self.players, current_player, self.game_config)
         system_prompt, user_prompt = create_llm_prompts(actions_player_can_take, history_str)
 
-        context["actions_player_can_take"] = actions_player_can_take
-        context["history_str"] = history_str
-        context["system_prompt"] = system_prompt
-        context["user_prompt"] = user_prompt
+        pre_discussion_vote_prompts = []
+        if phase == GamePhase.DISCUSS:
+            for player in alive_players:
+                fake_voting_actions = get_vote_actions(self.history, self.players, player)
+                fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
+                system_prompt_pd, user_prompt_pd = create_llm_prompts(fake_voting_actions, fake_history_str)
+                pre_discussion_vote_prompts.append({
+                    "player": player,
+                    "system_prompt": system_prompt_pd,
+                    "user_prompt": user_prompt_pd,
+                    "actions": fake_voting_actions
+                })
 
-        return context
+        return turn_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts
 
-    def step(self, turn_context: dict, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = None, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
+    def step(self, turn_context: History, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = None, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
         """Executes a single player action and updates the game state using pre-calculated context.
 
         Args:
-            turn_context: The dictionary of pre-calculated turn data from get_turn_context.
+            turn_context: The incomplete History object representing the current turn's context.
             action_taken: The action to be executed.
             llm_response: The raw response from the LLM.
             llm_cot: The chain of thought from the LLM.
@@ -122,13 +140,17 @@ class GameEngine:
         Returns:
             True and end game reason if the game is over, False otherwise.
         """
-        # Unpack the pre-calculated context
-        current_player = turn_context["current_player"]
-        alive_player_names = [p.name for p in turn_context["alive_players"]]
-        players_in_room = turn_context["players_in_room"]
-        location = turn_context["location"]
+        # Unpack the pre-calculated context from the History object
+        current_player_name = turn_context.action_taken.player_name # Get current player name from placeholder action
+        current_player = next((p for p in self.players if p.name == current_player_name), None)
+        if current_player is None:
+            raise ValueError(f"Current player {current_player_name} not found.")
 
-        spectators_who_saw = [p.name for p in players_in_room]
+        alive_player_names = turn_context.alive_player_names.copy()
+        players_in_room_names = turn_context.spectators_who_saw.copy()
+        location = turn_context.location
+
+        spectators_who_saw = players_in_room_names
         if action_taken.type == ActionType.REPORT:
             spectators_who_saw = alive_player_names
 
@@ -142,18 +164,12 @@ class GameEngine:
         elif action_taken.type == ActionType.MOVE:
             location = action_taken.target_location # type: ignore
             new_players_in_room = get_players_in_room(self.history, self.players, current_player, location)
-            spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
+            spectators_who_saw = list(set(players_in_room_names + [p.name for p in new_players_in_room]))
 
         if action_taken.type == ActionType.KILL:
             alive_player_names.remove(action_taken.target_player_name) # type: ignore
 
-        new_history_item = History(
-            player_names_to_play_next=turn_context["next_players"],
-            phase=turn_context["phase"],
-            actions_until_phase_ends=turn_context["actions_until_phase_ends"],
-            location=location,
-            impostor_cooldown=max(0, turn_context["last_player_action"].impostor_cooldown-1),
-            actions_agent_could_take=[a.text for a in turn_context["actions_player_can_take"]],
+        new_history_item = turn_context.copy(
             spectators_who_saw=spectators_who_saw,
             llm_cot=llm_cot,
             llm_response=llm_response,
@@ -161,7 +177,8 @@ class GameEngine:
             action_taken=action_taken,
             tasks_left_to_do=tasks_left_to_do,
             votes_before_this_discussion_message=pre_discussion_votes or {},
-            alive_player_names=alive_player_names
+            alive_player_names=alive_player_names,
+            location=location
         )
 
         self.history.append(new_history_item)

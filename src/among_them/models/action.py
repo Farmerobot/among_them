@@ -66,3 +66,9 @@ class Action:
         data = self.__dict__.copy()
         data.update(kwargs)
         return Action(**data)
+
+    def __str__(self):
+        return self.spectator
+
+    def __repr__(self):
+        return self.spectator
