@@ -93,4 +93,5 @@ SHORT_TASKS = [
     Task(name="Process data in communications", location=Location.COMMUNICATIONS),
     Task(name="Fix wiring in reactor", location=Location.REACTOR),
     Task(name="Check reactor", location=Location.REACTOR),
+    Task(name="Fix wiring in security", location=Location.SECURITY),
 ]
