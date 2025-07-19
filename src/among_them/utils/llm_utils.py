@@ -50,7 +50,10 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         ValueError: If no chain of thought is found in the response
     """
     # Debug print
-    print("\033[92m" + prompt + "\033[0m")
+    print("\n\033[93mSystem Prompt:\033[0m") #yellow
+    print("\033[91m" + system_prompt + "\033[0m") #green
+    print("\033[93mUser Prompt:\033[0m") #yellow
+    print("\033[92m" + prompt + "\033[0m") #green
 
     # Build messages list
     messages = [
