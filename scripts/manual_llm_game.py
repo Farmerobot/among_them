@@ -1,9 +1,11 @@
 import random
 import tiktoken
+from among_them.config import STATE_FILE
 from among_them.game_engine import GameEngine
 from among_them.utils.llm_utils import parse_llm_response_to_action, invoke_llm
 from among_them.utils.ui_utils import prompt_manual_fallback_action
 from among_them.game_config import GameConfig
+import os
 
 def main():
     """Runs the game with manual LLM control."""
@@ -17,6 +19,12 @@ def main():
         impostor_cooldown=1
     )
     engine = GameEngine(game_config)
+    if os.path.exists(STATE_FILE):
+        engine.load_state()
+        print(f"Game loaded from state file with {len(engine.history)} history entries")
+
+    for history_item in engine.history:
+        print(history_item)
 
     while True:
         game_over, end_reason = engine.handle_automatic_transitions()

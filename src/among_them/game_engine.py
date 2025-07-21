@@ -19,8 +19,8 @@ from among_them.utils.player_utils import (get_last_player_action,
                                            get_next_random_player,
                                            get_players_in_room)
 from among_them.utils.end_utils import get_end_game_reason
-from among_them.utils.history_utils import initialize_history, end_game_history, create_vote_history_entry, get_action_history_str
-from among_them.utils.llm_utils import create_llm_prompts
+from among_them.utils.history_utils import initialize_history, end_game_history, create_vote_history_entry
+from among_them.utils.prompt_utils import build_environment_prompt
 from among_them.game_config import GameConfig
 
 class GameEngine:
@@ -108,19 +108,25 @@ class GameEngine:
             votes_before_this_discussion_message=None,
         )
 
-        history_str = get_action_history_str(self.history, self.players, current_player, self.game_config)
-        system_prompt, user_prompt = create_llm_prompts(actions_player_can_take, history_str)
+        # Build new environment-like prompt
+        environment_prompt = build_environment_prompt(
+            current_player, self.history, self.players, self.game_config
+        )
+        system_prompt = ""  # System context is included in environment_prompt
+        user_prompt = environment_prompt
 
         pre_discussion_vote_prompts = []
         if phase == GamePhase.DISCUSS:
             for player in alive_players:
                 fake_voting_actions = get_vote_actions(self.history, self.players, player)
-                fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
-                system_prompt_pd, user_prompt_pd = create_llm_prompts(fake_voting_actions, fake_history_str)
+                # Build environment prompt for voting phase
+                voting_prompt = build_environment_prompt(
+                    player, self.history, self.players, self.game_config
+                )
                 pre_discussion_vote_prompts.append({
                     "player": player,
-                    "system_prompt": system_prompt_pd,
-                    "user_prompt": user_prompt_pd,
+                    "system_prompt": "",
+                    "user_prompt": voting_prompt,
                     "actions": fake_voting_actions
                 })
 
