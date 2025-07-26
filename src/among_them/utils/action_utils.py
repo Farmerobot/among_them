@@ -28,7 +28,7 @@ def get_task_phase_actions(
     actions = []
 
     # actions for WAIT
-    actions.append(Action(type=ActionType.WAIT, player_name=player.name))
+    # actions.append(Action(type=ActionType.WAIT, player_name=player.name))
 
     # action for REPORT
     dead_players_in_room_names = [name for name, dead_location in get_dead_players(history).items() if dead_location == location.value]

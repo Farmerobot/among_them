@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple
 
 import tiktoken
 
-from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX
+from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX, RUN_LOCALLY, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
@@ -23,7 +23,7 @@ class Player:
         name: str, 
         role: PlayerRole = PlayerRole.CREWMATE,
         manual_human_control: bool = False,
-        llm_model_name: str = OLLAMA_LLM_MODEL_NAME
+        llm_model_name: str = OLLAMA_LLM_MODEL_NAME if RUN_LOCALLY else OPENROUTER_MODEL_NAME
     ):
         self.name = name
         self.role = role
@@ -124,45 +124,77 @@ class Player:
     def _invoke_llm(self, system_prompt: str, prompt: str) -> Tuple[str, Optional[str]]:
         """
         Invoke the LLM with the given prompts and handle exceptions.
-        
+
         Args:
             system_prompt: The system prompt to use
             prompt: The user prompt to send to the LLM
-        
+
         Returns:
             Tuple of (response_text, chain_of_thought)
-        
+
         Raises:
             ValueError: If no chain of thought is found in the response
         """
-        # Build messages list
         messages = [
             {"role": "user", "content": system_prompt + "\n" + prompt},
         ]
 
-        # Generate raw output via MLX or streaming chat
         raw = "<think>" if USE_MLX else ""
+        raw_reasoning = ""
+        raw_content = ""
+        
         try:
-            if USE_MLX:
-                from mlx_lm import stream_generate
-                from mlx_lm.sample_utils import make_sampler
-                from among_them.config import MLX_MODEL, MLX_TOKENIZER
-                model, tokenizer = (MLX_MODEL, MLX_TOKENIZER)
-                prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
-                chunks = stream_generate(
-                    model, tokenizer, prompt=prompt_chat,
-                    max_tokens=2000, sampler=make_sampler(temp=0.0)
-                )
+            if RUN_LOCALLY:
+                if USE_MLX:
+                    from mlx_lm import stream_generate
+                    from mlx_lm.sample_utils import make_sampler
+                    from among_them.config import MLX_MODEL, MLX_TOKENIZER
+
+                    model, tokenizer = MLX_MODEL, MLX_TOKENIZER
+                    prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+                    chunks = stream_generate(
+                        model, tokenizer, prompt=prompt_chat,
+                        max_tokens=2000, sampler=make_sampler(temp=0.0)
+                    )
+                else:
+                    from ollama import chat
+                    chunks = chat(model=self.llm_model_name, messages=messages, stream=True)
             else:
-                from ollama import chat
-                # Streaming Ollama chat
-                chunks = chat(model=self.llm_model_name, messages=messages, stream=True)
+                # Use OpenRouter if not running locally
+                from openai import OpenAI
+
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=OPENROUTER_API_KEY,
+                )
+
+                response = client.chat.completions.create(
+                    model=self.llm_model_name,
+                    messages=messages,
+                    stream=True
+                )
+
+                chunks = response
 
             for chunk in chunks:
-                content = chunk["message"]["content"] if not USE_MLX else chunk.text
-                print("\033[94m" + content + "\033[0m", end="", flush=True)
-                raw += content
-                # Count all non-<think> tags; Hallucination Early Check (HEC) System
+                if RUN_LOCALLY:
+                    content = chunk["message"]["content"] if not USE_MLX else chunk.text
+                    raw += content
+                    print("\033[94m" + content + "\033[0m", end="", flush=True)   
+                else:
+                    try:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            raw_content += content
+                            print("\033[94m" + content + "\033[0m", end="", flush=True)  
+                        
+                        reasoning = chunk.choices[0].delta.reasoning
+                        if reasoning:
+                            raw_reasoning += reasoning
+                            print("\033[90m" + reasoning + "\033[0m", end="", flush=True) 
+                    except:
+                        ...
+                
                 all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
                 if len(all_tags) > 2:
                     raise Exception("LLM did hallucinate")
@@ -173,17 +205,23 @@ class Player:
             raise KeyboardInterrupt("User interrupted LLM generation")
 
         # Extract chain of thought and cleanup
-        cot = ""
-        cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
-        cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
-        if cot_match:
-            cot = cot_match.group(0)
-            response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
-        elif cot_match_end:
-            cot = cot_match_end.group(0)
-            response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
+        if RUN_LOCALLY:
+            cot = ""
+            cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
+            cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
+            if cot_match:
+                cot = cot_match.group(0)
+                response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+            elif cot_match_end:
+                cot = cot_match_end.group(0)
+                response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
+            else:
+                cot = ""
+                response_text = raw
+                # raise ValueError("No chain of thought found in response")
         else:
-            raise ValueError("No chain of thought found in response")
+            cot = "<think>\n" + raw_reasoning + "\n</think>"
+            response_text = raw_content
 
         return response_text, cot
 

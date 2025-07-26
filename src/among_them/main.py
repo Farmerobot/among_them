@@ -12,6 +12,7 @@ from among_them.game_engine import GameEngine
 # Console output color guide:
 # Green - prompt
 # Red - system prompt
+# Grey - llm reasoning
 # Blue - llm response
 
 def main():

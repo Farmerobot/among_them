@@ -33,10 +33,10 @@ class Action:
             self.text = f"move to location {self.target_location.value}"
             self.result = f"You [{self.player_name}] moved to location {self.target_location.value}"
             self.spectator = f"{self.player_name} moved to location {self.target_location.value}"
-        elif self.type == ActionType.WAIT:
-            self.text = "wait"
-            self.result = f"You [{self.player_name}] are waiting"
-            self.spectator = f"{self.player_name} waited"
+        # elif self.type == ActionType.WAIT:
+        #     self.text = "wait"
+        #     self.result = f"You [{self.player_name}] are waiting"
+        #     self.spectator = f"{self.player_name} waited"
         elif self.type == ActionType.TASK:
             self.text = f"complete task: {self.target_task.name}"
             self.result = f"You [{self.player_name}] completed task: {self.target_task.name}"
