@@ -1,8 +1,6 @@
 import re
 from typing import Dict, List, Optional, Tuple
-
 import tiktoken
-
 from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX, RUN_LOCALLY, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
@@ -11,11 +9,8 @@ from among_them.models.player_role import PlayerRole
 
 class Player:
     """
-    A unified player class that can be either human-controlled or AI-controlled.
-    
-    The player's behavior is determined by the manual_human_control flag:
-    - If True: The player is controlled by human input
-    - If False: The player is controlled by an LLM
+    A player in the game. This class holds player-specific state and is responsible
+    for generating LLM prompts for the player's turn.
     """
 
     def __init__(
@@ -307,10 +302,3 @@ class Player:
         for action in range(len(available_actions) - 1, -1, -1): 
             if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
                 return action, available_actions[action]
-
-        warning_str = (
-            f"LLM did not conform to output format. "
-            f"Expected one of {available_actions}, but got '{chosen_action}'"
-        )
-        print(warning_str)
-        raise ValueError(warning_str)

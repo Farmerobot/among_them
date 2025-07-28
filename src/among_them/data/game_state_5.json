@@ -1,0 +1,3625 @@
+[
+  [
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Game Start"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 1,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "System",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "The game started",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 59,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "complete task: Start the coffee maker in the cafeteria",
+        "complete task: Fix wiring in cafeteria"
+      ],
+      "llm_cot": "<think>\nAlright, let's see. David is a Crewmate and needs to complete his tasks to win. He's currently in the Cafeteria. His available tasks here are starting the coffee maker and fixing the wiring. He can't talk right now because it's the Task phase.\n\nFirst, completing tasks is crucial for the Crewmates to win. Since he's already in the Cafeteria, doing the tasks here would save time instead of moving elsewhere. Starting the coffee maker and fixing wiring are both available. Fixing wiring might be a common task that Impostors can fake, but in the Task phase, he needs to focus on finishing them. Also, some tasks need multiple steps, but the game says tasks are independent. So doing either would help. Maybe do both if possible, but the available actions let him choose one. He has two tasks in Cafeteria, so completing one now would reduce the list. Starting the coffee maker first might be quicker. Then he can move on. Since movement takes an action, staying put and completing tasks is efficient. Let's go with starting the coffee maker.\n\n</think>",
+      "llm_response": "<action>complete task: Start the coffee maker in the cafeteria</action>",
+      "token_usage": {
+        "input_tokens": 1033,
+        "output_tokens": 241
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Start the coffee maker in the cafeteria",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Start the coffee maker in the cafeteria",
+        "result": "You [David] completed task: Start the coffee maker in the cafeteria",
+        "spectator": "David completed task: Start the coffee maker in the cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "Eve",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 58,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "complete task: Start the coffee maker in the cafeteria"
+      ],
+      "llm_cot": "<think>\nOkay, let's see. Bob is a Crewmate, so his main goals are to complete tasks and identify impostors. Right now, he's in the Cafeteria during the Task phase. His available actions include moving to Medbay, Admin, Weapons, or completing the coffee maker task here in the Cafeteria.\n\nLooking at his tasks, he has \"Start the coffee maker in the cafeteria\" as one of them. The game history shows David already completed that task, but maybe Bob's task is separate. Wait, tasks are independent between players, right? So even if David did it, Bob still needs to do his own. Since he's already in the Cafeteria, completing the coffee maker task here makes sense to reduce the total tasks left. That's efficient because moving somewhere else would take an action. Also, completing tasks helps Crewmates win faster. Plus, if other players are around, they'll see him doing the task, which could build trust. Let me check if there's any reason not to do the task. The rules say all actions taken are seen by co-located players, so performing a task here is a good way to appear as a genuine Crewmate. Since he can't talk now, action is key. So, the best move is to complete the \"Start the coffee maker in the cafeteria\" task.\n\n</think>",
+      "llm_response": "<action>complete task: Start the coffee maker in the cafeteria</action>",
+      "token_usage": {
+        "input_tokens": 1043,
+        "output_tokens": 291
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Start the coffee maker in the cafeteria",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Start the coffee maker in the cafeteria",
+        "result": "You [Bob] completed task: Start the coffee maker in the cafeteria",
+        "spectator": "Bob completed task: Start the coffee maker in the cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 57,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nOkay, Frank is an Impostor, and right now he's in the Cafeteria with Alice, Charlie (the other Impostor), David, Eve, and Bob. The phase is Task, so he can't talk. His main goals are to eliminate Crewmates without being caught. Let's see the available actions.\n\nOptions are moving to Medbay, Admin, Weapons, or pretending to do the cafeteria trash task. But killing isn't listed here; maybe there are no kill options because he's with multiple people? Wait, during the Task phase, Impostors can kill if they're alone with someone. Right now, there are five players in the Cafeteria. If Frank moves to a different location, maybe he can find someone alone.\n\nAlternatively, pretending a task might help him blend in. The task listed is \"Empty the cafeteria trash\" which is in the current location. If others are around, faking the task could make him look like a Crewmate. But since two Crewmates (David and Bob) just did the coffee maker task here, maybe others might not have tasks left here. If he pretends now, but others saw those tasks done, perhaps they know there's another task here. Alternatively, maybe they expect multiple people to have the same task.\n\nBut moving to another location might help. If he moves to Medbay, Admin, or Weapons, maybe he can get someone alone. Let's think about game history. David and Bob did the same task, which might indicate they're Crewmates since Impostors fake tasks. But Charlie is the other Impostor. So he's with Charlie. If they want to kill, they need to split up.\n\nIf Frank moves to another area, say Admin, which might be less crowded, he might find a lone Crewmate to kill. But if others are there, he can't. Alternatively, if he stays and fakes the task, but with so many people, it's risky. But Crewmates might notice if he pretends a task that's already done or not. Wait, David and Bob did \"Start coffee maker\" but \"Empty cafeteria trash\" is a different task. If Frank pretends that, maybe it's okay. Since the Task phase allows actions to be seen, faking the task here could make others think he's doing a real task.\n\nBut if he stays and pretends, that's safe, but doesn't further his goal of killing. However, since there are multiple people here, he can't kill without being caught. The best move might be to move to a different location where a Crewmate is alone. But without info on where others are going, it's a bit of a gamble. But maybe Admin or Weapons could have fewer people. Let's say he moves to Admin. If he's there alone or with just one Crewmate, he can kill. Alternatively, if he moves and pretends tasks there, but moving gives more opportunities.\n\nAlternatively, maybe staying is better to not raise suspicion. Since David and Bob did tasks here, others might not question his presence. He can fake the trash task to seem busy. Then, during the Discussion phase, maybe accuse someone else.\n\nBut as an Impostor, killing is priority. So perhaps moving to a different location where he can isolate a Crewmate. If he goes to Medbay, maybe Eve or Alice is there. But since it's a Task phase, players might be moving around. Hmm. The safest bet might be to fake the task here to build credibility, then try to kill later when possible. However, given the current phase is Task and you can act once, maybe moving to another area would allow a better kill opportunity. Maybe Admin is a good spot. If he moves there and finds a lone player, he can kill. If not, he can fake a task there. Since the available actions for Admin would include faking tasks in that location. \n\nAlternatively, he can stay, fake the task, but then when the next phase comes, he can use that as an alibi. Let's look at the game history. David and Bob did the same task; maybe that's suspicious, maybe not. For now, Frank needs to either take an action that allows a kill or build alibi. Since killing is more effective for Impostors, moving seems better.\n\nBut the other Impostor Charlie is also in Cafeteria. Maybe they coordinate? But since they can't communicate now, Frank can't. If both stay, they can't kill. So perhaps moving is better. I'll suggest Frank moves to Admin to possibly find an isolated target.\n\n</think>",
+      "llm_response": "<action>move to location Admin</action>",
+      "token_usage": {
+        "input_tokens": 1016,
+        "output_tokens": 941
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Frank",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Admin"
+        },
+        "target_task": null,
+        "text": "move to location Admin",
+        "result": "You [Frank] moved to location Admin",
+        "spectator": "Frank moved to location Admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve",
+        "Bob",
+        "Alice",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 56,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, let me figure out what Alice should do next. She's a Crewmate, so her main goals are to complete tasks and identify impostors. Looking at her tasks left:\n\n1. Route power to defence in Electrical\n2. Clean the floor in Admin\n3. Fix wiring in Weapons\n4. Submit scan in Medbay\n\nShe's currently in the Cafeteria, and her available move options are Medbay, Admin, or Weapons. Since she can only do one action at a time, moving to one of these locations to work on a task makes sense.\n\nLooking at the game history, David and Bob both completed \"Start the coffee maker in the cafeteria.\" That task is probably done now. Frank moved to Admin. So Frank is in Admin right now. If Alice goes to Admin, she can do the \"Clean the floor\" task there. But since Frank is there, she should be cautious. Also, having two people in Admin might make Frank an Impostor\u2014if he's faking tasks. But Crewmates can't detect fake tasks, so she can't directly know. However, moving to Admin would let her see if Frank is actually cleaning the floor or not. However, during the task phase, Impostors can fake tasks, so even if he's there, she can't be sure.\n\nAlternatively, Medbay and Weapons have tasks too. Medbay's \"Submit scan\" might be a task that requires her to be there. Fixing wiring in Weapons is another task. She could split up and go to a different location. Also, from the potential impostors list, Frank, Charlie, David, Eve, and Bob are suspects. Since David and Bob did the same task in Cafeteria, maybe that's a common task. But do Impostors have that task too? If not, then completing it might indicate they're crewmates, but sometimes Impostors can fake tasks.\n\nWait, in the game history: David and Bob completed the same task. If that's a common task, maybe they're both crewmates. But Impostors can fake tasks, so even if they \"completed\" it, it doesn't confirm their innocence. Also, Alice has to choose between moving to Medbay, Admin, or Weapons.\n\nHer current tasks: if she goes to Admin, she can do Clean the floor there. But Frank is already in Admin. Would that be risky? However, during the Task phase, you can't speak, but all actions are visible. If Frank is there and not doing anything, maybe that's a red flag. But since tasks are independent, maybe he's doing a different task. Although the task in Admin is \"Clean the floor\"\u2014maybe he's there doing that. But if Alice also goes, she can do her task. If she's in the same location as an Impostor, she could be in danger, but Impostors can kill during the Task phase. But Alice can't know who is Impostor yet.\n\nAlternatively, maybe she should prioritize completing her tasks. Her tasks remaining include Medbay, so moving to Medbay would allow her to do \"Submit scan.\" If she goes there alone, maybe safer? Or Weapons for Fix wiring. But she's in Cafeteria, needs to move. So Medbay: Submit scan might be a task that requires multiple steps or maybe a visual task. But again, she can't communicate.\n\nAlternatively, Weapons: If she goes there, maybe there's someone else. The companions in Cafeteria are Charlie, David, Eve, Bob. Charlie hasn't been mentioned in the history except as a potential impostor.\n\nAlternatively, Admin has Frank, but if she moves there, maybe she can complete the task. Ideally, Crewmates need to finish tasks asap. So moving to Admin would allow completing that task, but since Frank is there, maybe he's a threat. But since it's Task phase, the only action is moving or doing tasks. If Alice moves to Admin, the action is to go there. Then she can do the task in Admin, but her next action would be performing the task. The problem is that if Frank is an Impostor, he can kill her there during the Task phase. However, there's security in numbers; if Alice and Frank are in Admin, and if Impostors can kill when co-located, then Frank could kill her.\n\nWait, in the game mechanics, when you move to a location, you can take actions there. The murder ability is only for Impostors. So during the Task phase, if Impostors are in the same location as a Crewmate, they can kill them. So moving to a location with an Impostor could be dangerous.\n\nGiven that Frank is in Admin, if Alice moves there, and if Frank is an Impostor, he could kill her. So perhaps it's safer to go to Medbay or Weapons instead?\n\nBut she has tasks in Admin, Weapons, and Medbay. She needs to do all of them. The Crewmates win when all tasks are done. So completing tasks quickly is crucial. But she needs to survive.\n\nSo maybe choose the safest location. Are there other players around? The current companions in Cafeteria are Charlie, David, Eve, Bob. So Alice is in Cafeteria with four others. If she leaves, maybe split up. But Impostors might kill when isolated. Alternatively, going to Admin where Frank is alone? Or another location.\n\nIf she goes to Weapons, perhaps there's no one there. If she can do Fix wiring there, then proceed. But she doesn't know who's where besides the current location.\n\nAlternatively, Medbay. The task there is \"Submit scan,\" perhaps a visual task that others can verify. But during Task phase, can't communicate. However, in future discussions, if someone saw her doing that, they can confirm.\n\nHowever, since the Task phase is active now, she can't talk. So perhaps choosing the nearest or quickest task to complete.\n\nLooking at her tasks, perhaps prioritize Medbay because Submit scan could be a visual task that helps others confirm her innocence later. But without knowing the map layout, maybe they're all similar in distance.\n\nAlternatively, Admin has Frank. If he's a suspect, Alice could monitor his actions. But if she moves there and he kills her, that's bad. But if he's a Crewmate, then moving there allows task completion.\n\nGiven the potential risk versus reward, perhaps Medbay or Weapons is safer. Maybe Weapons? Let me check: is Fix wiring in Weapons a task that can be done quickly? Maybe irrelevant. So what's the best move.\n\nConsidering Alice's options and the current state. Since two other players (David and Bob) completed the coffee task in Cafeteria. Frank moved to Admin. So in the Cafeteria: Charlie, David, Eve, Bob. If she moves, say, to Medbay, maybe Medbay is empty, and she can do her task. But if other players are going elsewhere. She needs to move to a location where she can complete a task. So picking Medbay: if that's where she can do Submit scan, which might be a task that others can see (if it's a visual task), that would be beneficial. Alternatively, Admin with Frank, perhaps he's doing a task, maybe he's a Crewmate. But with 2 Impostors, it's possible. However, moving to Admin could help her finish that task but with some risk.\n\nAlternatively, if she chooses Medbay, and that's an empty location, maybe safer. However, I'm not sure. The Crewmates need to finish tasks quickly. Maybe prioritize Medbay because if the scan is done, others might see her doing it and trust her. Then she can proceed to other tasks. So the action should be moving to Medbay.\n\n</think>",
+      "llm_response": "<action>move to location Medbay</action>",
+      "token_usage": {
+        "input_tokens": 1052,
+        "output_tokens": 1599
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Medbay"
+        },
+        "target_task": null,
+        "text": "move to location Medbay",
+        "result": "You [Alice] moved to location Medbay",
+        "spectator": "Alice moved to location Medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Charlie",
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Charlie"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 55,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, let's see. Eve is a Crewmate and needs to complete all tasks to win. Right now, she's in the Cafeteria with Charlie, David, and Bob. Her remaining tasks are Fix wiring in admin, Fix wiring in storage, Clean the floor in admin, and Run diagnostics in medbay.\n\nLooking at the game history, David and Bob both started the coffee maker in the Cafeteria. Frank moved to Admin and Alice to Medbay. During the Task phase, I can't talk, so Eve needs to focus on moving to locations where she can do tasks.\n\nHer available actions are to move to Medbay, Admin, or Weapons. She has a task in Medbay (diagnostics) and two tasks in Admin (fix wiring and clean floor). Since Admin has two tasks, maybe going there first makes sense. But Frank is already in Admin. Wait, Frank is a potential impostor. If Eve goes to Admin, she can complete her tasks there but might be near Frank, who could be an impostor. However, since they can't talk now, maybe it's better to go ahead. Crewmates have to do tasks even if others are around. Also, completing tasks is crucial for the crew's win.\n\nAlternatively, moving to Medbay for the diagnostics task. Alice is there. She's also a potential impostor. But Medbay only has one task. However, completing tasks in multiple locations might reduce the time needed later. But Admin has two tasks. Let me check: are all tasks independent? Yes. So, maybe prioritize locations with more tasks first. Also, Frank is in Admin; maybe if Eve goes there, she can observe his behavior. Like, if he's faking tasks, but Crewmates can't detect that. Hmm.\n\nWait, but Tasks are completed independently. So fixing wiring in Admin and cleaning the floor there are two separate tasks. So going there allows Eve to do both. So going to Admin would let her maybe complete both tasks quicker. Unless moving takes too long, but how does movement work? The game mechanics say you can move between places and take one action at a time. So moving to Admin is an action, then next turn she can do the task there.\n\nSo right now, in the Cafeteria, she can move. Considering the list of tasks left, Admin has two tasks. So moving there next makes sense. Even though Frank is there, but since he's a potential impostor, but Crewmates can't do anything about that during the task phase. Just need to proceed and hope to survive. If Frank is an impostor, he could kill her, but she has to take that risk to complete tasks. Alternatively, maybe go to Storage first? Wait, no. Her tasks left include Fix wiring in storage. So Storage is another location, but isn't an available action mentioned here? The available actions are Medbay, Admin, Weapons. So she can only choose from those three. So maybe she needs to move to Admin or Medbay first. Because Storage isn't an option. Wait, looking at the available_actions, the options are Medbay, Admin, Weapons. So perhaps she can't move to Storage directly yet. So the available moves are limited to those three locations. Therefore, she needs to choose which of those three locations would help with her tasks.\n\nIn the tasks left, Admin and Medbay have tasks. So moving to Admin allows her to work on two tasks, Medbay on one. So Admin is better. But moving also takes time, so each move is one action. So going to Admin, then she can next do the tasks there. So the best move is to go to Admin now. Even though Frank is there. Since she's a Crewmate, she can't kill, so she just does her tasks and hopes Frank isn't an impostor. If he is, he might kill her, but that's part of the game. Crewmates have to take risks.\n\nAlternatively, maybe going to Medbay to do the diagnostic task. But that only has one task. But if she goes there, maybe Alice is the impostor. But again, same risk. Maybe going to Admin is better because two tasks, even with Frank there.\n\nAlso, the potential impostors list includes Frank, Alice, Charlie, David, Bob. But Charlie is currently with her in Cafeteria. So if Eve moves, she leaves Charlie, David, Bob. Wait, current companions are Charlie, David, Bob. So they are in Cafeteria. If she moves to Admin, she'll be there with Frank. But during tasks, impostors can kill co-located players. So if Frank is an impostor and she's alone with him, he might kill her. But maybe there are other players there? According to the game history, Frank moved to Admin earlier, but the current companions in Cafeteria are Charlie, David, Bob. So when Eve moves to Admin, she'll be with Frank, or maybe others. Wait, no. Action log shows Frank moved to Admin, but other people may have moved as well. But in current_state, companions are Charlie, David, Bob. So she's leaving them to go to Admin where Frank is. If she moves there, it's just her and Frank. If Frank is an impostor, he can kill her. But if she stays in Cafeteria, maybe safe with others. However, staying allows her to do... but her tasks aren't in Cafeteria anymore. The Cafeteria tasks were completed by David and Bob. Her remaining tasks are Admin and Storage and Medbay. So she needs to move out.\n\nAlternatively, perhaps going to Medbay to be with Alice, another potential impostor, but again, same risk. Hmm. As a Crewmate, Eve needs to balance task completion with survival. But without completing tasks, they can't win. So maybe prioritizing tasks is necessary. So moving to Admin to do two tasks. Perhaps she can complete them quickly and move on. Alternatively, if she can't, but the impostors might kill her. It's a risk. But the game requires that.\n\nAlternatively, does moving to Weapons help? She doesn't have any tasks listed in Weapons. So that's not useful. So the best options are Medbay or Admin. Between the two, Admin has two tasks. So go there, do both tasks next. Therefore, the action should be to move to Admin.\n\n</think>",
+      "llm_response": "<action>move to location Admin</action>",
+      "token_usage": {
+        "input_tokens": 1059,
+        "output_tokens": 1316
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Admin"
+        },
+        "target_task": null,
+        "text": "move to location Admin",
+        "result": "You [Eve] moved to location Admin",
+        "spectator": "Eve moved to location Admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank",
+        "Bob",
+        "David",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 54,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "pretend doing task: Empty the cafeteria trash"
+      ],
+      "llm_cot": "<think>\nOkay, let's see. Charlie is an Impostor currently in the Cafeteria with David and Bob. The phase is Task, so no talking. The available actions are moving to Medbay, Admin, Weapons, or pretending to do a task here.\n\nAs an Impostor, my main goals are to kill crewmates without getting caught and sabotage their tasks. Right now, two crewmates, David and Bob, are here. They completed the coffee maker task. Maybe that location is now empty? But I can't kill both at once. Killing one might be risky, but if I do it and they report the corpse, discussion phase starts. Alternatively, I could fake a task here to blend in.\n\nBut since I'm in the Cafeteria with two crewmates, if I kill one, the other will see me. David and Bob are both here. If I kill David, Bob would see and report it immediately. That's bad. So maybe it's better to move to another location where I can catch someone alone. Let me look at the game history. Frank, my partner, is in Admin with Eve. Alice is in Medbay. If I move to Medbay, Alice is there alone. If I go there, could kill her without witnesses. Alternatively, Admin has Frank and Eve\u2014Frank is my partner, but Eve is a crewmate. Going there might give us a chance to double-kill, but not sure. Wait, the action is only one at a time. Or maybe split up.\n\nMedbay: Only Alice. If I move there and she stays, during the Task phase when we're alone, I can kill her. But she might be doing her tasks. Alternatively, pretend to do the cafeteria trash task. But that's in Cafeteria. If I fake a task here, maybe gain some trust. But David and Bob are here. If I stay and pretend, they might not suspect. However, killing someone here is too risky in their presence. So moving to Medbay might be better. Check if Medbay is empty or if Alice is still there. The game history shows Alice moved to Medbay, but not sure if she moved again. Since last actions were movements to Admin and Medbay, maybe she's still there. If I move to Medbay now, maybe have a chance to kill her alone. Then, during next phases, Frank and I can coordinate.\n\nWait, but during the Task phase, can I kill someone immediately upon arriving? If I go to Medbay and Alice is there, then I can kill her. If no one else is there, then perfect. Yes. So moving to Medbay and then killing Alice might be possible. However, the available actions here don't include killing, only move or pretend task. Oh, right, the available actions given are move or pretend task. So in the current state, since phase is Task, to kill someone, the player would need to be in the same location and take the kill action. But the available actions listed don't include kill here. Wait, maybe the kill action is only available when co-located with a crewmate, but it's not listed here. Hmm... Maybe the system is presenting the possible actions, which for an Impostor, could include kill if they're with someone. But in the available actions listed, the only options are moving or pretending. That might mean that Charlie can't kill right now because maybe the system expects the action to be moving or pretending. Wait, the available actions are move to Medbay, Admin, Weapons, or pretend task. So maybe in this specific scenario, the kill action isn't available here. Because maybe you can only kill when alone with someone? But he's in the Cafeteria with David and Bob. If he's an Impostor, maybe he can kill either, but the action isn't listed here. Maybe the system's available actions are context-dependent. Like, if there's someone to kill, the action would be shown. But in this case, Charlie is with David and Bob, both crewmates, so maybe the kill action is a possible option, but not shown. Wait, the original action list says \"available_actions\" includes move and pretend. So maybe in this case, killing isn't possible. Possibly because maybe the system allows killing only when you're with a single target. But he's with two crewmates. So perhaps Impostors can't kill when there are multiple people present. So the available actions in the prompt are only movement or fake task. So killing isn't an option now. Therefore, maybe moving to Medbay where Alice is alone would let Charlie kill her. But since the current companions are David and Bob, current options are move or fake.\n\nIf he moves to Medbay, then maybe he can catch Alice alone. So moving to Medbay would be a good move to find a solo target. Alternatively, maybe Alice is not in Medbay anymore, but according to the game history, the last action was Alice moved to Medbay. So likely she's still there. Moving to Medbay may let Charlie be alone with her. Then he can kill her in the next turn. So choosing to move to Medbay could be the strategic choice.\n\nAlternatively, pretending to do the task in Cafeteria. \"Empty the cafeteria trash\" is a fake task. Since David and Bob are there, they see him do the fake task. That might help establish credibility. But if they already did their Cafeteria tasks (start the coffee maker), maybe they know that emptying the trash isn't a real task here. Wait, the game history shows both David and Bob completed \"Start the coffee maker in the cafeteria\", but maybe other tasks exist. We don't know. The fake task's name is \"Empty the cafeteria trash\"\u2014maybe that's a valid task. If the crewmates know their own tasks, David and Bob, if they don't have that task, they might notice that Charlie is faking. So if Charlie pretends to do a task that's not assigned to others, he might be caught. Or maybe in this game, tasks are not known to others. The mechanics state \"Tasks are independent of each other and of other players\", so each player has their own tasks. So David and Bob might have tasks to start the coffee maker, but others may have different tasks. If Charlie pretends to empty the trash, perhaps that's a valid task elsewhere. But in the Cafeteria? Depending on the game's setup, maybe \"Empty cafeteria trash\" is a genuine task. If so, then pretending to do it while in Cafeteria would be a way to look innocent. But if crewmates know that their own tasks don't include that, then they can suspect Charlie. But according to mechanics, tasks are independent; so other players don't know others' tasks. So, as long as Charlie pretends, the crewmates can't see that he's faking. But maybe the real players would know that \"Emptying trash\" isn't a task. Wait, but maybe in the game, different tasks exist. Since David and Bob had \"Start the coffee maker\", maybe \"Empty the cafeteria trash\" is a different task, possibly assigned to another crewmate. If Charlie fakes that task, then crewmates present there (David and Bob) may notice that Charlie is doing a task that they don't have. But according to the mechanics, players cannot detect if an Impostor is faking a task. The Crewmate constraints specify that they \"Cannot detect impostor faking tasks\". Therefore, crewmates can't tell that he's faking, even if they don't have that task. So pretending to do the task here might be okay.\n\nBut if he's with David and Bob, and he doesn't want to kill when there are multiple people around, maybe pretending is better to avoid suspicion. However, his main goal is to kill. So moving to Medbay where Alice is alone might be a better option. Then, in the next turn, he can kill her when they're alone. But right now, in the current phase, he can only move or fake. So moving seems better.\n\nAlternatively, if he can kill now. Wait, the available actions are those listed: move or pretend task. So if killing isn't an option here, perhaps due to being with two crewmates, then moving is the next best. By moving to Medbay, he can isolate Alice and kill her next. Alternatively, moving to Admin where Frank (the other Impostor) and Eve are\u2014if he goes to Admin, he can be with Frank. Maybe they can kill Eve together? But how? Because Impostors can kill individually. If both are present, maybe they can kill, but it's redundant. But Frank is there with Eve, so he can kill Eve himself. Alternatively, if Charlie and Frank are both in Admin with Eve, maybe someone else entering, but Charlie might not know. So the current situation in Admin is Frank and Eve. If Charlie moves there, that would be three players: two Impostors and Eve. But if Charlie moves there, can he kill Eve with Frank present? Maybe that's allowed. But killing in front of another Impostor might not be a problem. But in general, when you kill someone, any player present (except Impostors) would see it. But Frank is an Impostor, so Charlie killing Eve with Frank there is okay. However, the problem is, when the body is reported, the crewmates might figure out that Frank and Charlie were there. But during discussion, they can cover each other. Hmm. Alternatively, it's possible that in Admin, Frank can kill Eve, if he's there. But maybe Frank didn't do that yet. So if Charlie goes there, it's two Impostors with Eve, and either can kill her. However, if Charlie goes to Admin, he and Frank would be able to kill Eve. But in the current turn, Charlie could move there, then maybe next turn Frank or Charlie can kill Eve. However, Charlie's potential moves: now in Cafeteria, if he moves to Admin, then arrives there with Frank and Eve. Then, if possible, he can kill Eve, but depending on whether the game allows that action in the next steps.\n\nBut since this is a text-based game, maybe the phases change after each action. So each action takes one phase. But the current phase is Task, so if Charlie moves to Admin, the phase remains Task. Once there, if Eve is present with Frank and Charlie, maybe Charlie can kill Eve, assuming that action is available. But this is speculative. However, the available actions listed here are move or pretend, not kill. So in this current state, he can't kill. Therefore, maybe moving to Medbay to isolate Alice is better. Then, next phase, he can kill her if they are alone. \n\nAlternatively, moving to Weapons would be a new location, perhaps where no one is. Not helpful. Medbay has Alice. Admin has Frank and Eve. Cafeteria has David and Bob. So, moving to Medbay would allow being alone with Alice. So Charlie can head there. So action \"move to location Medbay\" is the better choice here. Therefore, the best action is to move to Medbay to find a solo kill opportunity.\n\n</think>",
+      "llm_response": "<action>move to location Medbay</action>",
+      "token_usage": {
+        "input_tokens": 1042,
+        "output_tokens": 2321
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Medbay"
+        },
+        "target_task": null,
+        "text": "move to location Medbay",
+        "result": "You [Charlie] moved to location Medbay",
+        "spectator": "Charlie moved to location Medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "David",
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 53,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, let me figure out what Bob should do next. He's a Crewmate in the Cafeteria with tasks left in Medbay and Admin. Right now, he's in the Task phase, so he can't talk. His main goals are to complete tasks to win and avoid suspicion.\n\nLooking at his tasks, he has \"Run diagnostics in medbay\" and \"Submit scan in medbay\" both in Medbay, and \"Fix wiring in admin\" in Admin. The coffee maker task he just completed must have been one of his tasks, so now he has those three left. Since Medbay has two tasks, going there would be efficient to knock out two in one location. But he's currently in Cafeteria with David. David already did the coffee maker task. The companions list shows David is with him in Cafeteria. \n\nIn the game history, after Bob completed his task, others moved: Frank and Eve to Admin, Alice and Charlie to Medbay. So Medbay has two others (Alice and Charlie), Admin has Frank and Eve. His own tasks in Medbay need doing. Since during the Task phase, moving to Medbay would allow him to do two tasks there. But Medbay is already crowded. However, performing tasks in front of others can build trust, showing he's a real Crewmate. Alternatively, going to Admin where Frank and Eve are might be risky if they are impostors, but he has to fix wiring there. \n\nAlternatively, since Medbay has two tasks, he could go there first. Completing both tasks in Medbay would leave only Admin's wiring. But moving takes an action each time. Let me see: if he moves to Medbay now, next turn he can do one task, then another. But each task is one action. So from Cafeteria, moving to Medbay is one action. Then next turn, he can start on the tasks. Maybe better to go to Medbay now, since it's efficient. The presence of Alice and Charlie there could be a good thing, as they can see him doing tasks. Unless they are impostors, but then again, if they fake tasks, he can't tell. Either way, he needs to complete tasks. So moving to Medbay might be the best move here. Alternatively, if he goes to Admin, there are two people there, which could be riskier but also allows completing another task. But Medbay has two tasks, so efficiency-wise, Medbay is better. Since the Crewmates need all tasks done to win, speed is important. So the first priority should be to tackle locations with multiple tasks first. \n\nTherefore, Bob should move to Medbay to work on those two tasks, even though others are there. This shows he's doing tasks, which is good for Crewmate validation. Plus, if there are impostors in Medbay, they might kill him, but that's a risk he has to take. Alternatively, Admin has fewer tasks left, but he's got two in Medbay. Moving to Medbay seems optimal for task completion.\n\n</think>",
+      "llm_response": "<action>move to location Medbay</action>",
+      "token_usage": {
+        "input_tokens": 1345,
+        "output_tokens": 638
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Medbay"
+        },
+        "target_task": null,
+        "text": "move to location Medbay",
+        "result": "You [Bob] moved to location Medbay",
+        "spectator": "Bob moved to location Medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "David",
+        "Alice"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 52,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage",
+        "kill Alice",
+        "kill Bob",
+        "pretend doing task: Fix wiring in medbay"
+      ],
+      "llm_cot": "<think>\nOkay, so Charlie is an Impostor in Medbay right now, along with Alice and Bob. The phase is Task, so he can't talk, but he can take actions. The available actions include moving to other locations or killing Alice or Bob. As an Impostor, killing is the main way to reduce crewmate numbers. However, killing when there are two crewmates present could be risky because both would witness the kill. Wait, in this case, both Alice and Bob are in Medbay with Charlie. If he kills one, the other will see it and can report the body immediately, leading to a discussion where they can accuse Charlie. That would be bad because Charlie's goal is to avoid detection.\n\nBut looking at the available actions, kill Alice and kill Bob are both options. Maybe the game allows Impostors to kill even when multiple people are present. However, that's a huge risk. If he kills Alice, Bob is a witness, and vice versa. Unless there's a way to kill without being seen. But according to the game mechanics, all actions taken are seen by co-located players. So killing in front of another crewmate is a sure way to get caught. But maybe in this game, when an Impostor kills, only the victim is removed, and others don't see the action? Wait, the game rules say, \"All actions taken seen by co-located players.\" So if Charlie kills someone, Alice and/or Bob would see him do it. Therefore, killing either Alice or Bob here would get Charlie immediately exposed, leading to ejection in the next discussion. That's a bad move.\n\nSo killing isn't a safe option here. The other actions available are moving to Cafeteria, Security, Electrical, Storage, or pretending to do the \"Fix wiring in medbay\" task. Moving might be a better idea. Let's see: if Charlie leaves Medbay, he can go to another location where he can find a solo crewmate. But where to go? The available locations to move are Cafeteria, Security, Electrical, or Storage.\n\nLooking at the game history, earlier movements included Frank moving to Admin, Alice to Medbay, Eve to Admin. The current companions are Alice and Bob in Medbay. Recent history shows Bob moved to Medbay in the last action. So maybe other players are spread out. If Charlie moves to another location, maybe he can find someone alone.\n\nBut if Charlie moves now, he leaves Medbay. Let's consider where other players might be. Frank (another Impostor) was in Admin with Eve. David was in Cafeteria previously but moved to Medbay? Wait, in the game history, after Charlie moved to Medbay, Bob moved there as well. So right now, Charlie is with Alice and Bob. \n\nThe available movement options are Cafeteria, Security, Electrical, Storage. Cafeteria might have David, since he was there earlier, but he moved to Medbay. Wait no, the initial state had Charlie moving from Cafeteria to Medbay. Then Bob moved to Medbay. So maybe Cafeteria is now empty, or someone else could be there. But it's unclear. Security, Electrical, Storage\u2014these are other locations. Maybe those have fewer people. Suppose Charlie moves to Security. If Security is empty, he can wait for someone to come. Or Electrical, which is a common task area. If he goes there and finds someone alone, he can kill. But right now, the available actions don't include those locations as options. Wait, available_actions lists move to Cafeteria, Security, Electrical, Storage. So those are the places he can go.\n\nAnother option is pretending to fix wiring in Medbay. Since he's an Impostor, he can fake tasks. Crewmates can't detect fakes. Alice and Bob are here, but they can't tell he's faking. Pretending to do a task might help blend in. However, since there are two crewmates here, if he can't kill without getting caught, pretending to do the task might be the safest move. But wait, he can only take one action. So either move or pretend.\n\nIf he stays and pretends, he avoids suspicion, but misses a chance to kill. However, killing here is too risky. So pretending might make Alice and Bob think he's a crewmate. Later, he can move to another location alone to kill.\n\nAlternatively, moving to a different location might help. For example, moving to Storage where someone is alone. But since empirical data isn't available, let's think of common strategies. Electrical is a hotspot for kills because it's a common task area and often isolated. So if he moves there and finds a crewmate, he can kill.\n\nAlternatively, Security has cameras, but maybe someone is there. But without knowing, moving is a gamble. Alternatively, moving back to Cafeteria, which might be empty now, but not sure. If Cafeteria is empty, that's not helpful.\n\nSo the options are:\n\n1. Pretend task in Medbay to avoid suspicion, even though two crewmates are here. Downside: couldn't kill this round. But stays undercover.\n\n2. Move to another location, maybe find someone alone to kill. If he moves to Electrical, maybe finds Eve or David there. But if they are there alone, he can kill. But it's risky if others are there.\n\nGiven that killing Alice or Bob here is dangerous, the best options are to fake a task here or move to isolate another player.\n\nPretending to fix wiring in Medbay could make Alice and Bob think he's doing his tasks. Since task phase doesn't allow talking, they can't ask him questions. Next phases would be Discussion if someone reports a body, but if Charlie doesn't kill now, the game progresses.\n\nAlternatively, moving to a location where he might find a single crewmate. Let's evaluate the locations:\n\n- Cafeteria: Maybe empty since David and Bob moved to Medbay. If no one's there, Charlie can't kill. But maybe if he's there, others come later.\n\n- Security: Not mentioned in recent movements. Unknown if anyone is there.\n\n- Electrical: Common tasks here. Maybe Eve or David is there. But not guaranteed.\n\n- Storage: Also possible, but again, not sure.\n\nAlternatively, since Electrical is a high-traffic area, going there could lead to a chance to catch someone alone. So moving to Electrical. If he moves and finds someone alone, he can kill next turn. If no one is there, maybe he can fake a task and wait.\n\nBut in the current phase (Task), movement and fake tasks are allowed. The move will be visible to the current companions Alice and Bob. If he leaves Medbay, Alice and Bob see him go. So they know he moved to Electrical. If he then kills someone there, the body is reported, and then during discussion, his movements might be questioned.\n\nBut Impostors need to kill without being caught. So if he can move to a location, kill someone alone, and then nobody sees him, that's ideal.\n\nBut considering the current available actions, the options are to move or pretend. The safest move for an Impostor, when in a room with multiple crewmates, is to avoid killing there, and instead either fake a task or move to a more opportune location.\n\nIn this case, faking the task in Medbay, \"Fix wiring in medbay\", would make sense. Alice and Bob see him doing the task, which they can't verify as fake. They might not suspect him. Then later, he can look for a chance to kill when alone with someone.\n\nAlternatively, if he moves, say to Electrical, and finds Eve there alone, he can kill her there without witnesses, assuming no one else is present. But moving is a gamble.\n\nThe more conservative choice is to fake the task now. It maintains cover and avoids the risk of killing in front of crewmates.\n\nTherefore, the best action is to pretend to do the \"Fix wiring in medbay\" task. This keeps Charlie under the radar, allowing him to kill another time when alone.\n\n</think>",
+      "llm_response": "<action>pretend doing task: Fix wiring in medbay</action>",
+      "token_usage": {
+        "input_tokens": 3422,
+        "output_tokens": 1686
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in medbay",
+          "completed": false,
+          "location": {
+            "__enum__": "Medbay"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Fix wiring in medbay",
+        "result": "You [Charlie] pretended Fix wiring in medbay",
+        "spectator": "Charlie doing task Fix wiring in medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 51,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage",
+        "complete task: Submit scan in medbay"
+      ],
+      "llm_cot": "<think>\nAlright, Alice is in Medbay with Charlie and Bob. She needs to decide her next move.\n\nFirst, she can't speak, so no communication. Her available actions are moving to other locations or completing the Submit scan task here. \n\nLooking at her tasks left, one of them is Submit scan in Medbay, which she can do now. Since completing tasks is her main objective, finishing this would help the crewmates. \n\nShe's with Charlie and Bob. If they're crewmates, working together on tasks is safe. But they could be impostors. However, during tasks, impostors can't kill while others are around. Also, since she's in a group here, it's less risky than being alone. \n\nCompleting the task in Medbay would reduce the tasks left. Even if Charlie and Bob are impostors, she can still do her task. So the best move is to complete the task now rather than moving somewhere else and risking getting killed alone.\n\n</think>",
+      "llm_response": "<action>complete task: Submit scan in medbay</action>",
+      "token_usage": {
+        "input_tokens": 2727,
+        "output_tokens": 213
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Submit scan in medbay",
+          "completed": false,
+          "location": {
+            "__enum__": "Medbay"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Submit scan in medbay",
+        "result": "You [Alice] completed task: Submit scan in medbay",
+        "spectator": "Alice completed task: Submit scan in medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 50,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Storage",
+        "kill Eve",
+        "pretend doing task: Fix wiring in admin"
+      ],
+      "llm_cot": "<think>\nOkay, Frank is currently in Admin with Eve. He's an Impostor and wants to eliminate crewmates. The available actions include moving, killing Eve, or pretending a task. Since they're alone in Admin, killing Eve is possible. If he kills her now, that reduces the crewmate count without witnesses. However, he should consider if that's the best move.\n\nWait, during the Task phase, when you kill, others nearby can't see unless they're in the same location. Since only Eve is with him in Admin, killing her would leave her body there. Then Frank would need to leave before someone else comes and reports it. But since they're the only ones in Admin, killing her would be immediate and there's no one else to witness the kill. But after killing, Frank might want to move away to avoid being found near the corpse when it's reported. However, right after the kill, he can choose to move. But the available actions after killing would change.\n\nAlternatively, pretending to do the task could keep him undercover. But since Eve is here, if she's a crewmate, she might be doing the actual task. If Frank fakes the task, Eve might notice that he's faking, especially if the task isn't real. Wait, the task listed in Admin is \"Fix wiring\", and if Eve is there, maybe she's doing that task. So if Frank pretends to do it too, will that seem suspicious? Eve, as a crewmate, might be actually completing the task, and if Frank pretends, Eve could notice that the task is done. But I think tasks are independent, so maybe Crewmates have individual tasks. However, if Eve finishes her task, and Frank is pretending, that could make Eve suspicious later if she sees Frank still \"fixing wiring\" when she's done. \n\nAlternatively, killing Eve eliminates a crewmate now without witnesses. Since they\u2019re alone, it's the perfect opportunity. But Impostors can only kill once per cooldown, maybe? The prompt doesn't mention cooldowns, so maybe Frank can kill now. Killing would immediately remove Eve and bring the Impostors closer to their victory condition. The crewmates need to complete all tasks or eject all Impostors. If Frank kills Eve, that's one fewer crewmate. The other Impostor Charlie is still in Cafeteria. \n\nHowever, when Eve's body is discovered, the discussion phase will start. But if Frank kills and then leaves, maybe moving to another location like Storage, he can distance himself from the corpse. But the available actions after killing may not allow movement before the phase changes. \n\nConsidering execution rules, Frank must maintain his role and not reveal himself. If he kills Eve, no one else is there to see it. So it's safe. Then, when the body is reported, Frank can act innocent. However, when someone finds Eve in Admin and questions who was there, Frank might come under suspicion if others saw him go there. But in the game history, Frank moved to Admin, and Eve followed. If the phase is still Task, can other players see movement? The movement is observed as per the 'move' actions. So when Frank moved to Admin, that's an observed action. Then Eve also moved there. If other players are in Cafeteria, Storage, etc., when Eve's body is reported, they might recall that Frank and Eve were in Admin. So if Eve is found dead there, Frank could be a suspect. But if he kills her and moves away before the body is found, maybe he can claim he left earlier. But during the Task phase, actions are seen when they happen, right? So if he kills Eve and then moves, the kill would have been when they were both in Admin. So his movement after the kill would still have happened after the kill. When the body is reported, players would know Eve was killed in Admin, and Frank was there. But maybe if he leaves immediately, others might think Eve stayed behind. However, the game mechanics note that all actions are seen by co-located players, but movement actions are observed as well. So others would know that Frank and Eve went to Admin. If Frank stays there and kills Eve, then stays, others would know he's there. If he kills and moves, the kill happens at the moment he's in Admin with Eve. Then, when he moves, those movements are logged. So when the body is found, players can track that Frank was with Eve in Admin, then moved. If a body is reported in Admin, Frank would be the prime suspect since he was the last person with Eve there. Unless someone else comes in after. \n\nAlternatively, if he kills her and stays, and the body is not reported until later, he could be seen as suspicious. But during Task phase, players can report corpses. Eve's body is in Admin, so if another player comes to Admin, they'll see it and report. Then during the discussion, people will know Eve died in Admin, and Frank was there with her. So Frank might be voted out. So killing Eve now might be risky unless he can create an alibi. \n\nAlternatively, he pretends to do the task, which might not help him eliminate crewmates but keeps him undercover. Let's consider the other option: pretending to \"Fix wiring in admin\". If Frank pretends that task, Eve, being a crewmate, might be doing her own task. If she's actually doing the wiring task, she finishes it, and Frank fakes it. Then, after she leaves, if he stays, maybe no one else comes. If she doesn't have the task, she might notice Frank faking. But Crewmates can't detect faked tasks. According to the role constraints for Crewmates: \"Cannot detect impostor faking tasks\". So Eve won't know Frank is faking. Therefore, Frank can safely fake the task here. Then, if they both leave the task as done (Eve actually does it, Frank pretends), then later, when tasks are checked, maybe Frank's fake task doesn't contribute to the overall progress. Since tasks are individual, Crewmates need to complete their own tasks. So Frank's fake task doesn't count. Therefore, Crewmates' total tasks would still require completion. But the Impostor's goal is to kill, so faking tasks is just for cover. \n\nSo in this scenario, Frank's options are to kill Eve (risky but effective if he can get away) or fake the task (safer but doesn't progress the kill objective). Since he's an Impostor, the priority should be to kill. However, in the current situation, killing Eve in Admin may lead to him being suspected when the body is found because he was there with her. But there's another Impostor, Charlie, who might be able to help divert suspicion. \n\nIf Frank kills Eve and then moves to Storage, perhaps when the body is reported, he can frame someone else. During the Discussion phase, he can say he was in Storage and someone else must have been in Admin. But the game history shows he was in Admin with Eve, so that wouldn't hold. Unless the movement to Storage was after the kill. Let me check the game history again: \n\nAfter Frank moved to Admin, Eve also moved there. The current state is in Admin with Eve. So if he kills Eve now, the available actions include moving. So he can kill Eve and then move to Storage. Then, when the body is reported, the Discussion phase starts. \n\nWhen the body is reported, players will ask who was in Admin. The history shows Frank and Eve went there. If Frank moved to Storage after killing Eve, that action would be observed. So when Eve's body is found, the sequence would be:\n\n- Frank moved to Admin.\n\n- Eve moved to Admin.\n\n- Frank killed Eve.\n\n- Frank moved to Storage. (If he does that)\n\nBut according to the mechanics, players can take only one action at a time. The available actions are move to Cafeteria, Storage, kill Eve, or pretend task. So if he chooses 'kill Eve', that's his action. Moving would be another action, but the rules say \"Players can take only one action at a time. Only properly formatted actions will be accepted.\" So during this phase, Frank can take only one action. Therefore, he can't kill and move in the same step. So if he kills Eve, he remains in Admin. Unless after killing, the action allows him to move, but according to the rules, each action is separate. Therefore, after killing Eve, he would stay in Admin. \n\nBut if Eve's body is in Admin, then the next player to enter Admin would discover it. If Frank stays there, he can report the body himself, but reporting would start the Discussion. But as the Impostor, he might want to report the body to control the narrative. However, he's the killer, so reporting would mean he's the one who found the body, but others know he was there. Alternatively, if he leaves the body and moves elsewhere, when someone else finds it, they might accuse Frank. \n\nThis is tricky. If he's alone with Eve and kills her, then he must stay in Admin unless he moves first. Since he can only take one action: either kill Eve or move or pretend. So if he kills Eve, he stays in Admin with the corpse. Then, during the same Task phase, if another player comes to Admin, they would see the corpse and Frank. Frank could then report the corpse to start the Discussion phase, but that would immediately put him as the one who found it, which is risky. Alternatively, if another player comes to Admin, they find the corpse and report. Then, during discussion, players would know that Eve was killed in Admin. People would ask who was in Admin. Frank's movement to Admin was observed, and he remained there. That makes him the prime suspect. Unless someone can vouch for him or the other Impostor Charlie supports him. \n\nGiven this, killing Eve now might lead to Frank getting voted out in the next Discussion. So maybe it's too risky. On the other hand, the Impostor needs to kill to win. The alternative is to fake the task, which is safe but doesn't help progress. In that case, Frank could pretend to do the \"Fix wiring in admin\" task. Since Crewmates can't detect fake tasks, Eve won't know. Then, after this phase, perhaps Frank can move elsewhere and find another opportunity. \n\nAlternatively, if he fakes the task and Eve leaves Admin, he could kill her later when she's alone. But this depends on future movements. \n\nSo, which option is better? Killing Eve now but risking being caught, or faking the task and waiting. Since there's another Impostor, Charlie, maybe the two can coordinate later to create an alibi. If Frank kills Eve, he could argue during discussion that he was faking the task and someone else must have killed her. But with the current game information, the other Crewmates may not have alibis. \n\nWait, during the previous game history, players saw Frank move to Admin, then Eve moved there. If the kill happens now, other players (like Charlie and the others in Cafeteria) didn't see the kill, but when the body is reported, the game would know where Eve died. The players would ask where everyone was. Frank was in Admin with Eve. Frank's best bet is to claim that he left Admin before the kill, but he can't because his last action was moving there. Unless after killing, he moves... but he can only take one action. \n\nWait, the available actions are presented in the current state. The current location is Admin with Eve. The available actions include killing her or moving. So if he kills, he stays; if he moves, he leaves. So if he moves to Storage, the action is leaving Admin. But the previous steps were:\n\nFrank was in Admin, then Eve moved there. Now, the available actions include moving to Cafeteria or Storage, killing Eve, or pretending the task. So if he moves to Storage, then he's leaving Admin, and Eve remains there. Then, perhaps she is alone. If she's a Crewmate, she might do her task, and someone else could come in. If Frank moves, he could then later find another target elsewhere. But if he moves, Eve is left in Admin, maybe alone, then she'll complete her task but can't be killed unless another Impostor goes there. \n\nAlternatively, if Frank chooses to leave, maybe the other Impostor Charlie can go there and kill Eve. But Charlie is in Cafeteria. \n\nBut as the player is Frank, focus on his options. So the choices are to move away and let Eve live, kill her now and risk being caught, or fake the task and avoid suspicion. Whichever is optimal. \n\nGiven the risk of being voted out if he kills Eve now, maybe faking the task is safer. However, killing a Crewmate now reduces their numbers, which is crucial. Considering that there are 4 crewmates (Alice, David, Eve, Bob) and 2 Impostors (Frank, Charlie). If Frank kills Eve, it goes down to 3 crewmates. The Impostors need to eliminate all crewmates. So the kill would be beneficial. \n\nBut if Frank gets ejected for killing Eve, that's a loss. So the question is, can he get away with it? \n\nMaybe during the discussion phase, he can frame someone else. For example, claim that after he moved to Admin and saw Eve there, he did the task and then moved elsewhere, but the game's action log would show if he stayed or not. Wait, in the current action list, Frank's next action is either moving or killing. So if he moves, the log would show \"Frank moved to Storage\", then Eve is alone in Admin. If Eve is then killed later by Charlie, that would be better for Frank's cover. But Frank can't coordinate with Charlie during the Task phase. So if Frank moves now to Storage, Eve stays in Admin. Charlie, in the Cafeteria, could then move to Admin and kill Eve, but that's if Charlie goes there. \n\nBut this is speculative. Alternatively, Frank could take the kill now. Since the risk is high, but the reward is also high. Let's analyze what the Discussion would look like. If Eve's body is reported, and Frank was the last with her, but he may claim he left. However, his movement would show if he moved after the kill. Since he can only take one action, if he kills, he remains in Admin. Then, when the body is found, he's there. Alternatively, if he stays and fakes the task, and someone else comes in and reports the body, Frank can say he was doing the task and didn't see anything. But if he's the only one with Eve, he's the killer. \n\nWait, no. If Frank is alone with Eve and kills her, the body is in Admin with Frank still present. If another player then comes to Admin, they'll see the corpse and Frank. Then, they can report it. During the Discussion, players will know where the body was, who was present. So Frank would be found guilty. Unless he can lie. \n\nBut according to the game's mechanics, during Discussion, players can talk freely. So Frank might say, \"I was in Admin doing the wiring task. Eve came in, and then I left.\" But the action log shows he didn't leave; he killed her. Wait, no. If he killed Eve, he chose the 'kill Eve' action. His movement after that is not possible here. So he can't move; he can only take one action. So if he kills Eve, he remains in Admin. Then, if someone enters Admin, they see both Frank and Eve's corpse. Then, that player could report. When Frank is confronted, he could say, \"I was doing my task here. Eve came in and just suddenly died! Maybe she self-reported?\" But the game rules have no self-reporting. Alternatively, he could blame someone else. But it's risky.\n\nConsidering all this, maybe faking the task is safer for now. So pretend to \"Fix wiring in admin\". That way, when Eve completes her task and leaves, Frank can then move to another location to find another kill opportunity. But since Eve is a Crewmate, she might have a real task in Admin. If Frank is faking the same task, she can't detect it. Once Eve leaves, Frank can follow her to another location if she moves and try to kill her there alone. \n\nAlternatively, if he fakes the task, and Eve leaves, he can stay in Admin, but that's not helpful. Waiting too long might let the Crewmates complete tasks and win. \n\nSince Impostors need to act before tasks are completed, killing now might be worth the risk. If he can avoid being suspected. Or maybe he can use a tactic to shift blame. For example, during Discussion, if the kill happens, he can accuse another player of being in Admin. But the movement log would show who was there. Hmm.\n\nAlternatively, maybe take the kill and then use the Discussion phase to confuse others. But again, the evidence points to Frank. Unless there's a distraction. \n\nOverall, considering the high risk of ejection, perhaps the safer move is to fake the task now. Ejecting Frank early would be a loss, so preserving himself is also important. This allows him to make another kill later when the risk is lower. Therefore, the better option is to fake the task.\n\n</think>",
+      "llm_response": "<action>pretend doing task: Fix wiring in admin</action>",
+      "token_usage": {
+        "input_tokens": 1957,
+        "output_tokens": 3664
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Frank",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in admin",
+          "completed": false,
+          "location": {
+            "__enum__": "Admin"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Fix wiring in admin",
+        "result": "You [Frank] pretended Fix wiring in admin",
+        "spectator": "Frank doing task Fix wiring in admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 49,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Storage",
+        "complete task: Fix wiring in admin",
+        "complete task: Clean the floor in admin"
+      ],
+      "llm_cot": "<think>\nOkay, so Eve is currently in Admin with Frank. Her tasks here are Fix wiring and Clean the floor. She needs to complete her tasks to help the Crewmates win. Frank is a potential impostor, but in the Task phase, communication isn't allowed, so she just has to focus on tasks. Since both tasks are in Admin, it's efficient to do them now. Let me check the observed actions: Frank was seen doing Fix wiring in admin. Crewmates can't detect fake tasks, so that doesn't help. The available actions are to move to Cafeteria or Storage, or complete the tasks here. Moving away would waste time. Completing tasks here is best. She can do Fix wiring first, then Clean the floor next turn. So choose complete task: Fix wiring in admin.\n\n</think>",
+      "llm_response": "<action>complete task: Fix wiring in admin</action>",
+      "token_usage": {
+        "input_tokens": 2410,
+        "output_tokens": 178
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Eve",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in admin",
+          "completed": false,
+          "location": {
+            "__enum__": "Admin"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Fix wiring in admin",
+        "result": "You [Eve] completed task: Fix wiring in admin",
+        "spectator": "Eve completed task: Fix wiring in admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 48,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons",
+        "complete task: Fix wiring in cafeteria"
+      ],
+      "llm_cot": "<think>\nOkay, David is still in the Cafeteria during the Task phase. He needs to do one of the available actions. His tasks left include fixing the wiring in the cafeteria, security, and electrical. Since he's already in the cafeteria, completing the wiring task here makes sense. Moving elsewhere would take an action, and he has a task right here. He already did the coffee maker, so the next task in Cafeteria is the wiring. Completing tasks helps Crewmates win faster. Others moved around, but he can focus on his tasks. So the best move is to fix the wiring in the cafeteria now.\n\n</think>",
+      "llm_response": "<action>complete task: Fix wiring in cafeteria</action>",
+      "token_usage": {
+        "input_tokens": 1316,
+        "output_tokens": 143
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in cafeteria",
+          "completed": false,
+          "location": {
+            "__enum__": "Cafeteria"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Fix wiring in cafeteria",
+        "result": "You [David] completed task: Fix wiring in cafeteria",
+        "spectator": "David completed task: Fix wiring in cafeteria",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 47,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage",
+        "complete task: Run diagnostics in medbay",
+        "complete task: Submit scan in medbay"
+      ],
+      "llm_cot": "<think>\nOkay, Bob is a Crewmate currently in Medbay with Alice and Charlie. He has two tasks left in Medbay: Run diagnostics and Submit scan. Alice just completed her Submit scan task, so maybe Bob's Submit scan task is separate and still available.\n\nThe current phase is Task, so he can't talk. His main goal is to complete tasks. Since he's already in Medbay, the efficient move is to work on his tasks here. Completing \"Run diagnostics\" first makes sense. Then next turn, he can do the Submit scan. Both tasks in Medbay will clear two of his three remaining tasks, helping Crewmates get closer to winning. Moving elsewhere would waste an action. Since Alice and Charlie are present, doing tasks here looks legitimate, which is good. Also, it's possible that Alice is a Crewmate since she did a task, but impostors can fake tasks, so Bob shouldn't rely on that. His priority is to finish his own tasks. So choosing \"complete task: Run diagnostics in medbay\" is the best option.\n\n</think>",
+      "llm_response": "<action>complete task: Run diagnostics in medbay</action>",
+      "token_usage": {
+        "input_tokens": 2081,
+        "output_tokens": 233
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Run diagnostics in medbay",
+          "completed": false,
+          "location": {
+            "__enum__": "Medbay"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Run diagnostics in medbay",
+        "result": "You [Bob] completed task: Run diagnostics in medbay",
+        "spectator": "Bob completed task: Run diagnostics in medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 46,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage",
+        "kill Alice",
+        "kill Bob",
+        "pretend doing task: Fix wiring in medbay"
+      ],
+      "llm_cot": "<think>\nOkay, let me figure out the best move for Charlie here. He's an Impostor in Medbay with Alice and Bob. The phase is Task, so no talking. His available actions are moving to Cafeteria, Security, Electrical, Storage, killing Alice or Bob, or pretending to fix wiring in Medbay.\n\nKilling now would be risky because both Alice and Bob are here, and if he kills one, the other will see it. That could get him voted out during the discussion. So killing them is off the table. \n\nMoving might be a good idea. If he goes to another location, maybe he can find a crewmate alone. Electrical is a common spot, and if someone's there solo, he could kill them without witnesses. But the problem is, Alice and Bob would see him leave Medbay. If he moves to Electrical and someone's there, he might get the kill. But it's a bit of a gamble since we don't know where others are.\n\nPretending the task \"Fix wiring in medbay\" is safer. Alice and Bob just did their tasks here, so if Charlie pretends, they might not suspect him. Since tasks are independent, they can't tell he's faking. This keeps his cover intact, allowing him to strike later when alone with someone. Plus, moving now could draw attention if someone dies where he went. So pretending the task might be the best bet to stay under the radar and avoid suspicion.\n\n</think>",
+      "llm_response": "<action>pretend doing task: Fix wiring in medbay</action>",
+      "token_usage": {
+        "input_tokens": 5160,
+        "output_tokens": 314
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Pretend"
+        },
+        "player_name": "Charlie",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Fix wiring in medbay",
+          "completed": false,
+          "location": {
+            "__enum__": "Medbay"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "pretend doing task: Fix wiring in medbay",
+        "result": "You [Charlie] pretended Fix wiring in medbay",
+        "spectator": "Charlie doing task Fix wiring in medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Alice",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "David",
+        "Eve"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 45,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Storage",
+        "kill Eve",
+        "pretend doing task: Fix wiring in admin"
+      ],
+      "llm_cot": "<think>\nOkay, let me try to figure out the best move for Frank here. He's an Impostor in the Admin room with Eve. The current phase is Task, so no talking. His goal is to kill Crewmates without getting caught. The available actions are moving to Cafeteria, Storage, killing Eve, or pretending to fix wiring again.\n\nFirst, if Frank kills Eve now, that would eliminate a Crewmate. But since they're the only two in Admin, he can kill her without witnesses. However, once her body is found, other players know Frank was in Admin. When the Discussion phase starts, they might suspect him. The movement log shows Frank moved to Admin, then Eve did. If he kills her and stays there, someone might come in, see the body, and report it. Frank would be the prime suspect because he was there. But maybe he can move after killing? But the rules say only one action per turn, so killing ends his action, and he stays in Admin. So when the body is reported, he's there, which looks bad.\n\nAlternatively, if he moves to Storage, he leaves Eve alone. But that means missing the chance to kill her here. Maybe the other Impostor, Charlie, can go to Admin and kill her, but there's no way to coordinate during the Task phase. Plus, not sure if Charlie would know to do that. If Eve stays in Admin, she might finish her task and move elsewhere, giving another opportunity later.\n\nPretending to fix wiring again might be safer. Eve already completed the task, so if Frank pretends again, it could look suspicious if someone notices, but Crewmates can't detect fake tasks. So maybe faking again just keeps his cover. But since Eve is still there, he can't kill now without being obvious. Wait, the action log says Eve already completed \"Fix wiring in admin\". If Frank pretends again, what's the effect? Maybe it doesn't matter since tasks are individual, but faking it again might not raise suspicion. However, if someone was watching, they might think it's odd he's doing a task that's already done. Wait, but tasks are per player, so each has their own. So others don't know if Frank's task is done. So maybe he can fake it without issues.\n\nBut killing Eve is tempting. If he does it, and then during Discussion blames someone else. For example, say he left Admin before she was killed. But the movement log would show he stayed. Unless he can argue that someone else came in after him. Hmm. Alternatively, Charlie could back him up, but that's risky. If Frank takes the kill and if the body is reported quickly, he might get accused. But maybe it's worth the risk to reduce the Crewmate count.\n\nAlternatively, move to Storage. If he leaves, maybe Eve will be alone, and Charlie can go there next, but again, coordination is hard. But moving to Storage could let Frank find another target, like David or Bob, if they're there. But no info on their locations besides current state.\n\nIf he moves to Cafeteria, he's back with Charlie and others. But killing in front of others isn't possible. So maybe not helpful.\n\nSo, the options: fake task again (safe but no progress), kill Eve (risky), or move (maybe find another target). \n\nConsidering the previous action where Frank faked the task and Eve completed hers, maybe Eve will leave the Admin room next, giving Frank a chance to move elsewhere. But during this action phase, if he moves to Storage, he can check for isolated players. \n\nBut it's possible Eve leaves after her task. If Frank kills her now, even with the risk, he removes a crewmate. Maybe worth the risk if he can bluff during Discussion. Since the game requires Impostors to be proactive, taking the kill now might be better despite the risk. The potential to reduce crewmates and get closer to victory.\n\nWait, but Crewmates only need to complete all tasks or eject Impostors. If Frank gets ejected, that's bad. If the Crewmates are down to 3 after Eve dies, but then they could still complete tasks. So perhaps balance the risk. If Frank is ejected, there's still Charlie. But losing one Impostor is a big hit.\n\nSo, maybe safer to kill Eve. If he can survive the Discussion phase. But how? During Discussion, he can say that after he did his fake task, he left Admin. Except the action log shows he stayed. Unless the game only shows movement actions. Wait, when you move, it's an observed action. Killing doesn't create a movement log. So when he takes the kill action, the log would show he killed Eve. But the logs under <action type=\"observed\"> would show the kill. So when Eve's body is reported, the game history would show Frank killed her. But according to the game mechanics, during the Task phase, all actions taken are seen by co-located players. Since killing is only possible when alone with a Crewmate, so only Eve was there, but she gets killed. So no one else sees the kill. Therefore, when the body is reported, players know where she died but not who did it. Unless they check who was in Admin. So the discussion phase would involve figuring out who was there. Frank was with Eve in Admin. So he'd be a suspect. But he could argue that someone else came later or claim that he left. But according to the action log, Frank didn't move, so he must have been there. Unless moves are not logged exhaustively. Wait, looking at the previous actions:\n\nIn game history, after Frank moved to Admin, Eve moved there. Then Frank pretended to do the task. Then Eve completed her task. So movement actions are logged when players move. Therefore, if Frank stays in Admin and kills Eve, his only action is the kill. The log would show that during the current state, Frank is in Admin, then takes the kill action. Then, the corpse appears. Players would know Eve was in Admin. Her death would be in Admin, and Frank was the last with her. So strong suspicion.\n\nBut the rules don't say that kills are logged. Only movement and task completion are observed. So when Eve is killed, the game history would say that Frank killed Eve. Or is the kill action hidden? The game mechanics don't specify whether kills are logged. Wait, in the game mechanics under Corpse Reporting: \"Any player can report corpses during task phase. Triggers discussion phase. No automatic death alerts.\" So the kill isn't announced; only the corpse is found when reported. So when Eve's corpse is found, others know she was in Admin, and when the Discussion starts, they can ask who was there. Frank's previous moves show he was there. So yes, even if the kill isn't logged as an action, location and presence would lead to suspicion.\n\nTherefore, unless Frank has a way to alibi, killing here is risky. Safe play is to pretend the task again. But how does that help? Eve already did her task here, but Frank continues to pretend, so others might notice? But since Crewmates can't detect fake tasks, they don't know. So Frank can safely pretend again. Then, when Eve leaves, maybe follow her and find an opportunity to kill in a different location. Alternatively, Frank can move in the next round to another place where isolated Crewmates are.\n\nAlternatively, moving now. If he moves to Storage or Cafeteria, he can look for better opportunities. But if Storage has a lone Crewmate, maybe easier to kill. If he stays, he can only pretend again. If he moves to Storage, maybe meet someone there, maybe a lone target. But no info on where others are.\n\nBut let's look at his current companions. Only Eve is with him. So unless he leaves, he can't proceed. So the options again: kill Eve (risky), move, or fake again.\n\nHmm. The game might allow multiple fakes in the same location without suspicion since tasks are individual. So faking again might not hurt. But the advantage is if Eve leaves, he can follow her and kill her later with less risk. So maybe fake again and then next turn move to where she goes. But how does he know where she goes? Since movement is per phase, he can track that in logs. So maybe patience is key. Fake the task to stay undercover, track Eve's movements later, and kill when isolated.\n\nBut as an Impostor, he needs to prevent Crewmates from completing tasks. Eve just did one, so maybe she's closer to finishing all. Letting her live might help her team. But killing her now, even with the risk, might be worth it. If he can argue during Discussion and manipulate the votes.\n\nAlternatively, move to Storage to split up. Maybe someone's there. If Storage is empty, can kill later when someone comes. If Frank leaves Admin to Storage, and finds no one, then can still fake tasks there. But that's again playing passively.\n\nThe question is whether Frank can afford to wait. Given the Crewmates have four members, and tasks are progressing (David and Bob did tasks), the Impostors need to kill quickly. If Frank kills Eve now, even if he's suspected, Charlie can help sway the vote. Since there's another Impostor, Charlie, who can vouch for Frank's alibi or accuse someone else during Discussion. For example, Charlie could say, \"I saw Alice near Admin earlier,\" deflecting blame.\n\nAssuming Charlie is cooperative, the risk might be manageable. So taking the kill now might be the best move to reduce Crewmate numbers. If Frank is accused, Charlie can defend him. While risky, the potential gain is significant. Otherwise, the game might drag on with Crewmates finishing tasks.\n\nSo final decision: kill Eve and hope Charlie helps during Discussion.\n\n</think>",
+      "llm_response": "<action>kill Eve</action>",
+      "token_usage": {
+        "input_tokens": 5654,
+        "output_tokens": 2060
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Kill"
+        },
+        "player_name": "Frank",
+        "target_player_name": "Eve",
+        "target_location": null,
+        "target_task": null,
+        "text": "kill Eve",
+        "result": "You [Frank] killed Eve",
+        "spectator": "Frank killed Eve",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Eve"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 44,
+      "location": {
+        "__enum__": "Electrical"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage"
+      ],
+      "llm_cot": "<think>\nOkay, Alice is in Medbay with Charlie and Bob. She just completed her Submit scan task there. Now her available actions are to move to Cafeteria, Security, Electrical, or Storage. Looking at her remaining tasks: she still needs to Route power to defence in Electrical, Clean the floor in Admin, and Fix wiring in Weapons. \n\nSince she's in Medbay, the next task she can tackle is none here. So she needs to move to another location where her tasks are. The tasks left are Electrical, Admin, and Weapons. But the available move options are Cafeteria, Security, Electrical, Storage. So Electrical is an option. If she moves to Electrical, she can work on Routing power to defence.\n\nBut wait, what about companions? She's currently with Charlie and Bob. If she leaves Medbay, she might be alone in another location. But being alone increases risk of being killed by impostors. Alternatively, moving to Electrical could be necessary for her task. \n\nSince completing tasks is the primary goal, as a Crewmate, Alice needs to prioritize that. So the best move would be to go to Electrical to do her task there. Even though moving alone might be risky, she has to get that task done. Plus, if she moves to Electrical and others follow, maybe it's safer. If no one is there yet, perhaps it's better to proceed quickly.\n\nLooking at game history, she's already done Medbay. Electrical hasn't been mentioned yet in the history except in her tasks. Maybe other players are moving around too. Her next action should be moving to Electrical to work on the task there. Let's check if Electrical is available. Yes, one of the options is move to Electrical. So she should do that.\n\n</think>",
+      "llm_response": "<action>move to location Electrical</action>",
+      "token_usage": {
+        "input_tokens": 2951,
+        "output_tokens": 367
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "Alice",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Electrical"
+        },
+        "target_task": null,
+        "text": "move to location Electrical",
+        "result": "You [Alice] moved to location Electrical",
+        "spectator": "Alice moved to location Electrical",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Bob",
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 43,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Medbay",
+        "move to location Admin",
+        "move to location Weapons"
+      ],
+      "llm_cot": "<think>\nOkay, David is currently in the Cafeteria during the Task phase. His remaining tasks are to reset breakers in Electrical and fix wiring in Security. The available actions are moving to Medbay, Admin, or Weapons. He can't do any tasks in those locations right now. The most logical step is to move towards completing his tasks. To reset breakers in Electrical, he needs to be in Electrical, which isn't listed as an available move here. The closest might be moving to Admin, but wait, the available moves are Medbay, Admin, or Weapons. Hmm, maybe he needs to move step by step, but the movement options given are only those three. Since his tasks are in Electrical and Security, perhaps moving to Admin first could be a path towards Electrical? In some game maps, Admin is near Electrical. If he moves to Admin, then maybe next move he can go to Electrical. Alternatively, Security might be accessible from Medbay or another location. But his current tasks are in Electrical and Security. The available moves don't include those locations, so perhaps he has to move through other areas.\n\nWait, in the game history, when David was in Cafeteria, he fixed wiring there and then others moved to Medbay, Admin, etc. Since tasks are location-based, moving to Medbay might allow him to fix wiring in Security if Medbay is adjacent. Maybe Security is near Medbay? Alternatively, Admin is another location. Since the player's tasks are Electrical and Security, and available moves are Medbay, Admin, Weapons, which of those is closest to his tasks? Maybe Weapons is near Security, or Admin near Electrical? It's unclear without the map. But given the options, moving towards where tasks can be done is better. Maybe Admin leads to Electrical. So moving to Admin first to get closer to Electrical. Then next turn, move to Electrical and reset breakers. Since he can only take one action at a time, moving to Admin now would be a step towards completing Electrical task. Alternatively, if he goes to Weapons, maybe that's near Security. Either way, moving towards task locations is better than staying. Since he has to move, choose between the three. Let's pick Admin as a step towards Electrical.\n\n</think>",
+      "llm_response": "<action>move to location Admin</action>",
+      "token_usage": {
+        "input_tokens": 1434,
+        "output_tokens": 463
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "David",
+        "target_player_name": null,
+        "target_location": {
+          "__enum__": "Admin"
+        },
+        "target_task": null,
+        "text": "move to location Admin",
+        "result": "You [David] moved to location Admin",
+        "spectator": "David moved to location Admin",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 42,
+      "location": {
+        "__enum__": "Medbay"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "move to location Cafeteria",
+        "move to location Security",
+        "move to location Electrical",
+        "move to location Storage",
+        "complete task: Submit scan in medbay"
+      ],
+      "llm_cot": "<think>\nOkay, Bob is currently in Medbay with Charlie. His remaining tasks are \"Submit scan in medbay\" and \"Fix wiring in admin\". Since he's already in Medbay, completing the \"Submit scan\" task here would make sense. The available actions include completing that task. Moving somewhere else would waste an action, especially when he has a task right here. Plus, finishing tasks helps the crewmates win. Charlie is present, so they see Bob doing the task, which is good for his credibility. There's no reason to move now; focus on tasks.\n\nAlright, the best move is to complete the submit scan task in Medbay.\n\n</think>",
+      "llm_response": "<action>complete task: Submit scan in medbay</action>",
+      "token_usage": {
+        "input_tokens": 2314,
+        "output_tokens": 149
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Task"
+        },
+        "player_name": "Bob",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": {
+          "name": "Submit scan in medbay",
+          "completed": false,
+          "location": {
+            "__enum__": "Medbay"
+          },
+          "__class__": "Task",
+          "__module__": "among_them.models.tasks"
+        },
+        "text": "complete task: Submit scan in medbay",
+        "result": "You [Bob] completed task: Submit scan in medbay",
+        "spectator": "Bob completed task: Submit scan in medbay",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Charlie"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [
+        "Alice",
+        "Charlie",
+        "David"
+      ],
+      "phase": {
+        "__enum__": "Task"
+      },
+      "actions_until_phase_ends": 41,
+      "location": {
+        "__enum__": "Admin"
+      },
+      "impostor_cooldown": 0,
+      "actions_agent_could_take": [
+        "report dead body of Eve and start a discussion",
+        "move to location Cafeteria",
+        "move to location Storage",
+        "kill David",
+        "pretend doing task: Fix wiring in admin"
+      ],
+      "llm_cot": "<think>\nAlright, let's assess Frank's current situation. He's in Admin with David, and the phase is still Task. Frank just killed Eve, and David has now entered Admin. The available actions are to report Eve's body, move to another location, kill David, or continue faking the wiring task.\n\nSince Frank is an Impostor, his primary goals are to eliminate Crewmates and avoid detection. Reporting the body would trigger a Discussion phase, where Frank could be suspected because he was in Admin with Eve. However, David has now moved into Admin, so Frank's presence there alongside David might complicate things. If Frank reports the body, he might come under scrutiny, but David is also present, which could provide some cover or split suspicion.\n\nKilling David immediately could be risky because Frank is alone with him now. If he kills David, the body would be in Admin with Frank, and if another player enters, Frank would be the obvious suspect. However, killing David would reduce the Crewmate count significantly, which is beneficial for the Impostors. But considering that Frank's prior action (killing Eve) hasn't been discovered yet, adding another kill could escalate the situation.\n\nMoving to another location like Cafeteria or Storage might allow Frank to distance himself from the recent kills. However, leaving Admin without reporting could lead to someone else discovering Eve's body, which would still implicate Frank once they check the movement logs. \n\nPretending to do the task again might help maintain his cover, but David is now present. If David is a Crewmate, he might be completing a genuine task, but Crewmates can't detect fake tasks, so Frank can safely pretend. However, this doesn't advance the Impostor's goal of eliminating Crewmates.\n\nThe optimal move here might be to kill David immediately. Since David is already in Admin with Frank, eliminating another Crewmate would bring the Impostors closer to victory. Though there's a risk of getting caught if the body is found and Frank is implicated, the potential gain outweighs the risk. Plus, with both Eve and David dead, the Crewmate numbers drop to two (Alice and Bob), making it easier for the Impostors to win either through kills or sabotage. However, Frank must consider that after killing David, he'd be left in Admin with two corpses, which could be discovered quickly. \n\nAlternatively, moving to Storage could allow Frank to avoid immediate suspicion. If he leaves, David might discover Eve's body and report it. During the Discussion phase, Frank could claim he left before the bodies were there, but the movement logs would show he was in Admin previously. This could still make him a suspect.\n\nGiven the need to be proactive, killing David here could be the decisive move. Even with the risk, eliminating two Crewmates in quick succession puts significant pressure on the remaining Crewmates. Assuming the other Impostor, Charlie, can help divert suspicion during the Discussion phase, Frank might survive and win the game.\n\n</think>",
+      "llm_response": "<action>kill David</action>",
+      "token_usage": {
+        "input_tokens": 7750,
+        "output_tokens": 624
+      },
+      "action_taken": {
+        "type": {
+          "__enum__": "Kill"
+        },
+        "player_name": "Frank",
+        "target_player_name": "David",
+        "target_location": null,
+        "target_task": null,
+        "text": "kill David",
+        "result": "You [Frank] killed David",
+        "spectator": "Frank killed David",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "David"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    },
+    {
+      "player_names_to_play_next": [],
+      "phase": {
+        "__enum__": "Game End"
+      },
+      "actions_until_phase_ends": 0,
+      "location": {
+        "__enum__": "Cafeteria"
+      },
+      "impostor_cooldown": 1,
+      "actions_agent_could_take": [],
+      "llm_cot": "",
+      "llm_response": "",
+      "token_usage": {},
+      "action_taken": {
+        "type": {
+          "__enum__": "Move"
+        },
+        "player_name": "System",
+        "target_player_name": null,
+        "target_location": null,
+        "target_task": null,
+        "text": "",
+        "result": "",
+        "spectator": "The game ended (Too small number of crewmates left)",
+        "__class__": "Action",
+        "__module__": "among_them.models.action"
+      },
+      "spectators_who_saw": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "tasks_left_to_do": {
+        "Frank": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Alice": [
+          {
+            "name": "Route power to defence in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in weapons",
+            "completed": false,
+            "location": {
+              "__enum__": "Weapons"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Charlie": [
+          {
+            "name": "Vote out or kill all crewmates",
+            "completed": false,
+            "location": null,
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "David": [
+          {
+            "name": "Reset breakers in electrical",
+            "completed": false,
+            "location": {
+              "__enum__": "Electrical"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Fix wiring in security",
+            "completed": false,
+            "location": {
+              "__enum__": "Security"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Eve": [
+          {
+            "name": "Fix wiring in storage",
+            "completed": false,
+            "location": {
+              "__enum__": "Storage"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Clean the floor in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          },
+          {
+            "name": "Run diagnostics in medbay",
+            "completed": false,
+            "location": {
+              "__enum__": "Medbay"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ],
+        "Bob": [
+          {
+            "name": "Fix wiring in admin",
+            "completed": false,
+            "location": {
+              "__enum__": "Admin"
+            },
+            "__class__": "Task",
+            "__module__": "among_them.models.tasks"
+          }
+        ]
+      },
+      "votes_before_this_discussion_message": {},
+      "alive_player_names": [
+        "Frank",
+        "Alice",
+        "Charlie",
+        "David",
+        "Eve",
+        "Bob"
+      ],
+      "__class__": "History",
+      "__module__": "among_them.models.history"
+    }
+  ],
+  [
+    {
+      "name": "Frank",
+      "role": {
+        "__enum__": "Impostor"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Alice",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Charlie",
+      "role": {
+        "__enum__": "Impostor"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "David",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Eve",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    },
+    {
+      "name": "Bob",
+      "role": {
+        "__enum__": "Crewmate"
+      },
+      "manual_human_control": false,
+      "llm_model_name": "deepseek/deepseek-r1:free",
+      "__class__": "Player",
+      "__module__": "among_them.models.player"
+    }
+  ],
+  {
+    "num_tasks": 4,
+    "num_players": 6,
+    "num_impostors": 2,
+    "map_size": 1,
+    "num_task_phase_actions_per_player": 10,
+    "num_discuss_phase_actions_per_player": 2,
+    "impostor_cooldown": 1,
+    "__class__": "GameConfig",
+    "__module__": "among_them.game_config"
+  }
+]

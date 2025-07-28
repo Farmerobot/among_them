@@ -20,6 +20,7 @@ from among_them.utils.player_utils import (get_last_player_action,
                                            get_players_in_room)
 from among_them.utils.end_utils import get_end_game_reason
 from among_them.utils.history_utils import initialize_history, end_game_history, create_vote_history_entry, get_action_history_str
+from among_them.utils.llm_utils import create_llm_prompts
 from among_them.game_config import GameConfig
 
 class GameEngine:
@@ -34,34 +35,183 @@ class GameEngine:
     game_config: GameConfig = GameConfig()
     file_path: str = STATE_FILE
 
-    def __init__(self, game_config: GameConfig = GameConfig()):
+    def __init__(self, game_config: GameConfig = GameConfig(), file_path: str = None):
         player_names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack", "Jill", "Katie", "Liam", "Mia", "Nathan", "Olivia", "Pete", "Quinn", "Riley", "Samantha", "Tom", "Uma", "Victor", "Wendy", "Xander", "Yara", "Zack"]
         self.players = [Player(name) for name in player_names[:game_config.num_players]]
         self.check_players_set_impostors(game_config.num_impostors)
         self.history = initialize_history(self.players, game_config)
         self.game_config = game_config
+        if file_path is not None:
+            self.file_path = file_path
 
+    def get_turn_context(self) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
+        """Gathers all necessary context for the current player's turn.
 
-    def perform_step(self) -> tuple[bool, Optional[EndGameReason]]:
-        """Executes a single step in the game, which is a player action.
-
-        Only when player successfully completes the action, the result will be saved to history. 
-        Otherwise, nothing will change and next perform_step() call will start from the same place.
+        This method calculates everything needed for a turn up-front to avoid
+        redundant calculations in the step function.
 
         Returns:
-            True and end game reason if the game is over or in GAME_END phase, False otherwise
+            A tuple containing:
+            - An incomplete History object representing the current turn's context.
+            - The system prompt for the LLM.
+            - The user prompt for the LLM.
+            - A list of pre-discussion vote prompts (empty if not in DISCUSS phase).
+            Or None if the game is in a state that doesn't require player input.
         """
         alive_player_names = self.history[-1].alive_player_names.copy()
         alive_players = [p for p in self.players if p.name in alive_player_names]
         phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, self.game_config, self.players)
 
-        # Handle phases where new history item is added
+        if phase in [GamePhase.GAME_END, GamePhase.VOTE_RESULTS]:
+            return None
+
+        current_player, next_players = get_next_random_player(self.history, self.players)
+        last_player_action = get_last_player_action(self.history, current_player)
+        players_in_room = get_players_in_room(self.history, self.players, current_player)
+
+        # Initialize fields for the History object
+        location = None # Default location
+        actions_player_can_take = []
+        impostor_cooldown = 0
+        if last_player_action:
+            impostor_cooldown = max(0, last_player_action.impostor_cooldown - 1)
+
+        if phase == GamePhase.TASK:
+            actions_player_can_take = get_task_phase_actions(current_player, self.history, self.players, self.game_config)
+            if last_player_action:
+                location = last_player_action.location
+        elif phase == GamePhase.DISCUSS:
+            actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
+            location = Location.CAFETERIA
+        elif phase == GamePhase.VOTING:
+            actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
+            location = Location.CAFETERIA
+        else:
+            return None
+
+        # Create a placeholder action for the current player
+        placeholder_action = Action(player_name=current_player.name, type=ActionType.SPEAK, text="")
+
+        # Create the incomplete History object
+        turn_history = History(
+            player_names_to_play_next=next_players,
+            phase=phase,
+            actions_until_phase_ends=actions_until_phase_ends,
+            location=location,
+            impostor_cooldown=impostor_cooldown,
+            actions_agent_could_take=[a.text for a in actions_player_can_take],
+            tasks_left_to_do=self.history[-1].tasks_left_to_do.copy(),
+            alive_player_names=alive_player_names,
+            action_taken=placeholder_action, # Placeholder for current player
+            spectators_who_saw=[p.name for p in players_in_room], # Represents players in room
+            llm_cot=None,
+            llm_response=None,
+            token_usage=None,
+            votes_before_this_discussion_message=None,
+        )
+
+        history_str = get_action_history_str(self.history, self.players, current_player, self.game_config)
+        system_prompt, user_prompt = create_llm_prompts(actions_player_can_take, history_str)
+
+        pre_discussion_vote_prompts = []
+        if phase == GamePhase.DISCUSS:
+            for player in alive_players:
+                fake_voting_actions = get_vote_actions(self.history, self.players, player)
+                fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
+                system_prompt_pd, user_prompt_pd = create_llm_prompts(fake_voting_actions, fake_history_str)
+                pre_discussion_vote_prompts.append({
+                    "player": player,
+                    "system_prompt": system_prompt_pd,
+                    "user_prompt": user_prompt_pd,
+                    "actions": fake_voting_actions
+                })
+
+        return turn_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts
+
+    def step(self, turn_context: History, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = None, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
+        """Executes a single player action and updates the game state using pre-calculated context.
+
+        Args:
+            turn_context: The incomplete History object representing the current turn's context.
+            action_taken: The action to be executed.
+            llm_response: The raw response from the LLM.
+            llm_cot: The chain of thought from the LLM.
+            token_usage: Token usage details.
+            pre_discussion_votes: A dictionary of votes collected before the discussion phase.
+
+        Returns:
+            True and end game reason if the game is over, False otherwise.
+        """
+        # Unpack the pre-calculated context from the History object
+        current_player_name = turn_context.action_taken.player_name # Get current player name from placeholder action
+        current_player = next((p for p in self.players if p.name == current_player_name), None)
+        if current_player is None:
+            raise ValueError(f"Current player {current_player_name} not found.")
+
+        alive_player_names = turn_context.alive_player_names.copy()
+        players_in_room_names = turn_context.spectators_who_saw.copy()
+        location = turn_context.location
+
+        spectators_who_saw = players_in_room_names
+        if action_taken.type == ActionType.REPORT:
+            spectators_who_saw = alive_player_names
+
+        if action_taken.type == ActionType.SPEAK:
+            action_taken.result = f"[{current_player.name}]: {llm_response}"
+            action_taken.spectator = f"[{current_player.name}]: {llm_response}"
+
+        tasks_left_to_do = self.history[-1].tasks_left_to_do.copy()
+        if action_taken.type == ActionType.TASK:
+            tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
+        elif action_taken.type == ActionType.MOVE:
+            location = action_taken.target_location # type: ignore
+            new_players_in_room = get_players_in_room(self.history, self.players, current_player, location)
+            spectators_who_saw = list(set(players_in_room_names + [p.name for p in new_players_in_room]))
+
+        if action_taken.type == ActionType.KILL:
+            alive_player_names.remove(action_taken.target_player_name) # type: ignore
+
+        new_history_item = turn_context.copy(
+            spectators_who_saw=spectators_who_saw,
+            llm_cot=llm_cot,
+            llm_response=llm_response,
+            token_usage=token_usage,
+            action_taken=action_taken,
+            tasks_left_to_do=tasks_left_to_do,
+            votes_before_this_discussion_message=pre_discussion_votes or {},
+            alive_player_names=alive_player_names,
+            location=location
+        )
+
+        self.history.append(new_history_item)
+        self.save_state()
+
+        end_reason = get_end_game_reason(self.history, self.players)
+        if end_reason:
+            self.history.append(end_game_history(self.history, self.players, self.game_config, end_reason))
+            self.save_state()
+            return True, end_reason
+
+        return False, None
+
+    def handle_automatic_transitions(self) -> tuple[bool, Optional[EndGameReason]]:
+        """Handles automatic game state transitions that don't require player input.
+
+        This includes processing vote results and checking for game-end conditions.
+
+        Returns:
+            True and end game reason if the game is over, False otherwise.
+        """
+        alive_player_names = self.history[-1].alive_player_names.copy()
+        alive_players = [p for p in self.players if p.name in alive_player_names]
+        phase, _ = get_phase_and_when_it_ends(self.history, self.game_config, self.players)
+
         if phase == GamePhase.GAME_END:
             reason = get_end_game_reason(self.history, self.players)
-            if reason is None: 
+            if reason is None:
                 raise ValueError("Game ended with no reason")
             if self.history[-1].phase != GamePhase.GAME_END:
-                self.history.append(end_game_history(self.history, self.players, self.game_config, reason)) # type: ignore
+                self.history.append(end_game_history(self.history, self.players, self.game_config, reason))
                 self.save_state()
             return True, reason
         elif phase == GamePhase.VOTE_RESULTS:
@@ -79,115 +229,24 @@ class GameEngine:
             self.save_state()
             return False, None
 
-        current_player, next_players = get_next_random_player(self.history, self.players)
-        last_player_action = get_last_player_action(self.history, current_player)
-        players_in_room = get_players_in_room(self.history, self.players, current_player)
-        if phase == GamePhase.TASK:
-            location = last_player_action.location
-            actions_player_can_take = get_task_phase_actions(current_player, self.history, self.players, self.game_config)
-            spectators_who_saw = [p.name for p in players_in_room]
-        elif phase == GamePhase.DISCUSS:
-            # Set some variables
-            location = Location.CAFETERIA
-            actions_player_can_take = [Action(type=ActionType.SPEAK, player_name=current_player.name)]
-            spectators_who_saw = alive_player_names
-        elif phase == GamePhase.VOTING:
-            location = Location.CAFETERIA
-            actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
-            spectators_who_saw = alive_player_names
-
-        # Force a new vote BEFORE each discussion message.
-        # It does not affect the game logic. It is just extra data.
-        votes_before_this_discussion_message: dict[str, dict] = {}
-        if phase == GamePhase.DISCUSS:
-            for player in alive_players:
-                retry_count = 0
-                while True:
-                    retry_count += 1
-                    try:
-                        fake_voting_actions_player_can_take = get_vote_actions(self.history, self.players, player)
-                        fake_history_str = get_action_history_str(self.history, self.players, player, self.game_config, GamePhase.VOTING)
-                        fake_action_taken_idx, _, fake_action_chain_of_thought, _ = player.prompt_action(fake_voting_actions_player_can_take, fake_history_str)
-                        fake_action_taken = fake_voting_actions_player_can_take[fake_action_taken_idx]
-                        votes_before_this_discussion_message[player.name] = {"voted_player": fake_action_taken.target_player_name, "chain_of_thought": fake_action_chain_of_thought}
-                        print(f"Discussion phase fake voting: {player.name} voted for {fake_action_taken.target_player_name}")
-                        break
-                    except Exception as e:
-                        if "LLM did" in str(e):
-                            print(f"Error: {e}")
-                            print(f"Model failed to vote. Retry count: {retry_count}")
-                            continue
-                        else:
-                            raise e
-            print(f"Votes before this discussion message: {votes_before_this_discussion_message}")
-
-        history_str = get_action_history_str(self.history, self.players, current_player, self.game_config)
-        if phase == GamePhase.DISCUSS:
-            retry_count = 0
-            while True:
-                try:
-                    action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
-                    action_taken = actions_player_can_take[action_taken_idx]
-                    break
-                except Exception as e:
-                    retry_count += 1
-                    if retry_count > 15:
-                        raise ValueError("Hallucinated more than 15 times")
-                    if "LLM did" in str(e):
-                        print(f"Error: {e}")
-                        print(f"Model failed to respond. Retry count: {retry_count}")
-                        continue
-                    else:
-                        raise e
-        else:
-            action_taken_idx, response, cot, token_usage = current_player.prompt_action(actions_player_can_take, history_str)
-            action_taken = actions_player_can_take[action_taken_idx]
-
-        if action_taken.type == ActionType.REPORT:
-            spectators_who_saw = alive_player_names
-
-        if action_taken.type == ActionType.SPEAK:
-            action_taken.result = f"[{current_player.name}]: {response}"
-            action_taken.spectator = f"[{current_player.name}]: {response}"
-
-        tasks_left_to_do = self.history[-1].tasks_left_to_do.copy()
-        if action_taken.type == ActionType.TASK:
-            tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
-        elif action_taken.type == ActionType.MOVE:
-            location = action_taken.target_location # type: ignore
-            new_players_in_room = get_players_in_room(self.history, self.players, current_player, location)
-            spectators_who_saw = list(set([p.name for p in players_in_room] + [p.name for p in new_players_in_room]))
-
-        if action_taken.type == ActionType.KILL:
-            alive_player_names.remove(action_taken.target_player_name) # type: ignore
-
-        new_history_item = History(
-            player_names_to_play_next=next_players,
-            phase=phase,
-            actions_until_phase_ends=actions_until_phase_ends,
-            location=location,
-            impostor_cooldown=max(0, last_player_action.impostor_cooldown-1),
-            actions_agent_could_take=[a.text for a in actions_player_can_take],
-            spectators_who_saw=spectators_who_saw,
-            llm_cot=cot,
-            llm_response=response,
-            token_usage=token_usage,
-            action_taken=action_taken,
-            tasks_left_to_do=tasks_left_to_do,
-            votes_before_this_discussion_message=votes_before_this_discussion_message,
-            alive_player_names=alive_player_names
-        )
-
-        self.history.append(new_history_item)
-        self.save_state()
         return False, None
 
     def save_state(self):
         """Saves the current game state (history, players, config) to a JSON file."""
-        with open(self.file_path, 'w') as f:
-            # Save history, players, and game_config
-            json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
-            f.write(json_str)
+        try:
+            # Ensure the directory exists
+            import os
+            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+            
+            with open(self.file_path, 'w') as f:
+                # Save history, players, and game_config
+                json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
+                f.write(json_str)
+            
+            print(f"Game state saved to: {self.file_path}")
+        except Exception as e:
+            print(f"ERROR saving game state to {self.file_path}: {e}")
+            raise
             
     def load_state(self):
         """Loads the game state (history, players, config) from a JSON file."""

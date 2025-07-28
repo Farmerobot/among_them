@@ -16,6 +16,8 @@ from among_them.game_engine import GameEngine
 # Blue - llm response
 
 def main():
+    print("DEPRECATED: Use scripts/manual_llm_game.py instead")
+    return
     game_config = GameConfig(
         num_tasks=4,
         num_players=7,
