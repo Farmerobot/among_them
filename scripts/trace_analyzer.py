@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""
+Evaluates SFT dataset traces using GPT-4o-mini, scoring each trace 0-3 based on quality.
+Creates generated/trace_analysis.txt which is required by create_sampled_sft_dataset.py.
+Requires OPENAI_API_KEY environment variable.
+"""
+
 # from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 import openai
 # from ollama import chat
