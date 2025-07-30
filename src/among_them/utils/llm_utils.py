@@ -32,8 +32,6 @@ def create_llm_prompts(actions: List[Action], history_str: str) -> Tuple[str, st
     return system_prompt, prompt
 
 
-
-
 def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, Optional[str]]:
     """
     Invoke the LLM with the given prompts and handle exceptions.
@@ -52,6 +50,11 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
     messages = [
         {"role": "user", "content": system_prompt + "\n" + prompt},
     ]
+
+    # Print chat history
+    print("\n\nChat history:\n")
+    for message in messages:
+        print(f"{message['role']}: {message['content']}")
 
     raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
     raw_reasoning = ""
@@ -90,63 +93,20 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
             chunks = response
             
         elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
-            try:
-                from unsloth import FastLanguageModel
-                import torch
-                
-                model, tokenizer = FastLanguageModel.from_pretrained(
-                    model_name=HUGGINGFACE_MODEL_NAME,
-                    max_seq_length=2048,
-                    dtype=None,
-                    load_in_4bit=True,
-                )
-                FastLanguageModel.for_inference(model)
-                
-                inputs = tokenizer(
-                    [tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)],
-                    return_tensors="pt"
-                ).to("cuda" if torch.cuda.is_available() else "cpu")
-                
-                with torch.no_grad():
-                    outputs = model.generate(
-                        **inputs,
-                        max_new_tokens=2000,
-                        use_cache=True,
-                        temperature=0.0,
-                        do_sample=False
-                    )
-                
-                response_text = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
-                chunks = [{"text": response_text}]  # Simulate streaming format
-                
-            except ImportError:
-                # Fallback to transformers
-                from transformers import AutoTokenizer, AutoModelForCausalLM
-                import torch
-                
-                tokenizer = AutoTokenizer.from_pretrained(HUGGINGFACE_MODEL_NAME)
-                model = AutoModelForCausalLM.from_pretrained(
-                    HUGGINGFACE_MODEL_NAME,
-                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    device_map="auto" if torch.cuda.is_available() else None
-                )
-                
-                inputs = tokenizer(
-                    tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
-                    return_tensors="pt"
-                ).to(model.device)
-                
-                with torch.no_grad():
-                    outputs = model.generate(
-                        **inputs,
-                        max_new_tokens=2000,
-                        temperature=0.0,
-                        do_sample=False,
-                        pad_token_id=tokenizer.eos_token_id
-                    )
-                
-                response_text = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
-                chunks = [{"text": response_text}]  # Simulate streaming format
+            # Use Ollama to run the GGUF model instead of direct HuggingFace transformers
+            # This avoids Windows encoding issues and handles GGUF models natively
+            import ollama
+            
+            # Use the GGUF model via Ollama
+            
+            print(f"Using Ollama with GGUF model: {model_name}")
+            
+            response = ollama.chat(
+                model=HUGGINGFACE_MODEL_NAME,
+                messages=messages,
+                stream=True
+            )
+            chunks = response
         
         else:
             raise ValueError(f"Unsupported LLM backend: {LLM_BACKEND}")
@@ -157,7 +117,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
                 raw += content
                 print("\033[94m" + content + "\033[0m", end="", flush=True)
                 
-            elif LLM_BACKEND == LLMBackend.OLLAMA:
+            elif LLM_BACKEND in [LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
                 content = chunk["message"]["content"]
                 raw += content
                 print("\033[94m" + content + "\033[0m", end="", flush=True)
@@ -174,12 +134,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
                         raw_reasoning += reasoning
                         print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
                 except:
-                    ...
-                    
-            elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
-                content = chunk["text"]
-                raw += content
-                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                    print("\n\033[91mError parsing OpenRouter response\033[0m")
             
             # Check for hallucination (only for local backends that use raw)
             if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:

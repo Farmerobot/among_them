@@ -20,7 +20,7 @@ OLLAMA_LLM_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "deepseek-r1:14b")
 MLX_LLM_MODEL_NAME = os.getenv("MLX_LLM_MODEL_NAME", "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL_NAME = os.getenv("OPENROUTER_MODEL_NAME")
-HUGGINGFACE_MODEL_NAME = os.getenv("HUGGINGFACE_MODEL_NAME", "Farmerobot/deepseek-r1-among-them")
+HUGGINGFACE_MODEL_NAME = os.getenv("HUGGINGFACE_MODEL_NAME")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Other configurations
