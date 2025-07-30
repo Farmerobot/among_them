@@ -314,7 +314,7 @@ def main():
                     row_to_write[field_name] = value
             writer.writerow(row_to_write)
 
-    print(all_results)
+    # print(all_results)
         
     # Split data into train/valid/test sets
     random.seed(42)

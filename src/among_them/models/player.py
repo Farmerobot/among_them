@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List, Optional, Tuple
 import tiktoken
-from among_them.config import OLLAMA_LLM_MODEL_NAME, USE_MLX, RUN_LOCALLY, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME
+from among_them.config import LLMBackend, LLM_BACKEND, OLLAMA_LLM_MODEL_NAME, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
@@ -18,13 +18,26 @@ class Player:
         name: str, 
         role: PlayerRole = PlayerRole.CREWMATE,
         manual_human_control: bool = False,
-        llm_model_name: str = OLLAMA_LLM_MODEL_NAME if RUN_LOCALLY else OPENROUTER_MODEL_NAME
+        llm_model_name: str = None
     ):
         self.name = name
         self.role = role
         self.manual_human_control = manual_human_control
-        self.llm_model_name = llm_model_name
-        print(f"Using LLM model: {llm_model_name}")
+        
+        # Set model name based on backend if not provided
+        if llm_model_name is None:
+            if LLM_BACKEND == LLMBackend.OLLAMA:
+                self.llm_model_name = OLLAMA_LLM_MODEL_NAME
+            elif LLM_BACKEND == LLMBackend.OPENROUTER:
+                self.llm_model_name = OPENROUTER_MODEL_NAME
+            elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
+                self.llm_model_name = HUGGINGFACE_MODEL_NAME
+            else:  # MLX
+                self.llm_model_name = "mlx-model"  # MLX uses loaded model, not name
+        else:
+            self.llm_model_name = llm_model_name
+            
+        print(f"Using LLM backend: {LLM_BACKEND.value} with model: {self.llm_model_name}")
     
     def prompt_action(
         self, actions: List[Action], history_str: str
@@ -130,95 +143,9 @@ class Player:
         Raises:
             ValueError: If no chain of thought is found in the response
         """
-        messages = [
-            {"role": "user", "content": system_prompt + "\n" + prompt},
-        ]
-
-        raw = "<think>" if USE_MLX else ""
-        raw_reasoning = ""
-        raw_content = ""
-        
-        try:
-            if RUN_LOCALLY:
-                if USE_MLX:
-                    from mlx_lm import stream_generate
-                    from mlx_lm.sample_utils import make_sampler
-                    from among_them.config import MLX_MODEL, MLX_TOKENIZER
-
-                    model, tokenizer = MLX_MODEL, MLX_TOKENIZER
-                    prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
-                    chunks = stream_generate(
-                        model, tokenizer, prompt=prompt_chat,
-                        max_tokens=2000, sampler=make_sampler(temp=0.0)
-                    )
-                else:
-                    from ollama import chat
-                    chunks = chat(model=self.llm_model_name, messages=messages, stream=True)
-            else:
-                # Use OpenRouter if not running locally
-                from openai import OpenAI
-
-                client = OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=OPENROUTER_API_KEY,
-                )
-
-                response = client.chat.completions.create(
-                    model=self.llm_model_name,
-                    messages=messages,
-                    stream=True
-                )
-
-                chunks = response
-
-            for chunk in chunks:
-                if RUN_LOCALLY:
-                    content = chunk["message"]["content"] if not USE_MLX else chunk.text
-                    raw += content
-                    print("\033[94m" + content + "\033[0m", end="", flush=True)   
-                else:
-                    try:
-                        content = chunk.choices[0].delta.content
-                        if content:
-                            raw_content += content
-                            print("\033[94m" + content + "\033[0m", end="", flush=True)  
-                        
-                        reasoning = chunk.choices[0].delta.reasoning
-                        if reasoning:
-                            raw_reasoning += reasoning
-                            print("\033[90m" + reasoning + "\033[0m", end="", flush=True) 
-                    except:
-                        ...
-                
-                all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
-                if len(all_tags) > 2:
-                    raise Exception("LLM did hallucinate")
-            print("")
-
-        except KeyboardInterrupt:
-            print("\n\033[93mKeyboardInterrupt detected! Switching to manual action selection.\033[0m")
-            raise KeyboardInterrupt("User interrupted LLM generation")
-
-        # Extract chain of thought and cleanup
-        if RUN_LOCALLY:
-            cot = ""
-            cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
-            cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
-            if cot_match:
-                cot = cot_match.group(0)
-                response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
-            elif cot_match_end:
-                cot = cot_match_end.group(0)
-                response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
-            else:
-                cot = ""
-                response_text = raw
-                # raise ValueError("No chain of thought found in response")
-        else:
-            cot = "<think>\n" + raw_reasoning + "\n</think>"
-            response_text = raw_content
-
-        return response_text, cot
+        # Use the centralized invoke_llm function from llm_utils
+        from among_them.utils.llm_utils import invoke_llm
+        return invoke_llm(system_prompt, prompt, self.llm_model_name)
 
     def _handle_ai_action(
         self, actions: List[Action], history_str: str

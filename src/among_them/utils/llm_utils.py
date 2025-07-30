@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional, Tuple
 
-from among_them.config import USE_MLX, RUN_LOCALLY, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME
+from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
 from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 
@@ -41,6 +41,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
     Args:
         system_prompt: The system prompt to use
         prompt: The user prompt to send to the LLM
+        model_name: The model name to use
 
     Returns:
         Tuple of (response_text, chain_of_thought)
@@ -52,28 +53,28 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         {"role": "user", "content": system_prompt + "\n" + prompt},
     ]
 
-    raw = "<think>" if USE_MLX else ""
+    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
     raw_reasoning = ""
     raw_content = ""
     
     try:
-        if RUN_LOCALLY:
-            if USE_MLX:
-                from mlx_lm import stream_generate
-                from mlx_lm.sample_utils import make_sampler
-                from among_them.config import MLX_MODEL, MLX_TOKENIZER
+        if LLM_BACKEND == LLMBackend.MLX:
+            from mlx_lm import stream_generate
+            from mlx_lm.sample_utils import make_sampler
+            from among_them.config import MLX_MODEL, MLX_TOKENIZER
 
-                model, tokenizer = MLX_MODEL, MLX_TOKENIZER
-                prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
-                chunks = stream_generate(
-                    model, tokenizer, prompt=prompt_chat,
-                    max_tokens=2000, sampler=make_sampler(temp=0.0)
-                )
-            else:
-                from ollama import chat
-                chunks = chat(model=model, messages=messages, stream=True)
-        else:
-            # Use OpenRouter if not running locally
+            model, tokenizer = MLX_MODEL, MLX_TOKENIZER
+            prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+            chunks = stream_generate(
+                model, tokenizer, prompt=prompt_chat,
+                max_tokens=2000, sampler=make_sampler(temp=0.0)
+            )
+            
+        elif LLM_BACKEND == LLMBackend.OLLAMA:
+            from ollama import chat
+            chunks = chat(model=model_name, messages=messages, stream=True)
+            
+        elif LLM_BACKEND == LLMBackend.OPENROUTER:
             from openai import OpenAI
 
             client = OpenAI(
@@ -86,31 +87,105 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
                 messages=messages,
                 stream=True
             )
-
             chunks = response
+            
+        elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
+            try:
+                from unsloth import FastLanguageModel
+                import torch
+                
+                model, tokenizer = FastLanguageModel.from_pretrained(
+                    model_name=HUGGINGFACE_MODEL_NAME,
+                    max_seq_length=2048,
+                    dtype=None,
+                    load_in_4bit=True,
+                )
+                FastLanguageModel.for_inference(model)
+                
+                inputs = tokenizer(
+                    [tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)],
+                    return_tensors="pt"
+                ).to("cuda" if torch.cuda.is_available() else "cpu")
+                
+                with torch.no_grad():
+                    outputs = model.generate(
+                        **inputs,
+                        max_new_tokens=2000,
+                        use_cache=True,
+                        temperature=0.0,
+                        do_sample=False
+                    )
+                
+                response_text = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
+                chunks = [{"text": response_text}]  # Simulate streaming format
+                
+            except ImportError:
+                # Fallback to transformers
+                from transformers import AutoTokenizer, AutoModelForCausalLM
+                import torch
+                
+                tokenizer = AutoTokenizer.from_pretrained(HUGGINGFACE_MODEL_NAME)
+                model = AutoModelForCausalLM.from_pretrained(
+                    HUGGINGFACE_MODEL_NAME,
+                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    device_map="auto" if torch.cuda.is_available() else None
+                )
+                
+                inputs = tokenizer(
+                    tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+                    return_tensors="pt"
+                ).to(model.device)
+                
+                with torch.no_grad():
+                    outputs = model.generate(
+                        **inputs,
+                        max_new_tokens=2000,
+                        temperature=0.0,
+                        do_sample=False,
+                        pad_token_id=tokenizer.eos_token_id
+                    )
+                
+                response_text = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
+                chunks = [{"text": response_text}]  # Simulate streaming format
+        
+        else:
+            raise ValueError(f"Unsupported LLM backend: {LLM_BACKEND}")
 
         for chunk in chunks:
-            if RUN_LOCALLY:
-                content = chunk["message"]["content"] if not USE_MLX else chunk.text
+            if LLM_BACKEND == LLMBackend.MLX:
+                content = chunk.text
                 raw += content
-                print("\033[94m" + content + "\033[0m", end="", flush=True)   
-            else:
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                
+            elif LLM_BACKEND == LLMBackend.OLLAMA:
+                content = chunk["message"]["content"]
+                raw += content
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                
+            elif LLM_BACKEND == LLMBackend.OPENROUTER:
                 try:
                     content = chunk.choices[0].delta.content
                     if content:
                         raw_content += content
-                        print("\033[94m" + content + "\033[0m", end="", flush=True)  
+                        print("\033[94m" + content + "\033[0m", end="", flush=True)
                     
                     reasoning = chunk.choices[0].delta.reasoning
                     if reasoning:
                         raw_reasoning += reasoning
-                        print("\033[90m" + reasoning + "\033[0m", end="", flush=True) 
+                        print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
                 except:
                     ...
+                    
+            elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
+                content = chunk["text"]
+                raw += content
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
             
-            all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
-            if len(all_tags) > 2:
-                raise Exception("LLM did hallucinate")
+            # Check for hallucination (only for local backends that use raw)
+            if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+                all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
+                if len(all_tags) > 2:
+                    raise Exception("LLM did hallucinate")
         print("")
 
     except KeyboardInterrupt:
@@ -118,7 +193,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         raise KeyboardInterrupt("User interrupted LLM generation")
 
     # Extract chain of thought and cleanup
-    if RUN_LOCALLY:
+    if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
         cot = ""
         cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
         cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
@@ -131,8 +206,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         else:
             cot = ""
             response_text = raw
-            # raise ValueError("No chain of thought found in response")
-    else:
+    else:  # OpenRouter
         cot = "<think>\n" + raw_reasoning + "\n</think>"
         response_text = raw_content
 

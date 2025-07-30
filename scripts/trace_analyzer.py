@@ -2,8 +2,11 @@
 """
 Evaluates SFT dataset traces using GPT-4o-mini, scoring each trace 0-3 based on quality.
 Creates generated/trace_analysis.txt which is required by create_sampled_sft_dataset.py.
-Requires OPENAI_API_KEY environment variable.
+Requires OPENAI_API_KEY or OPENROUTER_API_KEY environment variable depending on USE_OPENROUTER setting.
 """
+
+# Configuration: Set to True to use OpenRouter, False to use OpenAI
+USE_OPENROUTER = False
 
 # from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 import openai
@@ -11,13 +14,42 @@ import openai
 import pandas as pd
 import os
 import json
+import sys
 from time import sleep
+
+# Import centralized configuration
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+from among_them.config import OPENAI_API_KEY, OPENROUTER_API_KEY
+
+def validate_api_key():
+    """Validate that the appropriate API key is properly set."""
+    if USE_OPENROUTER:
+        api_key = OPENROUTER_API_KEY
+        if not api_key:
+            print("ERROR: OPENROUTER_API_KEY environment variable is not set.")
+            print("Please set your OpenRouter API key:")
+            print("  Windows: set OPENROUTER_API_KEY=your_api_key_here")
+            print("  Linux/Mac: export OPENROUTER_API_KEY=your_api_key_here")
+            sys.exit(1)
+    else:
+        api_key = OPENAI_API_KEY
+        if not api_key:
+            print("ERROR: OPENAI_API_KEY environment variable is not set.")
+            print("Please set your OpenAI API key:")
+            print("  Windows: set OPENAI_API_KEY=your_api_key_here")
+            print("  Linux/Mac: export OPENAI_API_KEY=your_api_key_here")
+            sys.exit(1)
+    
+    return api_key
+
+
+# Validate API key before proceeding
+validate_api_key()
 
 fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
 
 traces = pd.read_csv("data/sft_dataset.csv", names=fieldnames)
 impostor_traces = traces[traces["player_role"] == "Impostor"]
-
 
 def get_trace_evaluation(trace):
     prompt = f"""
@@ -71,14 +103,25 @@ def get_trace_evaluation(trace):
     #     messages=messages
     # )
 
-    client = openai.OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
-    )
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-    )
+    if USE_OPENROUTER:
+        client = openai.OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY,
+        )
+        
+        completion = client.chat.completions.create(
+            model="openai/gpt-4o-mini",
+            messages=messages,
+        )
+    else:
+        client = openai.OpenAI(
+            api_key=OPENAI_API_KEY,
+        )
+        
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+        )
 
     return completion.choices[0].message.content
 
