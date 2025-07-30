@@ -33,6 +33,7 @@ tqdm = ">=4.65.0,<5.0.0"
 alphashape = { git = "https://github.com/bellockk/alphashape.git" }
 shapely = ">=2.0.0,<3.0.0"
 sentence-transformers = ">=4.1.0,<5.0.0"
+openai = "^1.97.1"
 
 [build-system]
 requires = ["poetry-core"]
