@@ -25,7 +25,6 @@ from among_them.models.action_type import ActionType
 from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.utils.phase_utils import count_votes
 
-UNIVERSAL_SYSTEM_PROMPT = "You are an AI assistant observing a game. Based on the game state and player actions, predict the AI's next thought process and action. Provide your response in a clear, step-by-step manner if explaining reasoning, followed by the specific action in the required format."
 CHARS_PER_TOKEN = 4 # Fallback if not using actual tokenizer
 
 def format_num(n):
