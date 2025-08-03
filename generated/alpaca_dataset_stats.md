@@ -2,26 +2,26 @@
 
 Tokenizer used for token counts: `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`
 
-- **Training examples:** 458
-- **Evaluation examples:** 115
-- **Total examples:** 573
+- **Training examples:** 1,168
+- **Evaluation examples:** 292
+- **Total examples:** 1,460
 
 ## Maximum Token Lengths Per Example
-- **Longest instruction:** 7,722 tokens
-- **Longest output:** 2,668 tokens
-- **Longest combined (instruction + output):** 7,981 tokens
+- **Longest instruction:** 11,910 tokens
+- **Longest output:** 5,754 tokens
+- **Longest combined (instruction + output):** 12,221 tokens
 
 ## Total Token Counts
-- **Total instruction tokens:** 1,389,578 tokens
-- **Total output tokens:** 223,841 tokens
-- **Overall total (all instructions + all outputs):** 1,613,419 tokens
+- **Total instruction tokens:** 3,879,369 tokens
+- **Total output tokens:** 793,873 tokens
+- **Overall total (all instructions + all outputs):** 4,673,242 tokens
 
 ## Token Count Distribution Summary
 | Statistic | Input Tokens | Output Tokens | Total Tokens |
 | :-------- | :----------- | :------------ | :----------- |
-| **Count** | 573 | 573 | 573 |
-| **Min** | 315 | 87 | 569 |
-| **Median** | 2,245 | 331 | 2,619 |
-| **Mean** | 2,425.09 | 390.65 | 2,815.74 |
-| **Max** | 7,722 | 2,668 | 7,981 |
-| **Std Dev** | 1,532.36 | 243.06 | 1,540.74 |
+| **Count** | 1,460 | 1,460 | 1,460 |
+| **Min** | 315 | 12 | 522 |
+| **Median** | 2,140.00 | 332.00 | 2,709.50 |
+| **Mean** | 2,657.10 | 543.75 | 3,200.85 |
+| **Max** | 11,910 | 5,754 | 12,221 |
+| **Std Dev** | 2,083.98 | 648.04 | 2,099.73 |

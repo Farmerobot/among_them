@@ -47,14 +47,14 @@ class Action:
             # Backward compatibility
             self.result = f"You [{self.player_name}] moved to {self.target_location.value}"
             self.spectator = f"{self.player_name} moved to {self.target_location.value}"
-        elif self.type == ActionType.WAIT:
-            self.text = "wait"
-            self.agent_perspective = "You waited."
-            self.observer_perspective = f"You noticed {self.player_name} was waiting."
-            self.global_perspective = f"{self.player_name} waited."
-            # Backward compatibility
-            self.result = f"You [{self.player_name}] are waiting"
-            self.spectator = f"{self.player_name} waited"
+        # elif self.type == ActionType.WAIT:
+        #     self.text = "wait"
+        #     self.agent_perspective = "You waited."
+        #     self.observer_perspective = f"You noticed {self.player_name} was waiting."
+        #     self.global_perspective = f"{self.player_name} waited."
+        #     # Backward compatibility
+        #     self.result = f"You [{self.player_name}] are waiting"
+        #     self.spectator = f"{self.player_name} waited"
         elif self.type == ActionType.TASK:
             self.text = f"{self.target_task.name}"
             self.agent_perspective = f"You completed the {self.target_task.name} task."

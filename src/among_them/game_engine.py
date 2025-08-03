@@ -36,12 +36,14 @@ class GameEngine:
     game_config: GameConfig = GameConfig()
     file_path: str = STATE_FILE
 
-    def __init__(self, game_config: GameConfig = GameConfig()):
+    def __init__(self, game_config: GameConfig = GameConfig(), file_path: str = None):
         player_names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack", "Jill", "Katie", "Liam", "Mia", "Nathan", "Olivia", "Pete", "Quinn", "Riley", "Samantha", "Tom", "Uma", "Victor", "Wendy", "Xander", "Yara", "Zack"]
         self.players = [Player(name) for name in player_names[:game_config.num_players]]
         self.check_players_set_impostors(game_config.num_impostors)
         self.history = initialize_history(self.players, game_config)
         self.game_config = game_config
+        if file_path is not None:
+            self.file_path = file_path
 
     def get_turn_context(self) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
         """Gathers all necessary context for the current player's turn.
@@ -92,7 +94,7 @@ class GameEngine:
             return None, None, None, None, None
 
         # Create a placeholder action for the current player
-        placeholder_action = Action(player_name=current_player.name, type=ActionType.WAIT)
+        placeholder_action = Action(player_name=current_player.name, type=ActionType.SPEAK, text="")
 
         # Create the incomplete History object
         turn_history = History(
@@ -270,10 +272,20 @@ class GameEngine:
 
     def save_state(self):
         """Saves the current game state (history, players, config) to a JSON file."""
-        with open(self.file_path, 'w') as f:
-            # Save history, players, and game_config
-            json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
-            f.write(json_str)
+        try:
+            # Ensure the directory exists
+            import os
+            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+            
+            with open(self.file_path, 'w') as f:
+                # Save history, players, and game_config
+                json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
+                f.write(json_str)
+            
+            print(f"Game state saved to: {self.file_path}")
+        except Exception as e:
+            print(f"ERROR saving game state to {self.file_path}: {e}")
+            raise
             
     def load_state(self):
         """Loads the game state (history, players, config) from a JSON file."""

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-This script uses the trace evaluation on a scale from 0 (halucination) to n (outstanding performance).
+Creates a sampled SFT dataset by filtering high-quality traces (score >= TRACE_QUALITY_THRESHOLD).
+Requires trace_analyzer.py to be run first to generate generated/trace_analysis.txt.
+
+Uses the trace evaluation on a scale from 0 (halucination) to n (outstanding performance).
 It prints the sampled dataset to the new file and generates its summary.
 TRACE_QUALITY_THRESHOLD defines what is the lower bound on evaluation for entering the sampled dataset.
 """

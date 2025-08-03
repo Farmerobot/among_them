@@ -15,6 +15,10 @@ import alphashape
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 import re
+import json
+
+TRACE_QUALITY_THRESHOLD = 2
+trace_analysis_file = "generated/trace_analysis.txt"
 
 def mean_pooling(token_embeddings, attention_mask):
     mask = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
@@ -24,78 +28,124 @@ def mean_pooling(token_embeddings, attention_mask):
 
 def main(input_csv, output_html, n_clusters=None, proj='umap', regenerate=False):
     # Load data
-    df = pd.read_csv(input_csv)
+    fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
+    df = pd.read_csv(input_csv, names=fieldnames)
+
     texts = (df['prompt'].fillna('') + ' ' + df['model_cot_and_cleaned_output'].fillna('')).tolist()
+    names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack", "Jill", "Katie", "Liam", "Mia", "Nathan", "Olivia", "Pete", "Quinn", "Riley", "Samantha", "Tom", "Uma", "Victor", "Wendy", "Xander", "Yara", "Zack"]
+    name_map = {name: f'Player' for i, name in enumerate(names)}
+
+    def anonymize_names(text, name_map):
+        for name, replacement in name_map.items():
+            text = re.sub(rf'{name}', replacement, text)
+        return text
+
+    texts_anonymized = [anonymize_names(t, name_map) for t in texts]
 
     # Setup embedding model and paths
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
-    # model_st = SentenceTransformer("Alibaba-NLP/gte-multilingual-base", device=device, trust_remote_code=True)
+    # model_st = SentenceTransformer("Alibaba-NLP/gte-Qwen2-7B-instruct", device=device, trust_remote_code=True)
     model_st = SentenceTransformer("all-MiniLM-L6-v2", device=device, trust_remote_code=True)
     batch_size = 1
     out_path = Path(output_html)
     emb_file = out_path.parent / f"{out_path.stem}_embeddings.npy"
-    if regenerate or not emb_file.exists():
-        embeddings = model_st.encode(texts, batch_size=batch_size,
-                                     show_progress_bar=True, convert_to_numpy=True,
-                                     normalize_embeddings=False)
-        np.save(emb_file, embeddings)
-    else:
-        embeddings = np.load(emb_file)
+    # if regenerate or not emb_file.exists():
+    #     embeddings = model_st.encode(texts_anonymized, batch_size=batch_size,
+    #                                  show_progress_bar=True, convert_to_numpy=True,
+    #                                  normalize_embeddings=False)
+    #     np.save(emb_file, embeddings)
+    # else:
+    #     embeddings = np.load(emb_file)
 
     # Clustering
     group_names = df['json_file_name'].astype(str).unique()
-    k = int(n_clusters) if n_clusters else len(group_names)
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    clusters = kmeans.fit_predict(embeddings)
-    df['cluster'] = clusters
+    # k = int(n_clusters) if n_clusters else len(group_names)
+    # kmeans = KMeans(n_clusters=k, random_state=42)
+    # clusters = kmeans.fit_predict(embeddings)
+    # df['cluster'] = clusters
 
-    # Embedding projection (UMAP or t-SNE)
-    if proj == 'umap':
-        reducer = UMAP(n_components=2, random_state=42)
-        embedding_2d = reducer.fit_transform(embeddings)
-    else:  # tsne
-        tsne = TSNE(n_components=2, init='random', random_state=42)
-        embedding_2d = tsne.fit_transform(embeddings)
-    df['emb_x'], df['emb_y'] = embedding_2d[:,0], embedding_2d[:,1]
+    # # Embedding projection (UMAP or t-SNE)
+    # if proj == 'umap':
+    #     reducer = UMAP(n_components=2, random_state=42)
+    #     embedding_2d = reducer.fit_transform(embeddings)
+    # else:  # tsne
+    #     tsne = TSNE(n_components=2, init='random', random_state=42)
+    #     embedding_2d = tsne.fit_transform(embeddings)
+    # df['emb_x'], df['emb_y'] = embedding_2d[:,0], embedding_2d[:,1]
+
+    quality_idx, scores = [], []
+    with open(trace_analysis_file, "r") as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            eval = json.loads(line)
+            score = eval[0]
+            scores.append(score)
+            if score >= TRACE_QUALITY_THRESHOLD:
+                quality_idx.append(1)
+            else:
+                quality_idx.append(0)
+
+    quality_idx, scores = np.array(quality_idx), np.array(scores)
+
+    df['score'] = quality_idx
+    df['color'] = df['score'].apply(lambda x: 'green' if x == 1 else 'red')
+    df['size'] = df['score'].apply(lambda x: 1 if x == 1 else 1)
 
     # Plot
-    fig = px.scatter(df, x='emb_x', y='emb_y', color=df['cluster'].astype(str),
-                     hover_data=['json_file_name','player_name','player_role'])
+    # fig = px.scatter(
+    #     df,
+    #     x='emb_x',
+    #     y='emb_y',
+    #     # color=df['cluster'].astype(str),
+    #     color='score',
+    #     # size='size',
+    #     # color_continuous_scale='RdYlGn_r',
+    #     hover_data=['json_file_name','player_name','player_role']
+    # )
 
-    # Add alpha-shape regions for each json_file_name & player_role
+    # # Add alpha-shape regions for each json_file_name & player_role
     colors = px.colors.qualitative.Light24
     group_pairs = df[['json_file_name','player_role']].drop_duplicates().values.tolist()
-    for i, (g, role) in enumerate(group_pairs):
-        sub = df[(df['json_file_name']==g)&(df['player_role']==role)]
-        if len(sub) < 4:
-            continue
-        # 2D points array for region
-        pts = sub[['emb_x','emb_y']].values
-        # compute alpha shape (concave hull). alpha parameter can be tuned
-        alpha = alphashape.optimizealpha(pts)
-        shape = alphashape.alphashape(pts, alpha)
-        # ensure shape is a Polygon
-        if isinstance(shape, Polygon):
-            xs, ys = shape.exterior.xy
-        else:
-            # if MultiPolygon, unify boundaries
-            union = unary_union(shape)
-            xs, ys = union.exterior.xy
-        # convert coordinate arrays to lists for Plotly
-        xs, ys = list(xs), list(ys)
-        fig.add_trace(go.Scatter(x=xs, y=ys,
-                                 fill='toself', fillcolor=colors[i % len(colors)],
-                                 line=dict(color=colors[i % len(colors)]),
-                                 opacity=0.2, name=f'{g}-{role} region',
-                                 hoverinfo='skip', showlegend=True))
+    # for i, (g, role) in enumerate(group_pairs):
+    #     sub = df[(df['json_file_name']==g)&(df['player_role']==role)]
+    #     if len(sub) < 4:
+    #         continue
+    #     # 2D points array for region
+    #     pts = sub[['emb_x','emb_y']].values
+    #     # compute alpha shape (concave hull). alpha parameter can be tuned
+    #     alpha = alphashape.optimizealpha(pts)
+    #     shape = alphashape.alphashape(pts, alpha)
+    #     # ensure shape is a Polygon
+    #     if isinstance(shape, Polygon):
+    #         xs, ys = shape.exterior.xy
+    #     else:
+    #         # if MultiPolygon, unify boundaries
+    #         union = unary_union(shape)
+    #         xs, ys = union.exterior.xy
+    #     # convert coordinate arrays to lists for Plotly
+    #     xs, ys = list(xs), list(ys)
+    #     fig.add_trace(go.Scatter(x=xs, y=ys,
+    #                              fill='toself', fillcolor=colors[i % len(colors)],
+    #                              line=dict(color=colors[i % len(colors)]),
+    #                              opacity=0.2, name=f'{g}-{role} region',
+    #                              hoverinfo='skip', showlegend=True))
 
-    fig.update_layout(title=f'Embedding visualization ({proj} + KMeans)',
-                      legend_title_text='Cluster')
-    fig.write_html(output_html, include_plotlyjs='cdn')
-    print(f"Saved visualization to {output_html}")
+    # # fig.update_layout(title=f'Embedding visualization ({proj} + KMeans)',
+    # #                   legend_title_text='Cluster')
+    # fig.update_layout(
+    #     title='Traces Colored by Score (Red=Bad, Green=Good)',
+    #     legend_title_text='Score',
+    #     legend=dict(
+    #         itemsizing='constant',
+    #         title_font=dict(size=14),
+    #         font=dict(size=12)
+    #     )
+    # )
+    # fig.write_html(output_html, include_plotlyjs='cdn')
+    # print(f"Saved visualization to {output_html}")
 
     # Second visualization: remove <thought> and <think> tags, then embed with tqdm
-    cleaned = [re.sub(r'<thought>.*?</thought>', '', t, flags=re.DOTALL) for t in texts]
+    cleaned = [re.sub(r'<thought>.*?</thought>', '', t, flags=re.DOTALL) for t in texts_anonymized]
     cleaned = [re.sub(r'<think>.*?</think>', '', t, flags=re.DOTALL) for t in cleaned]
     emb_stripped_file = out_path.parent / f"{out_path.stem}_embeddings_stripped.npy"
     if regenerate or not emb_stripped_file.exists():
@@ -115,8 +165,15 @@ def main(input_csv, output_html, n_clusters=None, proj='umap', regenerate=False)
         emb2 = TSNE(n_components=2, init='random', random_state=42).fit_transform(embeddings2)
     df2 = df.copy()
     df2['emb_x'], df2['emb_y'], df2['cluster'] = emb2[:,0], emb2[:,1], clusters2
-    fig2 = px.scatter(df2, x='emb_x', y='emb_y', color=df2['cluster'].astype(str),
-                      hover_data=['json_file_name','player_name','player_role'])
+    fig2 = px.scatter(
+        df2,
+        x='emb_x',
+        y='emb_y',
+        color='color',
+        size='size',
+        # color=df2['cluster'].astype(str),
+        hover_data=['json_file_name','player_name','player_role']
+    )
     for i, (g, role) in enumerate(group_pairs):
         sub2 = df2[(df2['json_file_name']==g)&(df2['player_role']==role)]
         if len(sub2) < 4:
@@ -140,8 +197,18 @@ def main(input_csv, output_html, n_clusters=None, proj='umap', regenerate=False)
                                   line=dict(color=colors[i % len(colors)]),
                                   opacity=0.2, name=f'{g}-{role} region',
                                   hoverinfo='skip', showlegend=True))
-    fig2.update_layout(title=f'Stripped tags visualization ({proj} + KMeans)',
-                       legend_title_text='Cluster')
+    # fig2.update_layout(title=f'Stripped tags visualization ({proj} + KMeans)',
+    #                    legend_title_text='Cluster')
+    fig2.update_traces(marker=dict(line=dict(width=0)))
+    fig2.update_layout(
+        title='Embeddings Colored by Score (Red=Bad, Green=Good)',
+        legend_title_text='Score',
+        legend=dict(
+            itemsizing='constant',
+            title_font=dict(size=14),
+            font=dict(size=12)
+        )
+    )
     out_html2 = output_html.replace('.html', '_stripped.html')
     fig2.write_html(out_html2, include_plotlyjs='cdn')
     print(f"Saved stripped visualization to {out_html2}")

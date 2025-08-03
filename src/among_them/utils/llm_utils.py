@@ -1,8 +1,8 @@
 import re
 from typing import List, Optional, Tuple
 
-from among_them.config import USE_MLX
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
+from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
+from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 
 
@@ -31,60 +31,115 @@ def create_llm_prompts(actions: List[Action], history_str: str) -> Tuple[str, st
     return system_prompt, prompt
 
 
-
-
 def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, Optional[str]]:
     """
     Invoke the LLM with the given prompts and handle exceptions.
-    
+
     Args:
         system_prompt: The system prompt to use
         prompt: The user prompt to send to the LLM
-        model_name: The name of the LLM model to use
-    
+        model_name: The model name to use
+
     Returns:
         Tuple of (response_text, chain_of_thought)
-    
+
     Raises:
         ValueError: If no chain of thought is found in the response
     """
-    # Debug print
-    print("\n\033[93mSystem Prompt:\033[0m") #yellow
-    print("\033[91m" + system_prompt + "\033[0m") #green
-    print("\033[93mUser Prompt:\033[0m") #yellow
-    print("\033[92m" + prompt + "\033[0m") #green
-
-    # Build messages list
     messages = [
         {"role": "user", "content": system_prompt + "\n" + prompt},
     ]
 
-    # Generate raw output via MLX or streaming chat
-    raw = "<think>" if USE_MLX else ""
+    # Print chat history
+    print("\n\nChat history:\n")
+    for message in messages:
+        print(f"{message['role']}: {message['content']}")
+
+    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
+    raw_reasoning = ""
+    raw_content = ""
+    
     try:
-        if USE_MLX:
+        if LLM_BACKEND == LLMBackend.MLX:
             from mlx_lm import stream_generate
             from mlx_lm.sample_utils import make_sampler
             from among_them.config import MLX_MODEL, MLX_TOKENIZER
-            model, tokenizer = (MLX_MODEL, MLX_TOKENIZER)
+
+            model, tokenizer = MLX_MODEL, MLX_TOKENIZER
             prompt_chat = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
             chunks = stream_generate(
                 model, tokenizer, prompt=prompt_chat,
                 max_tokens=2000, sampler=make_sampler(temp=0.0)
             )
-        else:
+            
+        elif LLM_BACKEND == LLMBackend.OLLAMA:
             from ollama import chat
-            # Streaming Ollama chat
             chunks = chat(model=model_name, messages=messages, stream=True)
+            
+        elif LLM_BACKEND == LLMBackend.OPENROUTER:
+            from openai import OpenAI
+
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=OPENROUTER_API_KEY,
+            )
+
+            response = client.chat.completions.create(
+                model=OPENROUTER_MODEL_NAME,
+                messages=messages,
+                stream=True
+            )
+            chunks = response
+            
+        elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
+            # Use Ollama to run the GGUF model instead of direct HuggingFace transformers
+            # This avoids Windows encoding issues and handles GGUF models natively
+            import ollama
+            
+            # Use the GGUF model via Ollama
+            
+            print(f"Using Ollama with GGUF model: {model_name}")
+            
+            response = ollama.chat(
+                model=HUGGINGFACE_MODEL_NAME,
+                messages=messages,
+                stream=True
+            )
+            chunks = response
+        
+        else:
+            raise ValueError(f"Unsupported LLM backend: {LLM_BACKEND}")
 
         for chunk in chunks:
-            content = chunk["message"]["content"] if not USE_MLX else chunk.text
-            print("\033[94m" + content + "\033[0m", end="", flush=True)
-            raw += content
-            # Count all non-<think> tags; Hallucination Early Check (HEC) System
-            all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
-            if len(all_tags) > 2:
-                raise Exception("LLM did hallucinate")
+            if LLM_BACKEND == LLMBackend.MLX:
+                content = chunk.text
+                raw += content
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                
+            elif LLM_BACKEND in [LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+                content = chunk["message"]["content"]
+                raw += content
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                
+            elif LLM_BACKEND == LLMBackend.OPENROUTER:
+                try:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        raw_content += content
+                        print("\033[94m" + content + "\033[0m", end="", flush=True)
+                    
+                    reasoning = chunk.choices[0].delta.reasoning
+                    if reasoning:
+                        raw_reasoning += reasoning
+                        print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
+                except:
+                    print("\n\033[91mError parsing OpenRouter response\033[0m")
+            
+            # Check for hallucination (only for local backends that use raw)
+            if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+                all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
+                if len(all_tags) > 2:
+                    raise Exception("LLM did hallucinate")
         print("")
 
     except KeyboardInterrupt:
@@ -92,17 +147,22 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         raise KeyboardInterrupt("User interrupted LLM generation")
 
     # Extract chain of thought and cleanup
-    cot = ""
-    cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
-    cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
-    if cot_match:
-        cot = cot_match.group(0)
-        response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
-    elif cot_match_end:
-        cot = cot_match_end.group(0)
-        response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
-    else:
-        raise ValueError("No chain of thought found in response")
+    if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+        cot = ""
+        cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
+        cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
+        if cot_match:
+            cot = cot_match.group(0)
+            response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+        elif cot_match_end:
+            cot = cot_match_end.group(0)
+            response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
+        else:
+            cot = ""
+            response_text = raw
+    else:  # OpenRouter
+        cot = "<think>\n" + raw_reasoning + "\n</think>"
+        response_text = raw_content
 
     return response_text, cot
 

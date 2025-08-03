@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+Analyzes voting statistics from SFT dataset traces.
+Optional analysis script - doesn't create files needed by other scripts.
+"""
+
 import pandas as pd
 import json
 
