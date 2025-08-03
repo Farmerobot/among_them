@@ -5,96 +5,80 @@ from among_them.game_config import GameConfig
 from among_them.models.history import History
 from among_them.models.location import Location
 from among_them.models.action import Action
-from among_them.models.end_game import EndGameReason
 from among_them.models.player_role import PlayerRole
 from among_them.models.action_type import ActionType
 from among_them.models.phase import GamePhase
 from among_them.models.tasks import get_impostor_tasks, get_crewmate_tasks
-from among_them.utils.phase_utils import get_phase_and_when_it_ends
 from among_them.utils.player_utils import get_players_in_room, get_last_player_action
 
 def initialize_history(players: List[Player], game_config: GameConfig) -> List[History]:
-    tasks = {}
-    for player in players:
-        tasks[player.name] = get_impostor_tasks() if player.role == PlayerRole.IMPOSTOR else get_crewmate_tasks(game_config)
+    """Create first history entry – a system message that the game started (TASK phase)."""
+    tasks = {p.name: (get_impostor_tasks() if p.role == PlayerRole.IMPOSTOR else get_crewmate_tasks(game_config)) for p in players}
 
     first_entry = History(
-        player_names_to_play_next = [p.name for p in players],
-        phase = GamePhase.GAME_START,
-        actions_until_phase_ends = 0,
-        location = Location.CAFETERIA,
-        impostor_cooldown = game_config.impostor_cooldown,
-        actions_agent_could_take = [],
-        spectators_who_saw = [player.name for player in players],
-        llm_cot = "",
-        llm_response = "",
-        token_usage = {},
-        action_taken = Action(ActionType.WAIT, "System", spectator="The game started"),
-        tasks_left_to_do = tasks,
-        votes_before_this_discussion_message = {},
-        alive_player_names = [p.name for p in players],
+        player_names_to_play_next=[p.name for p in players],
+        phase=GamePhase.TASKS,
+        actions_until_phase_ends=(game_config.num_task_phase_actions_per_player * len(players)),
+        location=Location.CAFETERIA,
+        impostor_cooldown=game_config.impostor_cooldown,
+        actions_agent_could_take=[],
+        spectators_who_saw=[p.name for p in players],
+        llm_cot="",
+        llm_response="",
+        token_usage={},
+        action_taken=Action(ActionType.SPEAK, "System", spectator="The game started"),
+        tasks_left_to_do=tasks,
+        votes_before_this_discussion_message={},
+        alive_player_names=[p.name for p in players],
     )
     return [first_entry]
 
-def end_game_history(history: List[History], players: List[Player], game_config: GameConfig, reason: EndGameReason) -> History:
+
+def create_system_message(
+    history: List[History], 
+    phase: GamePhase, 
+    text: str, 
+    game_config: GameConfig, 
+    alive_player_names: List[str],
+    ejected_player: str = "nobody",
+    no_more_actions: bool = False,
+):
+    """Append a generic system History entry with given phase and spectator text."""
+    actions_until_phase_ends = 0
+    if phase == GamePhase.TASKS:
+        actions_until_phase_ends = (game_config.num_task_phase_actions_per_player * len(alive_player_names))
+    elif phase == GamePhase.DISCUSS:
+        actions_until_phase_ends = (game_config.num_discuss_phase_actions_per_player * len(alive_player_names))
+    elif phase == GamePhase.VOTING:
+        actions_until_phase_ends = len(alive_player_names)
     return History(
-        player_names_to_play_next = [],
-        phase = GamePhase.GAME_END,
-        actions_until_phase_ends = 0,
-        location = Location.CAFETERIA,
-        impostor_cooldown = game_config.impostor_cooldown,
-        actions_agent_could_take = [],
-        spectators_who_saw = [p.name for p in players],
-        llm_cot = "",
-        llm_response = "",
-        token_usage = {},
-        action_taken = Action(ActionType.WAIT, "System", spectator=f"The game ended ({reason})"),
-        tasks_left_to_do = history[-1].tasks_left_to_do,
-        votes_before_this_discussion_message = {},
-        alive_player_names = [p.name for p in players],
-    )
-    
-def create_vote_history_entry(
-    history: List[History],
-    alive_players: List[Player],
-    ejected_player: str,
-    action_result: str,
-    action_type: ActionType,
-    game_config: GameConfig
-) -> History:
-    """
-    Create a new history entry for a vote action. 
-    
-    Args:
-        votes: dictionary of player name to voted for. This is for votes_before_this_discussion_message variable so that it includes votes after discussion.
-    
-    Returns:
-        A new history entry for the vote action.
-    """
-    return History(
-        player_names_to_play_next = [], # handled automatically
-        phase = GamePhase.VOTE_RESULTS,
-        actions_until_phase_ends = 0,
-        location = Location.CAFETERIA,
-        impostor_cooldown = game_config.impostor_cooldown,
-        actions_agent_could_take = [],
-        spectators_who_saw = [p.name for p in alive_players],
-        llm_cot = "",
-        llm_response = "",
-        token_usage = {},
-        action_taken = Action(type=action_type, player_name="System", target_player_name=ejected_player, spectator=action_result),
-        tasks_left_to_do = history[-1].tasks_left_to_do,
-        votes_before_this_discussion_message = {},
-        alive_player_names = [p.name for p in alive_players if p.name != ejected_player],
+        player_names_to_play_next=alive_player_names.copy(),
+        phase=phase,
+        actions_until_phase_ends=0 if no_more_actions else actions_until_phase_ends,
+        location=Location.CAFETERIA,
+        impostor_cooldown=game_config.impostor_cooldown,
+        actions_agent_could_take=[],
+        spectators_who_saw=alive_player_names.copy(),
+        llm_cot="",
+        llm_response="",
+        token_usage={},
+        action_taken = Action(
+            type=ActionType.SPEAK if ejected_player == "nobody" else ActionType.KILL,
+            player_name="System", 
+            target_player_name=ejected_player if ejected_player != "nobody" else None, 
+            spectator=text
+        ),
+        tasks_left_to_do={k: v.copy() for k, v in history[-1].tasks_left_to_do.items()},
+        votes_before_this_discussion_message={},
+        alive_player_names=alive_player_names.copy(),
     )
 
 def get_action_history_str(history: List[History], players: List[Player], player: Player, game_config: GameConfig, phase: Optional[GamePhase] = None) -> str:
-    """Returns all actions seen by agent and actions that agent saw/spectated in history in order."""
-    if phase is None:
-        try:
-            phase, _ = get_phase_and_when_it_ends(history, game_config, players)
-        except:
-            phase = GamePhase.TASK
+    """
+    DEPRECATED: see prompt_utils.py
+    Returns all actions seen by agent and actions that agent saw/spectated in history in order.
+    """
+    phase = history[-1].phase
     players_in_room = get_players_in_room(history, players, player)
     alive_players = [p for p in players if p.name in history[-1].alive_player_names]
     location = get_last_player_action(history, player).location
@@ -162,7 +146,7 @@ def get_action_history_str(history: List[History], players: List[Player], player
     # Current game state
     history_str += "<current_state>\n"
     other_players = [p.name for p in players_in_room if p.name != player.name]
-    if phase == GamePhase.TASK:
+    if phase == GamePhase.TASKS:
         if len(other_players) == 0:
             history_str += "<companions>none</companions>\n"
             history_str += f"<location>{location.value}</location>\n"

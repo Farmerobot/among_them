@@ -5,10 +5,13 @@ from among_them.models.player import Player
 from among_them.models.end_game import EndGameReason
 from among_them.models.phase import GamePhase
 from among_them.models.player_role import PlayerRole
+from among_them.models.action_type import ActionType
 
 def get_end_game_reason(history: List[History], players: List[Player]) -> Optional[EndGameReason]:
-    last_history_item = history[-2] if history[-1].phase == GamePhase.GAME_END else history[-1]
-    if last_history_item.actions_until_phase_ends == 0 and last_history_item.phase == GamePhase.TASK:
+    last_history_item = history[-1]
+    if last_history_item.action_taken.spectator.startswith("The game ended"):
+        return EndGameReason(last_history_item.action_taken.spectator.split("(")[1].split(")")[0])
+    if last_history_item.actions_until_phase_ends == 0 and last_history_item.phase == GamePhase.TASKS and last_history_item.action_taken.type != ActionType.REPORT:
         return EndGameReason.NO_ACTIONS_LEFT
 
     alive_players = [p for p in players if p.name in last_history_item.alive_player_names]

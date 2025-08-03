@@ -1,6 +1,7 @@
 import json
 import random
 from typing import List, Optional
+import copy
 
 from among_them.config import STATE_FILE
 from among_them.game_jsonencoder import GameJSONEncoder, game_object_hook
@@ -14,13 +15,13 @@ from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 from among_them.utils.action_utils import (get_task_phase_actions,
                                            get_vote_actions)
-from among_them.utils.phase_utils import count_votes, determine_ejection_result, get_phase_and_when_it_ends
+from among_them.utils.phase_utils import count_votes, determine_ejection_result
 from among_them.utils.player_utils import (get_last_player_action,
                                            get_next_random_player,
                                            get_players_in_room)
 from among_them.utils.end_utils import get_end_game_reason
-from among_them.utils.history_utils import initialize_history, end_game_history, create_vote_history_entry
-from among_them.utils.prompt_utils import build_environment_prompt
+from among_them.utils.history_utils import initialize_history, create_system_message
+from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
 from among_them.game_config import GameConfig
 
 class GameEngine:
@@ -58,23 +59,26 @@ class GameEngine:
         """
         alive_player_names = self.history[-1].alive_player_names.copy()
         alive_players = [p for p in self.players if p.name in alive_player_names]
-        phase, actions_until_phase_ends = get_phase_and_when_it_ends(self.history, self.game_config, self.players)
+        phase = self.history[-1].phase # valid traces should have system messages that dictate current phase
+        actions_until_phase_ends = self.history[-1].actions_until_phase_ends - 1
 
-        if phase in [GamePhase.GAME_END, GamePhase.VOTE_RESULTS]:
-            return None
+        # If game ended no further player input is required.
+        if get_end_game_reason(self.history, self.players) is not None:
+            print("Game over! {}".format(get_end_game_reason(self.history, self.players)))
+            return None, None, None, None, None
 
         current_player, next_players = get_next_random_player(self.history, self.players)
         last_player_action = get_last_player_action(self.history, current_player)
         players_in_room = get_players_in_room(self.history, self.players, current_player)
 
         # Initialize fields for the History object
-        location = None # Default location
+        location = Location.CAFETERIA # Default location
         actions_player_can_take = []
         impostor_cooldown = 0
         if last_player_action:
             impostor_cooldown = max(0, last_player_action.impostor_cooldown - 1)
 
-        if phase == GamePhase.TASK:
+        if phase == GamePhase.TASKS:
             actions_player_can_take = get_task_phase_actions(current_player, self.history, self.players, self.game_config)
             if last_player_action:
                 location = last_player_action.location
@@ -85,7 +89,7 @@ class GameEngine:
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
             location = Location.CAFETERIA
         else:
-            return None
+            return None, None, None, None, None
 
         # Create a placeholder action for the current player
         placeholder_action = Action(player_name=current_player.name, type=ActionType.WAIT)
@@ -98,18 +102,18 @@ class GameEngine:
             location=location,
             impostor_cooldown=impostor_cooldown,
             actions_agent_could_take=[a.text for a in actions_player_can_take],
-            tasks_left_to_do=self.history[-1].tasks_left_to_do.copy(),
+            tasks_left_to_do={k: v.copy() for k, v in self.history[-1].tasks_left_to_do.items()},
             alive_player_names=alive_player_names,
             action_taken=placeholder_action, # Placeholder for current player
             spectators_who_saw=[p.name for p in players_in_room], # Represents players in room
-            llm_cot=None,
-            llm_response=None,
-            token_usage=None,
-            votes_before_this_discussion_message=None,
+            llm_cot="",
+            llm_response="",
+            token_usage={},
+            votes_before_this_discussion_message={},
         )
 
         # Build new environment-like prompt
-        environment_prompt = build_environment_prompt(
+        environment_prompt = reconstruct_environment_prompt_from_history(
             current_player, self.history, self.players, self.game_config
         )
         system_prompt = ""  # System context is included in environment_prompt
@@ -120,7 +124,7 @@ class GameEngine:
             for player in alive_players:
                 fake_voting_actions = get_vote_actions(self.history, self.players, player)
                 # Build environment prompt for voting phase
-                voting_prompt = build_environment_prompt(
+                voting_prompt = reconstruct_environment_prompt_from_history(
                     player, self.history, self.players, self.game_config
                 )
                 pre_discussion_vote_prompts.append({
@@ -132,7 +136,7 @@ class GameEngine:
 
         return turn_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts
 
-    def step(self, turn_context: History, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = None, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
+    def step(self, turn_context: History, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = {}, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
         """Executes a single player action and updates the game state using pre-calculated context.
 
         Args:
@@ -152,7 +156,7 @@ class GameEngine:
         if current_player is None:
             raise ValueError(f"Current player {current_player_name} not found.")
 
-        alive_player_names = turn_context.alive_player_names.copy()
+        alive_player_names = [p for p in turn_context.alive_player_names]
         players_in_room_names = turn_context.spectators_who_saw.copy()
         location = turn_context.location
 
@@ -163,8 +167,9 @@ class GameEngine:
         if action_taken.type == ActionType.SPEAK:
             action_taken.result = f"[{current_player.name}]: {llm_response}"
             action_taken.spectator = f"[{current_player.name}]: {llm_response}"
+            spectators_who_saw = alive_player_names
 
-        tasks_left_to_do = self.history[-1].tasks_left_to_do.copy()
+        tasks_left_to_do = {k: v.copy() for k, v in self.history[-1].tasks_left_to_do.items()}
         if action_taken.type == ActionType.TASK:
             tasks_left_to_do[current_player.name].remove(action_taken.target_task) # type: ignore
         elif action_taken.type == ActionType.MOVE:
@@ -172,7 +177,9 @@ class GameEngine:
             new_players_in_room = get_players_in_room(self.history, self.players, current_player, location)
             spectators_who_saw = list(set(players_in_room_names + [p.name for p in new_players_in_room]))
 
+        cooldown = turn_context.impostor_cooldown
         if action_taken.type == ActionType.KILL:
+            cooldown = self.game_config.impostor_cooldown
             alive_player_names.remove(action_taken.target_player_name) # type: ignore
 
         new_history_item = turn_context.copy(
@@ -184,54 +191,80 @@ class GameEngine:
             tasks_left_to_do=tasks_left_to_do,
             votes_before_this_discussion_message=pre_discussion_votes or {},
             alive_player_names=alive_player_names,
-            location=location
+            location=location,
+            impostor_cooldown=cooldown
         )
 
         self.history.append(new_history_item)
+
+        # Handle phase change
+        if action_taken.type == ActionType.REPORT: # if report start discussion
+            self.history.append(
+                create_system_message(
+                    history=self.history,
+                    phase=GamePhase.DISCUSS,
+                    text="It is discussion phase now. Discuss who to eject from the game.",
+                    game_config=self.game_config,
+                    alive_player_names=alive_player_names,
+                )
+            )
+        if new_history_item.phase == GamePhase.DISCUSS and new_history_item.actions_until_phase_ends == 0:
+            self.history.append(
+                create_system_message(
+                    history=self.history,
+                    phase=GamePhase.VOTING,
+                    text="Discussion ended. Voting phase started. Vote who to eject from the game.",
+                    game_config=self.game_config,
+                    alive_player_names=alive_player_names,
+                )
+            )
+        elif new_history_item.phase == GamePhase.VOTING and new_history_item.actions_until_phase_ends == 0:
+            vote_counts, _ = count_votes(self.history)
+            ejected_player, action_type = determine_ejection_result(vote_counts)
+
+            # Message with vote outcome (still VOTING phase)
+            self.history.append(
+                create_system_message(
+                    history=self.history,
+                    phase=GamePhase.VOTING,
+                    text=f"{ejected_player} was voted out.",
+                    ejected_player=ejected_player,
+                    game_config=self.game_config,
+                    alive_player_names=[p for p in alive_player_names if p != ejected_player],
+                    no_more_actions=True
+                )
+            )
+            # Remove ejected player from alive list if needed
+            if ejected_player != "nobody" and ejected_player in alive_player_names:
+                alive_player_names.remove(ejected_player)
+
+            # Message that tasks resume (TASK phase)
+            self.history.append(
+                create_system_message(
+                    history=self.history,
+                    phase=GamePhase.TASKS,
+                    text="Everyone is in the cafeteria and start from there. It is task phase now.",
+                    game_config=self.game_config,
+                    alive_player_names=alive_player_names,
+                )
+            )
+
         self.save_state()
 
         end_reason = get_end_game_reason(self.history, self.players)
         if end_reason:
-            self.history.append(end_game_history(self.history, self.players, self.game_config, end_reason))
+            self.history.append(
+                create_system_message(
+                    history=self.history,
+                    phase=GamePhase.TASKS,
+                    text=f"The game ended ({end_reason})",
+                    game_config=self.game_config,
+                    alive_player_names=self.history[-1].alive_player_names,
+                    no_more_actions=True
+                )
+            )
             self.save_state()
             return True, end_reason
-
-        return False, None
-
-    def handle_automatic_transitions(self) -> tuple[bool, Optional[EndGameReason]]:
-        """Handles automatic game state transitions that don't require player input.
-
-        This includes processing vote results and checking for game-end conditions.
-
-        Returns:
-            True and end game reason if the game is over, False otherwise.
-        """
-        alive_player_names = self.history[-1].alive_player_names.copy()
-        alive_players = [p for p in self.players if p.name in alive_player_names]
-        phase, _ = get_phase_and_when_it_ends(self.history, self.game_config, self.players)
-
-        if phase == GamePhase.GAME_END:
-            reason = get_end_game_reason(self.history, self.players)
-            if reason is None:
-                raise ValueError("Game ended with no reason")
-            if self.history[-1].phase != GamePhase.GAME_END:
-                self.history.append(end_game_history(self.history, self.players, self.game_config, reason))
-                self.save_state()
-            return True, reason
-        elif phase == GamePhase.VOTE_RESULTS:
-            vote_counts, _ = count_votes(self.history)
-            ejected_player, action_type = determine_ejection_result(vote_counts)
-
-            self.history.append(create_vote_history_entry(
-                history=self.history,
-                alive_players=alive_players,
-                ejected_player=ejected_player,
-                action_result=f"{ejected_player} was voted out.",
-                action_type=action_type,
-                game_config=self.game_config
-            ))
-            self.save_state()
-            return False, None
 
         return False, None
 

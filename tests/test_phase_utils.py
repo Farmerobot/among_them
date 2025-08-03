@@ -47,11 +47,10 @@ class TestPhaseUtils(unittest.TestCase):
         phase, actions_left = get_phase_and_when_it_ends(
             history=self.history[:task_phase_idx+1],
             game_config=self.game_config,
-            players=self.players
         )
         
         # Verify phase is TASK and actions left is correct
-        self.assertEqual(phase, GamePhase.TASK, "Phase should be TASK")
+        self.assertEqual(phase, GamePhase.TASKS, "Phase should be TASK")
         self.assertGreaterEqual(actions_left, 0, "Actions left should be non-negative")
     
     def test_get_phase_and_when_it_ends_after_report(self):
@@ -66,7 +65,6 @@ class TestPhaseUtils(unittest.TestCase):
         phase, actions_left = get_phase_and_when_it_ends(
             history=self.history[:report_phase_idx+1],
             game_config=self.game_config,
-            players=self.players
         )
         
         # Verify phase is DISCUSS after a report
@@ -80,7 +78,6 @@ class TestPhaseUtils(unittest.TestCase):
         next_phase, actions_left = get_phase_and_when_it_ends(
             history=self.history[:vote_results_idx+1],
             game_config=self.game_config,
-            players=self.players
         )
         self.assertEqual(next_phase, GamePhase.GAME_END, "After VOTE_RESULTS phase should come GAME_END phase since there are no impostors left")
         self.assertEqual(actions_left, 0, "No actions left after GAME_END phase")
@@ -95,7 +92,7 @@ class TestPhaseUtils(unittest.TestCase):
             previous_phase=self.history[last_game_start_idx].phase,
             game_config=self.game_config
         )
-        self.assertEqual(next_phase, GamePhase.TASK, "After GAME_START phase should come TASK phase")
+        self.assertEqual(next_phase, GamePhase.TASKS, "After GAME_START phase should come TASK phase")
         self.assertEqual(actions_left, len(self.history[last_game_start_idx].alive_player_names)*self.game_config.num_task_phase_actions_per_player-1, "TASK phase should have all alive players left")
 
         # Test transition from DISCUSS to VOTE

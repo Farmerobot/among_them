@@ -1,8 +1,4 @@
-from typing import List, Tuple
-
 from among_them.config import OLLAMA_LLM_MODEL_NAME
-from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
-from among_them.models.action import Action, ActionType
 from among_them.models.player_role import PlayerRole
 
 

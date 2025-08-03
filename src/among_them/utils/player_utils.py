@@ -35,8 +35,11 @@ def get_next_random_player(
 
 
 def get_last_player_action(history: List[History], player: Player) -> History:
+    """Returns the last action taken by the player. Used to get the player's last location and impostor cooldown."""
     for i in range(len(history) - 1, -1, -1):
         if history[i].action_taken.player_name == player.name:
+            return history[i]
+        elif history[i].action_taken.spectator.startswith("Everyone is in the cafeteria and start from there"):
             return history[i]
     return history[0]
 

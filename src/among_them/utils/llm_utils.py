@@ -2,7 +2,7 @@ import re
 from typing import List, Optional, Tuple
 
 from among_them.config import USE_MLX
-from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
+from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 
 
@@ -16,7 +16,6 @@ def create_llm_prompts(actions: List[Action], history_str: str) -> Tuple[str, st
     """
     system_prompt = UNIVERSAL_SYSTEM_PROMPT
     prompt = history_str
-    prompt += RULES
 
     # Add available actions to prompt if needed
     if actions and actions[0].type != ActionType.SPEAK:
