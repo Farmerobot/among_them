@@ -95,7 +95,7 @@ class History:
         # Actor and action icon
         actor = f'{COLORS["yellow"]}{self.action_taken.spectator}{RESET}'
         icon_map = {
-            ActionType.WAIT: "·",
+            # ActionType.WAIT: "·",
             ActionType.MOVE: "→",
             ActionType.TASK: "✓",
             ActionType.KILL: "×",

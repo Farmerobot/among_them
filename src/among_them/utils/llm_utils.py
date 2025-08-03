@@ -2,7 +2,7 @@ import re
 from typing import List, Optional, Tuple
 
 from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
-from among_them.llm_prompts import RULES, UNIVERSAL_SYSTEM_PROMPT
+from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
 
 
@@ -172,9 +172,13 @@ def normalize_and_check_action_valid(
     """Check if the chosen action is valid and return its index"""
     chosen_action = chosen_action.strip().lower()
     available_actions = [a.lower() for a in available_actions]
+    
     for action in range(len(available_actions) - 1, -1, -1): 
         if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
             return action, available_actions[action]
+        if available_actions[action].startswith("pretend"):
+            if re.search(rf"\b{re.escape(available_actions[action].split(": ")[1])}\b", chosen_action, re.IGNORECASE) or re.search(rf"\b{re.escape("pretend")}\b", chosen_action, re.IGNORECASE):
+                return action, available_actions[action]
 
     warning_str = (
         f"LLM did not conform to output format. "

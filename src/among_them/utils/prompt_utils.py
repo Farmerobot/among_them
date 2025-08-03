@@ -239,9 +239,9 @@ def reconstruct_environment_prompt_from_history(
             ))
             
             # Add LLM generation if this was the player's turn and we have the response
-            if hist_entry.llm_response and hist_entry.llm_cot:
+            if hist_entry.action_taken.text and hist_entry.llm_cot:
                 # Add the player's LLM output (think + action tags)
-                llm_output = hist_entry.llm_cot + hist_entry.llm_response
+                llm_output = hist_entry.llm_cot + hist_entry.action_taken.text
                 prompt_parts.append(llm_output)
 
         # Add observations about what happened (for everyone)
