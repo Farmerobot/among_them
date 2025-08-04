@@ -33,4 +33,4 @@ class Player:
         else:
             self.llm_model_name = llm_model_name
             
-        print(f"Using LLM backend: {LLM_BACKEND.value} with model: {self.llm_model_name}")
+        # print(f"Using LLM backend: {LLM_BACKEND.value} with model: {self.llm_model_name}")
