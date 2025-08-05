@@ -36,7 +36,7 @@ class GameEngine:
     game_config: GameConfig = GameConfig()
     file_path: str = STATE_FILE
 
-    def __init__(self, game_config: GameConfig = GameConfig(), file_path: str = None):
+    def __init__(self, game_config: GameConfig = GameConfig(), file_path: Optional[str] = None):
         player_names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack", "Jill", "Katie", "Liam", "Mia", "Nathan", "Olivia", "Pete", "Quinn", "Riley", "Samantha", "Tom", "Uma", "Victor", "Wendy", "Xander", "Yara", "Zack"]
         self.players = [Player(name) for name in player_names[:game_config.num_players]]
         self.check_players_set_impostors(game_config.num_impostors)
@@ -108,7 +108,7 @@ class GameEngine:
             return None, None, None, None, None
 
         # Create a placeholder action for the current player
-        placeholder_action = Action(player_name=current_player.name, type=ActionType.SPEAK, text="")
+        placeholder_action = Action(player_name=current_player.name, type=ActionType.SPEAK, target_message="placeholder")
 
         # Create the incomplete History object
         turn_history = History(
@@ -117,11 +117,11 @@ class GameEngine:
             actions_until_phase_ends=actions_until_phase_ends,
             location=location,
             impostor_cooldown=impostor_cooldown,
-            actions_agent_could_take=[a.text for a in actions_player_can_take],
+            actions_agent_could_take=[a.set_stories().command_perspective for a in actions_player_can_take],
             tasks_left_to_do={k: v.copy() for k, v in self.history[-1].tasks_left_to_do.items()},
             alive_player_names=alive_player_names,
             action_taken=placeholder_action, # Placeholder for current player
-            spectators_who_saw=[p.name for p in players_in_room], # Represents players in room
+            spectators_who_saw=[p.name for p in players_in_room],
             llm_cot="",
             llm_response="",
             token_usage={},
@@ -181,8 +181,7 @@ class GameEngine:
             spectators_who_saw = alive_player_names
 
         if action_taken.type == ActionType.SPEAK:
-            action_taken.result = f"[{current_player.name}]: {llm_response}"
-            action_taken.spectator = f"[{current_player.name}]: {llm_response}"
+            action_taken.target_message = llm_response
             spectators_who_saw = alive_player_names
 
         tasks_left_to_do = {k: v.copy() for k, v in self.history[-1].tasks_left_to_do.items()}

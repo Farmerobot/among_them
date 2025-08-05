@@ -16,6 +16,13 @@ class GameJSONEncoder(json.JSONEncoder):
             return {"__enum__": obj.value}
         if hasattr(obj, "__dict__"):
             obj_dict = obj.__dict__.copy()
+            # Remove empty/null fields
+            obj_dict = {k: v for k, v in obj_dict.items() if v is not None and v != ""}
+            # Remove perspective fields for Action objects
+            if obj.__class__.__name__ == "Action":
+                perspective_fields = ["agent_perspective", "observer_perspective", "global_perspective", "command_perspective"]
+                for field in perspective_fields:
+                    obj_dict.pop(field, None)
             obj_dict["__class__"] = obj.__class__.__name__
             obj_dict["__module__"] = obj.__class__.__module__
             return obj_dict

@@ -222,6 +222,6 @@ def parse_llm_response_to_action(
         return 0, response_text
     else:
         action_idx, _ = normalize_and_check_action_valid(
-            [action.text for action in actions], llm_response
+            [action.set_stories().command_perspective for action in actions], llm_response
         )
         return action_idx, llm_response

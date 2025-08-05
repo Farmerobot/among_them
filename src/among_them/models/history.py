@@ -81,7 +81,9 @@ class History:
             alive_players_str = f'[{",".join(player_task_info)}] '
 
         # Phase segment (override to green if game ended)
-        if self.action_taken.spectator.startswith("The game ended"):
+        # For system messages, check the target_message
+        if (self.action_taken.player_name == "System" and
+            self.action_taken.target_message.startswith("The game ended")):
             phase_color = COLORS["green"]
         else:
             phase_color_map = {
@@ -93,7 +95,11 @@ class History:
         phase_str = f"{phase_color}[{self.phase.name} {self.actions_until_phase_ends}]{RESET}"
 
         # Actor and action icon
-        actor = f'{COLORS["yellow"]}{self.action_taken.spectator}{RESET}'
+        # Call set_stories if needed to ensure perspectives are populated
+        self.action_taken.set_stories()
+        
+        actor_text = self.action_taken.global_perspective
+        actor = f'{COLORS["yellow"]}{actor_text}{RESET}'
         icon_map = {
             ActionType.WAIT: "·",
             ActionType.MOVE: "→",

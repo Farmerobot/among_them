@@ -7,7 +7,10 @@ from among_them.models.phase import GamePhase
 def get_last_voting_action_idx(history: List[History]) -> int:
     """Return index after the vote-result system message (now the final VOTING entry)."""
     for i in range(len(history) - 1, -1, -1):
-        if history[i].phase == GamePhase.VOTING and history[i].action_taken.spectator.endswith("was voted out."):
+        # Check if this is a system message indicating someone was voted out
+        if (history[i].phase == GamePhase.VOTING and 
+            history[i].action_taken.player_name == "System" and
+            history[i].action_taken.target_message.endswith("was voted out.")):
             return i + 1
     return 0
 

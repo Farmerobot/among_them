@@ -12,7 +12,10 @@ from pathlib import Path
 
 from among_them.config import STATE_FILE
 from among_them.game_engine import GameEngine
+from among_them.models.action import Action
+from among_them.models.action_type import ActionType
 from among_them.models.history import History
+from among_them.utils.end_utils import get_end_game_reason
 from among_them.utils.llm_utils import parse_llm_response_to_action
 from among_them.game_config import GameConfig
 
@@ -121,10 +124,9 @@ def replay_game(json_file: Path, output_folder: Path):
         
         # Ensure available actions match between replay and original game
         # This ensures action consistency between the original game and the replay
-        original_actions = getattr(history_item, 'actions_agent_could_take', [])
-        without_wait_texts = sorted([a.text for a in actions_player_can_take if a.text != "wait"])
+        original_actions = history_item.actions_agent_could_take
         original_texts = sorted([a for a in original_actions])
-        can_take_texts = sorted([a.text for a in actions_player_can_take])
+        can_take_texts = sorted([a.set_stories().command_perspective for a in actions_player_can_take])
         # if can_take_texts != original_texts and without_wait_texts != original_texts:
         #     if "wait" in original_texts:
         #         print(f"Warning: Action mismatch at action {i}")
@@ -135,30 +137,37 @@ def replay_game(json_file: Path, output_folder: Path):
         #         print(f"Current actions: {without_wait_texts}")
         #         print(f"Original actions: {original_texts}")
         if "wait" not in original_texts:
-            turn_context_history.actions_agent_could_take = [a.text for a in actions_player_can_take if a.text != "wait"]
+            turn_context_history.actions_agent_could_take = [a.set_stories().command_perspective for a in actions_player_can_take if a.set_stories().command_perspective != "wait"]
             # print(turn_context_history.actions_agent_could_take)
+        elif "wait" in original_texts and "wait" not in can_take_texts:
+            actions_player_can_take.append(Action(type=ActionType.WAIT, player_name=history_item.action_taken.player_name))
+            turn_context_history.actions_agent_could_take = [a.set_stories().command_perspective for a in actions_player_can_take]
         
         # For pre-discussion votes, we use the recorded data directly (as requested)
         # These are already dicts and don't need to be gathered again
-        pre_discussion_votes = getattr(history_item, 'votes_before_this_discussion_message', {})
+        pre_discussion_votes = history_item.votes_before_this_discussion_message
         
         # Extract LLM data from history
-        llm_response = getattr(history_item, 'llm_response', '')
-        llm_cot = getattr(history_item, 'llm_cot', '')
-        token_usage = getattr(history_item, 'token_usage', {})
-        
-        # Get the action that was taken in the original game
-        action_taken_obj = getattr(history_item, 'action_taken', None)
-        if not action_taken_obj:
-            print(f"No action found in history item {i}")
-            continue
+        llm_response = history_item.llm_response
+        if not getattr(history_item, "llm_cot", None) and json_file.name == "test_game.json":
+            history_item.llm_cot = "cot"
+        llm_cot = history_item.llm_cot
+        token_usage = history_item.token_usage
             
         # Parse the action using the same function as manual_llm_game.py
-        current_player_name = turn_context_history.action_taken.player_name
-        action_idx, response_text = parse_llm_response_to_action(
-            actions_player_can_take, llm_response, current_player_name
-        )
-        action_taken = actions_player_can_take[action_idx]
+        # current_player_name = turn_context_history.action_taken.player_name
+        # action_idx, response_text = parse_llm_response_to_action(
+        #     actions_player_can_take, llm_response, current_player_name
+        # )
+        if actions_player_can_take[0].type == ActionType.SPEAK and history_item.action_taken.type == ActionType.SPEAK and getattr(history_item.action_taken, "target_message", None):
+            actions_player_can_take[0].target_message = history_item.action_taken.target_message
+        try:
+            action_taken = [a for a in actions_player_can_take if a == history_item.action_taken][0]
+        except Exception as e:
+            print(e)
+            print(history_item.action_taken)
+            print(actions_player_can_take)
+
         # print(f"Action parsed: {action_taken.type.name} by {current_player_name}")
             
         # Step the environment with recorded LLM data (same as manual_llm_game.py)
@@ -178,7 +187,10 @@ def replay_game(json_file: Path, output_folder: Path):
                 old_history_length += 1
             
             if game_over:
-                # print(f"Game over! Reason: {end_reason}")
+                print(f"Game over! Reason: {end_reason} {json_file}")
+                # old_reason = get_end_game_reason_old(engine.history, engine.players)
+                # print(f"Old reason: {old_reason}")
+                # assert end_reason == old_reason
                 break
                 
         except Exception as e:

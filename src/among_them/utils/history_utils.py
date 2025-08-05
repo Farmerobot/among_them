@@ -26,7 +26,7 @@ def initialize_history(players: List[Player], game_config: GameConfig) -> List[H
         llm_cot="",
         llm_response="",
         token_usage={},
-        action_taken=Action(ActionType.SPEAK, "System", spectator="The game started"),
+        action_taken=Action(ActionType.SPEAK, "System", target_message="The game started"),
         tasks_left_to_do=tasks,
         votes_before_this_discussion_message={},
         alive_player_names=[p.name for p in players],
@@ -66,7 +66,7 @@ def create_system_message(
             type=ActionType.SPEAK if ejected_player == "nobody" else ActionType.KILL,
             player_name="System", 
             target_player_name=ejected_player if ejected_player != "nobody" else None, 
-            spectator=text
+            target_message=text
         ),
         tasks_left_to_do={k: v.copy() for k, v in history[-1].tasks_left_to_do.items()},
         votes_before_this_discussion_message={},
@@ -133,14 +133,14 @@ def get_action_history_str(history: List[History], players: List[Player], player
                     cot_without_think_tags = h.llm_cot.replace("<think>", "<thought>").replace("</think>", "</thought>")
                     history_str += f"<player_thought>{cot_without_think_tags}</player_thought>\n"
                 if h.action_taken.type == ActionType.SPEAK:
-                    history_str += f"<action type=\"player_message\">{h.action_taken.spectator}</action>\n"
+                    history_str += f"<action type=\"player_message\">{h.action_taken.agent_perspective}</action>\n"
                 else:
-                    history_str += f"<action type=\"player_action\">{h.action_taken.result}</action>\n"
+                    history_str += f"<action type=\"player_action\">{h.action_taken.agent_perspective}</action>\n"
             elif player.name in h.spectators_who_saw:
                 if h.action_taken.type == ActionType.SPEAK:
-                    history_str += f"<action type=\"discussion\">{h.action_taken.spectator}</action>\n"
+                    history_str += f"<action type=\"discussion\">{h.action_taken.observer_perspective}</action>\n"
                 elif h.action_taken.type != ActionType.VOTE: # players cannot see others voting
-                    history_str += f"<action type=\"observed\">{h.action_taken.spectator}</action>\n"
+                    history_str += f"<action type=\"observed\">{h.action_taken.observer_perspective}</action>\n"
     history_str += "</game_history>\n\n"
 
     # Current game state

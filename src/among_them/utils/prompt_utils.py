@@ -92,30 +92,16 @@ def generate_action_observations(
     Returns:
         Observation string for the observing player
     """
+    # Call set_stories if needed to ensure perspectives are populated
+    action.set_stories()
+    
     if observing_player_name == action.player_name:
-        # Player took the action themselves - Add their action result
-        if action.type == ActionType.SPEAK:
-            # For SPEAK actions, the spectator field contains the actual speech content
-            return f"You said: {action.spectator}"
-        else:
-            return action.agent_perspective or action.result
+        return action.agent_perspective
+    elif (observing_player_name in spectators_who_saw):
+        # Players cannot see others voting
+        return action.observer_perspective if action.type != ActionType.VOTE else ""
     else:
-        # Someone else took the action
-        can_observe = (observing_player_name in spectators_who_saw)
-        
-        if can_observe:
-            if action.type == ActionType.SPEAK and not action.player_name == "System":
-                # For SPEAK actions, the spectator field contains the actual speech content
-                return f"Discussion: {action.spectator}"
-            elif action.type == ActionType.VOTE:
-                # Players cannot see others voting
-                return ""
-            else:
-                # Observed action - use observer_perspective if available, otherwise fallback to spectator
-                return action.observer_perspective or action.spectator
-        else:
-            # Player didn't see this action
-            return f"You did not see what {action.player_name} did during his next turn."
+        return f"You did not see what {action.player_name} did during his next turn."
 
 
 def get_observations_at_history_point(
@@ -239,9 +225,10 @@ def reconstruct_environment_prompt_from_history(
             ))
             
             # Add LLM generation if this was the player's turn and we have the response
-            if hist_entry.action_taken.text and hist_entry.llm_cot:
+            hist_entry.action_taken.set_stories()
+            if hist_entry.action_taken.command_perspective and hist_entry.llm_cot:
                 # Add the player's LLM output (think + action tags)
-                llm_output = hist_entry.llm_cot + hist_entry.action_taken.text
+                llm_output = hist_entry.llm_cot + hist_entry.action_taken.command_perspective
                 prompt_parts.append(llm_output)
 
         # Add observations about what happened (for everyone)

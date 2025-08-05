@@ -9,8 +9,10 @@ from among_them.models.action_type import ActionType
 
 def get_end_game_reason(history: List[History], players: List[Player]) -> Optional[EndGameReason]:
     last_history_item = history[-1]
-    if last_history_item.action_taken.spectator.startswith("The game ended"):
-        return EndGameReason(last_history_item.action_taken.spectator.split("(")[1].split(")")[0])
+    # For system messages, check the target_message
+    if last_history_item.action_taken.player_name == "System" and last_history_item.action_taken.target_message.startswith("The game ended"):
+        # Extract reason from target_message
+        return EndGameReason(last_history_item.action_taken.target_message.split("(")[1].split(")")[0])
     if last_history_item.actions_until_phase_ends == 0 and last_history_item.phase == GamePhase.TASKS and last_history_item.action_taken.type != ActionType.REPORT:
         return EndGameReason.NO_ACTIONS_LEFT
 
