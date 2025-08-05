@@ -151,7 +151,12 @@ def replay_game(json_file: Path, output_folder: Path):
         llm_response = history_item.llm_response
         if not getattr(history_item, "llm_cot", None) and json_file.name == "test_game.json":
             history_item.llm_cot = "cot"
-        llm_cot = history_item.llm_cot
+        try:
+            llm_cot = history_item.llm_cot
+        except Exception as e:
+            print(e)
+            print("NO COT DETECTED IN {json_file.name}")
+            llm_cot = "..."
         token_usage = history_item.token_usage
             
         # Parse the action using the same function as manual_llm_game.py
