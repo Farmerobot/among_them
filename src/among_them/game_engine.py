@@ -45,11 +45,14 @@ class GameEngine:
         if file_path is not None:
             self.file_path = file_path
 
-    def get_turn_context(self) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
+    def get_turn_context(self, player_name: Optional[str] = None) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
         """Gathers all necessary context for the current player's turn.
 
         This method calculates everything needed for a turn up-front to avoid
         redundant calculations in the step function.
+
+        Args:
+            player_name: Optional player name to set as current player for deterministic replay.
 
         Returns:
             A tuple containing:
@@ -69,7 +72,18 @@ class GameEngine:
             print("Game over! {}".format(get_end_game_reason(self.history, self.players)))
             return None, None, None, None, None
 
-        current_player, next_players = get_next_random_player(self.history, self.players)
+        current_player, next_player_names = get_next_random_player(self.history, self.players)
+        
+        # If player_name is provided, override the current player
+        if player_name is not None:
+            # Check if the player name is valid
+            valid_players = [current_player.name] + next_player_names
+            if player_name not in valid_players:
+                raise ValueError(f"Player {player_name} is not a valid player for this turn. Valid players: {valid_players}")
+            
+            # Set the current player to the passed one and next players as the rest
+            next_player_names = [p for p in valid_players if p != player_name]
+            current_player = [p for p in self.players if p.name == player_name][0]
         last_player_action = get_last_player_action(self.history, current_player)
         players_in_room = get_players_in_room(self.history, self.players, current_player)
 
@@ -98,7 +112,7 @@ class GameEngine:
 
         # Create the incomplete History object
         turn_history = History(
-            player_names_to_play_next=next_players,
+            player_names_to_play_next=next_player_names,
             phase=phase,
             actions_until_phase_ends=actions_until_phase_ends,
             location=location,
@@ -282,7 +296,7 @@ class GameEngine:
                 json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
                 f.write(json_str)
             
-            print(f"Game state saved to: {self.file_path}")
+            # print(f"Game state saved to: {self.file_path}")
         except Exception as e:
             print(f"ERROR saving game state to {self.file_path}: {e}")
             raise

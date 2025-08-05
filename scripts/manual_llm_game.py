@@ -50,7 +50,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
             print("Game over!")
             break
 
-        pre_discussion_votes = {}
+        pre_discussion_votes = {} # TODO proper prompt - add fake voting system message
         if pre_discussion_vote_prompts:
             print("--- Collecting Pre-Discussion Votes ---")
             for vote_prompt in pre_discussion_vote_prompts:

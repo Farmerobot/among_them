@@ -26,6 +26,14 @@ class Task:
     def __repr__(self):
         return self.name
 
+    def __eq__(self, other):
+        if not isinstance(other, Task):
+            return False
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 def get_crewmate_tasks(game_config: GameConfig) -> list[Task]:
     return get_short_tasks(game_config)

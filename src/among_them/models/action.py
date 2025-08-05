@@ -17,7 +17,8 @@ class Action:
         agent_perspective: str = "",
         observer_perspective: str = "",
         global_perspective: str = "",
-        # Keep old fields for backward compatibility during transition TODO: remove
+        # Keep old fields for backward compatibility during transition 
+        # TODO: remove
         result: str = "",
         spectator: str = "",
     ):
@@ -37,10 +38,11 @@ class Action:
         if (text == "" and agent_perspective == "" and observer_perspective == "" 
             and global_perspective == "" and result == "" and spectator == ""):
             self.set_stories()
+            
 
     def set_stories(self):
         if self.type == ActionType.MOVE:
-            self.text = f"move to {self.target_location.value}"
+            self.text = f"move to location {self.target_location.value}"
             self.agent_perspective = f"You are in {self.target_location.value}."
             self.observer_perspective = f"You saw {self.player_name} move to {self.target_location.value}."
             self.global_perspective = f"{self.player_name} moved to {self.target_location.value}."
@@ -56,7 +58,7 @@ class Action:
             self.result = f"You [{self.player_name}] are waiting"
             self.spectator = f"{self.player_name} waited"
         elif self.type == ActionType.TASK:
-            self.text = f"{self.target_task.name}"
+            self.text = f"complete task: {self.target_task.name}"
             self.agent_perspective = f"You completed the {self.target_task.name} task."
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} completed the {self.target_task.name} task."
@@ -64,7 +66,7 @@ class Action:
             self.result = f"You [{self.player_name}] completed task: {self.target_task.name}"
             self.spectator = f"{self.player_name} completed task: {self.target_task.name}"
         elif self.type == ActionType.REPORT:
-            self.text = f"report the dead body of {str(self.target_player_name)} and start a discussion"
+            self.text = f"report dead body of {str(self.target_player_name)} and start a discussion"
             self.agent_perspective = f"You reported the dead body of {str(self.target_player_name)} and started a discussion."
             self.observer_perspective = f"You saw {self.player_name} report the dead body of {str(self.target_player_name)} to everyone. Discussion started."
             self.global_perspective = f"A dead body was reported by {self.player_name}. Discussion started."
@@ -88,7 +90,7 @@ class Action:
             self.result = f"You [{self.player_name}] voted for {str(self.target_player_name)}"
             self.spectator = f"{self.player_name} voted for {self.target_player_name}"
         elif self.type == ActionType.PRETEND:
-            self.text = f"pretend to do task: {self.target_task.name}"
+            self.text = f"pretend doing task: {self.target_task.name}"
             self.agent_perspective = f"You pretended to do the {self.target_task.name} task."
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} pretended to do the {self.target_task.name} task."
