@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import json
-from create_sft_dataset import write_alpaca_json, format_num, write_jsonl
+from create_sft_dataset import write_alpaca_json, format_num
 import random
 import os
 
@@ -35,11 +35,16 @@ def main():
     with open(trace_analysis_file, "r") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
-            eval = json.loads(line)
-            score = eval[0]
-            scores.append(score)
-            if score >= TRACE_QUALITY_THRESHOLD:
-                quality_idx.append(i)
+            if line.strip() == "":
+                continue
+            try:
+                eval = json.loads(line)
+                score = eval[0]
+                scores.append(score)
+                if score >= TRACE_QUALITY_THRESHOLD:
+                    quality_idx.append(i)
+            except json.JSONDecodeError:
+                print(f"Failed to decode line {i}: {line}")
 
     quality_idx, scores = np.array(quality_idx), np.array(scores)
 
@@ -140,13 +145,13 @@ def main():
     # For Alpaca format, combine validation and test into a single eval set
     eval_data = all_results[train_size:]
     
-    # Write JSONL files
-    train_file = sft_data_dir / "train_sampled.jsonl"
-    valid_file = sft_data_dir / "valid_sampled.jsonl"
-    test_file = sft_data_dir / "test_sampled.jsonl"
-    write_jsonl(train_data, train_file)
-    write_jsonl(valid_data, valid_file)
-    write_jsonl(test_data, test_file)
+    # # Write JSONL files
+    # train_file = sft_data_dir / "train_sampled.jsonl"
+    # valid_file = sft_data_dir / "valid_sampled.jsonl"
+    # test_file = sft_data_dir / "test_sampled.jsonl"
+    # write_jsonl(train_data, train_file)
+    # write_jsonl(valid_data, valid_file)
+    # write_jsonl(test_data, test_file)
         
     # Write Alpaca JSON files
     alpaca_train_file = alpaca_data_dir / "among_them_train_sampled.json"
