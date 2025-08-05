@@ -3,7 +3,7 @@
 Simple script that:
 1. Loads each JSON file in the data folder
 2. Extracts discussion messages
-3. Gets the prompt using get_action_history_str
+3. Gets the prompt using reconstruct_environment_prompt_from_history
 4. Outputs a CSV file with the required fields
 """
 
@@ -20,9 +20,7 @@ from transformers import AutoTokenizer
 
 from among_them.game_engine import GameEngine
 from among_them.models.phase import GamePhase
-from among_them.utils.history_utils import get_action_history_str
-from among_them.models.action_type import ActionType
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
+from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
 from among_them.utils.phase_utils import count_votes
 
 CHARS_PER_TOKEN = 4 # Fallback if not using actual tokenizer
@@ -59,20 +57,12 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
                 raise ValueError(f"Player {player_name} not found in game")
         
         history_until_now = engine.history[:i]
-        history_str = get_action_history_str(
+        history_str = reconstruct_environment_prompt_from_history(
+            player, 
             history_until_now, 
             engine.players, 
-            player, 
             engine.game_config
         )
-        
-        # copied from player.py
-        if event.action_taken.type == ActionType.SPEAK:
-            history_str += "\n\nIt is discussion phase now. Respond to others in the following xml format: <message>message</message>"
-        else:
-            actions_text = "<available_actions>\n" + "\n".join(f"<action>{action}</action>" for action in event.actions_agent_could_take) + "\n</available_actions>"
-            history_str += f"\n\n{actions_text}\n"
-            history_str += "\n\nChoose one action. Respond in the following xml format: <action>action</action>"
 
         # Get votes before (from the current message)
         votes_before = {}
@@ -86,19 +76,18 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
             if next_event.votes_before_this_discussion_message and event.phase == GamePhase.DISCUSS:
                 votes_after = {p.name: next_event.votes_before_this_discussion_message.get(p.name, {}).get("voted_player", None) for p in engine.players if p.name in next_event.votes_before_this_discussion_message}
                 break
-            elif next_event.phase == GamePhase.VOTE_RESULTS and event.phase == GamePhase.DISCUSS:
+            elif next_event.phase == GamePhase.VOTING and event.phase == GamePhase.DISCUSS:
                 _, votes_after = count_votes(engine.history[:i+1+j])
                 break
             j += 1
         
         # Combine chain of thought and response if both exist
-        response = f"<message>{event.llm_response}</message>" if event.action_taken.type == ActionType.SPEAK else f"<action>{event.action_taken.text}</action>"
-        model_output = f"{event.llm_cot}\n{response}" # without first think tag https://huggingface.co/deepseek-ai/DeepSeek-R1/commit/8a58a132790c9935686eb97f042afa8013451c9f
+        model_output = f"{event.llm_cot}{event.action_taken.set_stories().command_perspective}"
         
         item_data = {
             "json_file_name": os.path.basename(file_path),
             "player_name": player_name,
-            "player_role": player.role.value, # type: ignore
+            "player_role": player.role.value,
             "votes_before": json.dumps(votes_before),
             "votes_after": json.dumps(votes_after),
             "prompt": history_str,
@@ -106,7 +95,7 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
         }
         
         if tokenizer_for_counting:
-            instruction_text_for_count = UNIVERSAL_SYSTEM_PROMPT + "\n" + history_str
+            instruction_text_for_count = history_str
             item_data['instruction_token_count_actual'] = len(tokenizer_for_counting.encode(instruction_text_for_count))
             item_data['output_token_count_actual'] = len(tokenizer_for_counting.encode(model_output))
         
@@ -114,16 +103,16 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
     
     return results
 
-
-def write_jsonl(data, output_file):
-    """Write data to a JSONL file in the format required for training."""
-    with open(output_file, 'w') as f:
-        for item in data:
-            conversation = [
-                {"role": "user", "content": UNIVERSAL_SYSTEM_PROMPT + "\n" + item["prompt"]},
-                {"role": "assistant", "content": item["model_cot_and_cleaned_output"]}
-            ]
-            f.write(json.dumps({"messages": conversation}) + "\n")
+# Unused for now
+# def write_jsonl(data, output_file):
+#     """Write data to a JSONL file in the format required for training."""
+#     with open(output_file, 'w') as f:
+#         for item in data:
+#             conversation = [
+#                 {"role": "user", "content": item["prompt"]},
+#                 {"role": "assistant", "content": item["model_cot_and_cleaned_output"]}
+#             ]
+#             f.write(json.dumps({"messages": conversation}) + "\n")
 
 
 def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
@@ -135,7 +124,7 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
     max_output_tokens = 0
 
     for item in data:
-        instruction_text = UNIVERSAL_SYSTEM_PROMPT + "\n" + item["prompt"]
+        instruction_text = item["prompt"]
         output_text = item["model_cot_and_cleaned_output"]
         
         instruction_tokens_count = 0
@@ -195,14 +184,14 @@ def calculate_and_plot_token_metrics(all_results, output_path: Path, use_tokeniz
             # Fallback if actual counts are somehow not present
             if input_tokens is None:
                 print(f"Warning: Missing actual instruction token count for distribution summary for an item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
-                instruction_text_for_approx = UNIVERSAL_SYSTEM_PROMPT + "\n" + r_item["prompt"]
+                instruction_text_for_approx = r_item["prompt"]
                 input_tokens = len(instruction_text_for_approx) // CHARS_PER_TOKEN
             if output_tokens is None:
                 print(f"Warning: Missing actual output token count for distribution summary for an item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
                 output_text_for_approx = r_item["model_cot_and_cleaned_output"]
                 output_tokens = len(output_text_for_approx) // CHARS_PER_TOKEN
         else:
-            instruction_text_for_approx = UNIVERSAL_SYSTEM_PROMPT + "\n" + r_item["prompt"]
+            instruction_text_for_approx = r_item["prompt"]
             output_text_for_approx = r_item["model_cot_and_cleaned_output"]
             input_tokens = len(instruction_text_for_approx) // CHARS_PER_TOKEN
             output_tokens = len(output_text_for_approx) // CHARS_PER_TOKEN
@@ -330,12 +319,12 @@ def main():
     eval_data = all_results[train_size:]
     
     # Write JSONL files
-    train_file = sft_data_dir / "train.jsonl"
-    valid_file = sft_data_dir / "valid.jsonl"
-    test_file = sft_data_dir / "test.jsonl"
-    write_jsonl(train_data, train_file)
-    write_jsonl(valid_data, valid_file)
-    write_jsonl(test_data, test_file)
+    # train_file = sft_data_dir / "train.jsonl"
+    # valid_file = sft_data_dir / "valid.jsonl"
+    # test_file = sft_data_dir / "test.jsonl"
+    # write_jsonl(train_data, train_file)
+    # write_jsonl(valid_data, valid_file)
+    # write_jsonl(test_data, test_file)
         
     # Write Alpaca JSON files
     alpaca_train_file = alpaca_data_dir / "among_them_train.json"
@@ -375,9 +364,9 @@ def main():
     total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
         
     print(f"Successfully wrote {format_num(len(all_results))} rows to {output_csv_file}")
-    print(f"  {format_num(len(train_data))} examples to {train_file}")
-    print(f"  {format_num(len(valid_data))} examples to {valid_file}")
-    print(f"  {format_num(len(test_data))} examples to {test_file}")
+    # print(f"  {format_num(len(train_data))} examples to {train_file}")
+    # print(f"  {format_num(len(valid_data))} examples to {valid_file}")
+    # print(f"  {format_num(len(test_data))} examples to {test_file}")
     print(f"\nAlpaca format datasets:")
     print(f"  {format_num(train_stats['examples_count'])} examples to {alpaca_train_file}")
     print(f"  {format_num(eval_stats['examples_count'])} examples to {alpaca_eval_file}")
