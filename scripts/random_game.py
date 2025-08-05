@@ -56,7 +56,8 @@ def main(reset=False, always_kill=False, remove_last_n=0):
                 try:
                     # Here, you would insert your custom LLM call and log probability logic.
                     action_taken = random.choice(actions_pd)
-                    llm_response, cot = action_taken.text, "<think>Was thinking about this option: " + action_taken.text + "</think>"
+                    action_taken.set_stories()
+                    llm_response, cot = action_taken.command_perspective, "<think>Was thinking about this option: " + action_taken.command_perspective + "</think>"
                 except KeyboardInterrupt:
                     action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_pd)
 
@@ -87,7 +88,7 @@ def main(reset=False, always_kill=False, remove_last_n=0):
                 action_taken = random.choice(kill_actions)
             elif current_player.role == PlayerRole.CREWMATE and task_actions:
                 action_taken = random.choice(task_actions)
-            llm_response, cot = action_taken.text, "<think>Was thinking about this option: " + action_taken.text + "</think>"
+            llm_response, cot = action_taken.command_perspective, "<think>Was thinking about this option: " + action_taken.command_perspective + "</think>"
         except KeyboardInterrupt:
             action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_player_can_take)
 

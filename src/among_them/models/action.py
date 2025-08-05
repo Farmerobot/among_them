@@ -26,7 +26,7 @@ class Action:
     def set_stories(self):
         if self.type == ActionType.MOVE:
             self.command_perspective = f"move to {self.target_location.value}"
-            self.agent_perspective = f"You are in {self.target_location.value}."
+            self.agent_perspective = f"You moved to {self.target_location.value}."
             self.observer_perspective = f"You saw {self.player_name} move to {self.target_location.value}."
             self.global_perspective = f"{self.player_name} moved to {self.target_location.value}."
         elif self.type == ActionType.WAIT:

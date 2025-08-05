@@ -39,7 +39,7 @@ def get_last_player_action(history: List[History], player: Player) -> History:
     for i in range(len(history) - 1, -1, -1):
         if history[i].action_taken.player_name == player.name:
             return history[i]
-        elif history[i].action_taken.target_message and history[i].action_taken.target_message.startswith("Everyone is in the cafeteria and start from there"):
+        elif getattr(history[i].action_taken, "target_message", None) and history[i].action_taken.target_message.startswith("Everyone is in the cafeteria and start from there"):
             return history[i]
     return history[0]
 

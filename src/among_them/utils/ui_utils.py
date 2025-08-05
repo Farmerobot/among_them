@@ -35,7 +35,7 @@ def prompt_manual_fallback_action(actions: List[Action]) -> Tuple[int, str, str,
     """Handles manual action selection when AI generation is interrupted."""
     print("\nAI action generation interrupted. Please choose an action manually:")
     for i, action in enumerate(actions):
-        print(f"{i + 1}. {action.text}")
+        print(f"{i + 1}. {action.set_stories().command_perspective}")
 
     if actions[0].type == ActionType.SPEAK:
         try:
@@ -49,10 +49,10 @@ def prompt_manual_fallback_action(actions: List[Action]) -> Tuple[int, str, str,
             choice_idx = int(choice) - 1
             if 0 <= choice_idx < len(actions):
                 selected_action = actions[choice_idx]
-                print(f"You chose: {selected_action.text}")
+                print(f"You chose: {selected_action.command_perspective}")
                 return (
                     choice_idx,
-                    selected_action.text,
+                    selected_action.command_perspective,
                     "",
                     {},
                 )
@@ -64,7 +64,7 @@ def prompt_manual_fallback_action(actions: List[Action]) -> Tuple[int, str, str,
             print("\nInput stream closed. Defaulting to first action.")
             return (
                 0,
-                actions[0].text,
+                actions[0].command_perspective,
                 "",
                 {},
             )
