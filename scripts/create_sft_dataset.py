@@ -23,7 +23,11 @@ from among_them.models.phase import GamePhase
 from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
 from among_them.utils.phase_utils import count_votes
 
-CHARS_PER_TOKEN = 4 # Fallback if not using actual tokenizer
+# Used as fallback to calculate token counts if actual tokenizer is not available
+CHARS_PER_TOKEN = 4
+
+# Responses with more than this many tokens in the output are filtered out
+MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF = 3000
 
 def format_num(n):
     if isinstance(n, float):
@@ -122,6 +126,7 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
     total_output_tokens = 0
     max_instruction_tokens = 0
     max_output_tokens = 0
+    filtered_count = 0
 
     for item in data:
         instruction_text = item["prompt"]
@@ -144,6 +149,11 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
             instruction_tokens_count = len(instruction_text) // CHARS_PER_TOKEN
             output_tokens_count = len(output_text) // CHARS_PER_TOKEN
 
+        # Filter out responses that are too long
+        if output_tokens_count > MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF:
+            filtered_count += 1
+            continue
+
         total_instruction_tokens += instruction_tokens_count
         total_output_tokens += output_tokens_count
         max_instruction_tokens = max(max_instruction_tokens, instruction_tokens_count)
@@ -154,6 +164,9 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
             "output": output_text
         })
     
+    if filtered_count > 0:
+        print(f"Filtered out {filtered_count} examples with output token count exceeding {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens.")
+    
     with open(output_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     
@@ -162,7 +175,8 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
         "max_output_tokens": max_output_tokens,
         "total_instruction_tokens": total_instruction_tokens,
         "total_output_tokens": total_output_tokens,
-        "examples_count": len(data)
+        "examples_count": len(data),
+        "filtered_count": filtered_count
     }
 
 
@@ -254,7 +268,7 @@ def main():
     tokenizer_model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" # For actual token counting
     
     # Create output directories if they don't exist
-    sft_data_dir.mkdir(exist_ok=True, parents=True)
+    # sft_data_dir.mkdir(exist_ok=True, parents=True)
     alpaca_data_dir.mkdir(exist_ok=True, parents=True)
     generated_dir.mkdir(exist_ok=True, parents=True)
     # --- End Configuration ---
@@ -288,19 +302,19 @@ def main():
         print("No data was processed. Check the input directory and file format.")
         return
 
-    # Write results to CSV
-    with open(output_csv_file, 'w', newline='', encoding='utf-8') as f:
-        fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
-        writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL, extrasaction='ignore') # Ignore extra fields not in fieldnames for robustness
-        for result in all_results:
-            row_to_write = {}
-            for field_name in fieldnames:
-                value = result.get(field_name) # Use .get() to avoid KeyError if a field is missing
-                if isinstance(value, str):
-                    row_to_write[field_name] = value.replace('\n', '\\n')
-                else:
-                    row_to_write[field_name] = value
-            writer.writerow(row_to_write)
+    # CSV not needed for now
+    # with open(output_csv_file, 'w', newline='', encoding='utf-8') as f:
+    #     fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
+    #     writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL, extrasaction='ignore') # Ignore extra fields not in fieldnames for robustness
+    #     for result in all_results:
+    #         row_to_write = {}
+    #         for field_name in fieldnames:
+    #             value = result.get(field_name) # Use .get() to avoid KeyError if a field is missing
+    #             if isinstance(value, str):
+    #                 row_to_write[field_name] = value.replace('\n', '\\n')
+    #             else:
+    #                 row_to_write[field_name] = value
+    #         writer.writerow(row_to_write)
 
     # print(all_results)
         
@@ -362,6 +376,11 @@ def main():
         
     total_instruction_tokens = train_stats["total_instruction_tokens"] + eval_stats["total_instruction_tokens"]
     total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
+    
+    # Get filtered count information
+    train_filtered_count = train_stats.get("filtered_count", 0)
+    eval_filtered_count = eval_stats.get("filtered_count", 0)
+    total_filtered_count = train_filtered_count + eval_filtered_count
         
     print(f"Successfully wrote {format_num(len(all_results))} rows to {output_csv_file}")
     # print(f"  {format_num(len(train_data))} examples to {train_file}")
@@ -370,6 +389,13 @@ def main():
     print(f"\nAlpaca format datasets:")
     print(f"  {format_num(train_stats['examples_count'])} examples to {alpaca_train_file}")
     print(f"  {format_num(eval_stats['examples_count'])} examples to {alpaca_eval_file}")
+    
+    # Print information about filtered examples if any
+    if total_filtered_count > 0:
+        print(f"\nExcluded examples (assistant output exceeded {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens): {format_num(total_filtered_count)}")
+        print(f"  Training excluded: {format_num(train_filtered_count)}")
+        print(f"  Evaluation excluded: {format_num(eval_filtered_count)}")
+        print("  (These were omitted using the arbitrary output token cutoff to reduce context length during training and save VRAM.)")
         
     token_counting_method_info_oneline = f"Tokenizer: {tokenizer_model_name}" if use_actual_tokenizer else "Token Count Method: Estimated (4 chars = 1 token)"
     print(f"\n--- Alpaca Dataset Token Statistics ({token_counting_method_info_oneline}) ---")
@@ -409,6 +435,15 @@ def main():
         f.write(f"- **Training examples:** {format_num(train_stats['examples_count'])}\n")
         f.write(f"- **Evaluation examples:** {format_num(eval_stats['examples_count'])}\n")
         f.write(f"- **Total examples:** {format_num(total_examples_count)}\n")
+        
+        # Add information about filtered examples if any
+        if total_filtered_count > 0:
+            f.write(f"- **Excluded examples (assistant output exceeded {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens):** {format_num(total_filtered_count)}\n")
+            f.write(f"  - Training excluded: {format_num(train_filtered_count)}\n")
+            f.write(f"  - Evaluation excluded: {format_num(eval_filtered_count)}\n")
+            f.write("\n> Note: Any example whose assistant output is longer than the arbitrary cutoff of ")
+            f.write(f"{MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens is excluded from the generated dataset ")
+            f.write("to keep file sizes manageable, reduce context length during training, and therefore save VRAM.\n")
             
         f.write("\n## Maximum Token Lengths Per Example\n")
         f.write(f"- **Longest instruction:** {format_num(max_instruction_tokens)} tokens\n")
