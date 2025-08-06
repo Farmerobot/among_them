@@ -27,7 +27,7 @@ class TestEndUtils(unittest.TestCase):
         
     def test_get_end_game_reason_at_end(self):
         # Test at the end of the game when there should be an end game reason
-        # Using turn 21 (GAME_END phase)
+        # Using turn 21 (end of game)
         end_game_idx = 21  # The game ended (No impostors left)
         
         # Get end game reason
@@ -47,8 +47,8 @@ class TestEndUtils(unittest.TestCase):
         
     def test_get_end_game_reason_after_kill(self):
         # Test after a kill that might lead to game end
-        # Using turn 20 (VOTE_RESULTS phase after David was voted out)
-        after_kill_idx = 20  # David was voted out
+        # Using turn 22 (after David was voted out)
+        after_kill_idx = 22  # David was voted out
         
         # Get end game reason
         reason = get_end_game_reason(

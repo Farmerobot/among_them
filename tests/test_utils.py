@@ -1,29 +1,34 @@
 """
 Game History Reference:
 Players: {'David': 'Impostor', 'Alice': 'Crewmate', 'Bob': 'Crewmate', 'Charlie': 'Crewmate'}
-Game loaded from state file with 22 history entries
-0 GamePhase.GAME_START(0) [The game started(1), Location.CAFETERIA] next: David, Alice, Charlie, Bob||David, Alice, Charlie, Bob saw it
-1 GamePhase.TASK(39) [Charlie waited(0), Location.CAFETERIA] next: David, Alice, Bob||David, Alice, Bob saw it
-2 GamePhase.TASK(38) [David moved to location Medbay(0), Location.MEDBAY] next: Alice, Bob||Bob, Charlie, Alice saw it
-3 GamePhase.TASK(37) [Bob completed task: Start the coffee maker in the cafeteria(0), Location.CAFETERIA] next: Alice||Alice, Charlie saw it
-4 GamePhase.TASK(36) [Alice completed task: Empty the cafeteria trash(0), Location.CAFETERIA] next: ||Charlie, Bob saw it
-5 GamePhase.TASK(35) [Charlie waited(0), Location.CAFETERIA] next: David, Alice, Bob||Alice, Bob saw it
-6 GamePhase.TASK(34) [David moved to location Cafeteria(0), Location.CAFETERIA] next: Alice, Bob||Bob, Charlie, Alice saw it
-7 GamePhase.TASK(33) [Alice waited(0), Location.CAFETERIA] next: Bob||David, Charlie, Bob saw it
-8 GamePhase.TASK(32) [Bob completed task: Empty the cafeteria trash(0), Location.CAFETERIA] next: ||David, Alice, Charlie saw it
-9 GamePhase.TASK(31) [Alice waited(0), Location.CAFETERIA] next: David, Charlie, Bob||David, Charlie, Bob saw it
-10 GamePhase.TASK(30) [Bob waited(0), Location.CAFETERIA] next: David, Charlie||David, Alice, Charlie saw it
-11 GamePhase.TASK(29) [Charlie waited(0), Location.CAFETERIA] next: David||David, Alice, Bob saw it
-12 GamePhase.TASK(28) [David killed Alice- Alice(0), Location.CAFETERIA] next: ||Alice, Charlie, Bob saw it
-13 GamePhase.TASK(27) [Bob reported dead body of Alice to everyone and started discussion(0), Location.CAFETERIA] next: David, Charlie||David, Charlie, Bob saw it
-14 GamePhase.DISCUSS(2) [[Charlie]: helolo(0), Location.CAFETERIA] next: Bob, David||Bob, David, Charlie saw it
-15 GamePhase.DISCUSS(1) [[David]: hi(0), Location.CAFETERIA] next: Bob||Bob, David, Charlie saw it
-16 GamePhase.DISCUSS(0) [[Bob]: bry(0), Location.CAFETERIA] next: ||Bob, David, Charlie saw it
-17 GamePhase.VOTING(2) [David voted for nobody(0), Location.CAFETERIA] next: Charlie, Bob||David, Charlie, Bob saw it
-18 GamePhase.VOTING(1) [Bob voted for David(0), Location.CAFETERIA] next: Charlie||David, Charlie, Bob saw it
-19 GamePhase.VOTING(0) [Charlie voted for David(0), Location.CAFETERIA] next: ||David, Charlie, Bob saw it
-20 GamePhase.VOTE_RESULTS(0) [David was voted out.- David(1), Location.CAFETERIA] next: ||David, Charlie, Bob saw it
-21 GamePhase.GAME_END(0) [The game ended (No impostors left)(1), Location.CAFETERIA] next: ||David, Alice, Charlie, Bob saw it
+Game loaded from state file with 24 history entries (using new phase structure)
+Phases: TASKS, DISCUSS, VOTING
+
+0: [C:4,D:1,A:4,B:4] [TASKS 40] 💬 @CAFETERIA System said: The game started cd=1 next: Charlie, David, Alice, Bob seen by: Charlie, David, Alice, Bob
+1: [C:4,D:1,A:4,B:4] [TASKS 39] · @CAFETERIA Charlie waited. next: Alice, David, Bob seen by: Bob, Alice, David
+2: [C:4,D:1,A:4,B:4] [TASKS 38] → @MEDBAY David moved to Medbay. next: Alice, Bob seen by: Charlie, Bob, Alice
+3: [C:4,D:1,A:4,B:3] [TASKS 37] ✓ @CAFETERIA Bob completed the Start the coffee maker in the cafeteria task. next: Alice seen by: Alice, Charlie
+4: [C:4,D:1,A:3,B:3] [TASKS 36] ✓ @CAFETERIA Alice completed the Empty the cafeteria trash task. seen by: Bob, Charlie
+5: [C:4,D:1,A:3,B:3] [TASKS 35] · @CAFETERIA Charlie waited. next: David, Bob, Alice seen by: Bob, Alice
+6: [C:4,D:1,A:3,B:3] [TASKS 34] → @CAFETERIA David moved to Cafeteria. next: Bob, Alice seen by: Charlie, Bob, Alice
+7: [C:4,D:1,A:3,B:3] [TASKS 33] · @CAFETERIA Alice waited. next: Bob seen by: Bob, David, Charlie
+8: [C:4,D:1,A:3,B:2] [TASKS 32] ✓ @CAFETERIA Bob completed the Empty the cafeteria trash task. seen by: Alice, David, Charlie
+9: [C:4,D:1,A:3,B:2] [TASKS 31] · @CAFETERIA Alice waited. next: Bob, David, Charlie seen by: Bob, David, Charlie
+10: [C:4,D:1,A:3,B:2] [TASKS 30] · @CAFETERIA Bob waited. next: David, Charlie seen by: Alice, David, Charlie
+11: [C:4,D:1,A:3,B:2] [TASKS 29] · @CAFETERIA Charlie waited. next: David seen by: Bob, Alice, David
+12: [C:4,D:1,B:2] [TASKS 28] × Alice @CAFETERIA Alice was killed. cd=1 seen by: Bob, Alice, Charlie
+13: [C:4,D:1,B:2] [TASKS 27] ⚑ Alice @CAFETERIA A dead body was reported by Bob. Discussion started. next: Charlie, David seen by: Charlie, David, Bob
+14: [C:4,D:1,B:2] [DISCUSS 3] 💬 @CAFETERIA System said: It is discussion phase now. Discuss who to eject from the game. cd=1 next: Charlie, David, Bob seen by: Charlie, David, Bob
+15: [C:4,D:1,B:2] [DISCUSS 2] 💬 @CAFETERIA Charlie said: helolo next: David, Bob seen by: Charlie, David, Bob
+16: [C:4,D:1,B:2] [DISCUSS 1] 💬 @CAFETERIA David said: hi next: Bob seen by: Charlie, David, Bob
+17: [C:4,D:1,B:2] [DISCUSS 0] 💬 @CAFETERIA Bob said: bry seen by: Charlie, David, Bob
+18: [C:4,D:1,B:2] [VOTING 3] 💬 @CAFETERIA System said: Discussion ended. Voting phase started. Vote who to eject from the game. cd=1 next: Charlie, David, Bob seen by: Charlie, David, Bob
+19: [C:4,D:1,B:2] [VOTING 2] ✔ @CAFETERIA David voted for nobody. next: Charlie, Bob seen by: Bob, Charlie
+20: [C:4,D:1,B:2] [VOTING 1] ✔ @CAFETERIA Bob voted for David. next: Charlie seen by: David, Charlie
+21: [C:4,B:2] [VOTING 0] ✔ @CAFETERIA Charlie voted for David. seen by: Bob, David
+22: [C:4,B:2] [VOTING 0] × David @CAFETERIA David was killed. cd=1 next: Charlie, Bob seen by: Charlie, Bob
+23: [C:4,B:2] [TASKS 20] 💬 @CAFETERIA System said: Everyone is in the cafeteria and start from there. It is task phase now. cd=1 next: Charlie, Bob seen by: Charlie, Bob
+24: [C:4,B:2] [TASKS 0] 💬 @CAFETERIA System said: The game ended (No impostors left) cd=1 next: Charlie, Bob seen by: Charlie, Bob
 """
 
 import json
