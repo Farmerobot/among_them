@@ -5,8 +5,13 @@
 **/game_results/
 .idea/
 src/among_them/game/dummy.py
-.windsurfrules
 model/
+.windsurfrules
+
+# Global rules are version controlled
+# Personal rules are not version controlled
+.windsurf/rules/personal-rules.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
