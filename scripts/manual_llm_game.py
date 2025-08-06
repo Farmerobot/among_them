@@ -143,11 +143,15 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                     continue  # retry with same prompt
                     
             except KeyboardInterrupt:
-                # Allow manual fallback if user cancels
-                action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_player_can_take)
-                action_taken = actions_player_can_take[action_idx]
-                response_text = llm_response
-                break  # we got a result manually, so exit the loop
+                # First Ctrl+C: switch to manual fallback. If another Ctrl+C occurs during fallback, exit cleanly.
+                try:
+                    action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_player_can_take)
+                    action_taken = actions_player_can_take[action_idx]
+                    response_text = llm_response
+                    break  # manual action obtained
+                except KeyboardInterrupt:
+                    print("\nInterrupted during manual fallback. Exiting game.")
+                    return  # exit the main() function cleanly
             except Exception as e:
                 # Log the error but keep the loop running
                 print(f"\033[91mError during LLM invocation: {e}\033[0m")
@@ -185,5 +189,11 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    main(reset=args.reset, remove_last_n=args.n, state_file_path=args.file)
+    try:
+        args = parse_args()  # parse CLI arguments
+        main(reset=args.reset, remove_last_n=args.n, state_file_path=args.file)
+    except KeyboardInterrupt:
+        # Any uncaught Ctrl+C lands here – exit without stack trace.
+        print("\nGame interrupted by user. Goodbye!")
+        import sys
+        sys.exit(0)
