@@ -50,7 +50,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
             print("Game over!")
             break
 
-        pre_discussion_votes = {} # TODO proper prompt - add fake voting system message
+        pre_discussion_votes = {}
         if pre_discussion_vote_prompts:
             print("--- Collecting Pre-Discussion Votes ---")
             for vote_prompt in pre_discussion_vote_prompts:
@@ -177,11 +177,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run Among Them game with manual LLM control.")
     parser.add_argument("--reset", action="store_true", 
                         help="Remove the state file and start a new game")
-    parser.add_argument("--remove-last-n", type=int, default=0,
+    parser.add_argument("-n", type=int, default=0,
                         help="Remove the last N entries from history and start from there")
+    parser.add_argument("--file", type=str, default=None,
+                        help="Path to a state file")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    args = parse_args() # TODO add rest of arguments
-    main(reset=args.reset, remove_last_n=args.remove_last_n)
+    args = parse_args()
+    main(reset=args.reset, remove_last_n=args.n, state_file_path=args.file)

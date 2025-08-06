@@ -139,8 +139,18 @@ class GameEngine:
             for player in alive_players:
                 fake_voting_actions = get_vote_actions(self.history, self.players, player)
                 # Build environment prompt for voting phase
+                fake_history = self.history.copy()
+                fake_history.append(
+                    create_system_message(
+                        history=fake_history,
+                        phase=GamePhase.VOTING,
+                        text="Voting phase started. Vote who to eject from the game.",
+                        game_config=self.game_config,
+                        alive_player_names=alive_player_names,
+                    )
+                )
                 voting_prompt = reconstruct_environment_prompt_from_history(
-                    player, self.history, self.players, self.game_config
+                    player, fake_history, self.players, self.game_config
                 )
                 pre_discussion_vote_prompts.append({
                     "player": player,
