@@ -49,7 +49,7 @@ def get_task_phase_actions(
 
     # actions for tasks TASK
     for task in history[-1].tasks_left_to_do[player.name]:
-        if player.role == PlayerRole.CREWMATE and task.location == location and not task.completed:
+        if player.role == PlayerRole.CREWMATE and task.location == location:
             actions.append(
                 Action(type=ActionType.TASK, player_name=player.name, target_task=task)
             )

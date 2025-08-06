@@ -1,35 +1,6 @@
 from typing import Dict, List, Tuple
 from among_them.models.action import Action, ActionType
 
-def prompt_human_action(
-    actions: List[Action], history_str: str, player_name: str
-) -> Tuple[int, str, str, Dict[str, int]]:
-    """Handle action selection for a human-controlled player."""
-    print(history_str)
-    if actions[0].type == ActionType.SPEAK:
-        return 0, input("Your message to others:"), "", {}
-    else:
-        action_prompt = "\n".join(
-            [f"{i}: {action.text}" for i, action in enumerate(actions)]
-        )
-        prompt = "========================================\n"
-        prompt += f"Your turn {player_name}: Choose an action\n{action_prompt}\n\n"
-        prompt += "========================================\n"
-        print(prompt)
-        while True:
-            try:
-                chosen_action = int(input("Choose action (enter the number):"))
-                if 0 <= chosen_action < len(actions):
-                    return (
-                        chosen_action,
-                        actions[chosen_action].text,
-                        "",
-                        {},
-                    )
-                else:
-                    print(f"Please enter a number between 0 and {len(actions) - 1}")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
 
 def prompt_manual_fallback_action(actions: List[Action]) -> Tuple[int, str, str, Dict[str, int]]:
     """Handles manual action selection when AI generation is interrupted."""

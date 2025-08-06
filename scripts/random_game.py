@@ -10,7 +10,7 @@ from among_them.game_config import GameConfig
 import os
 import argparse
 
-def main(reset=False, always_kill=False, remove_last_n=0):
+def main(reset=False, greedy=False, remove_last_n=0):
     """Runs the game with manual LLM control."""
     game_config = GameConfig(
         num_tasks=2,
@@ -83,11 +83,11 @@ def main(reset=False, always_kill=False, remove_last_n=0):
             # Here, you would insert your custom LLM call and log probability logic.
             action_taken = random.choice(actions_player_can_take)
             kill_actions = [action for action in actions_player_can_take if action.type == ActionType.KILL]
-            task_actions = [action for action in actions_player_can_take if action.type == ActionType.TASK]
-            if current_player.role == PlayerRole.IMPOSTOR and kill_actions and always_kill:
+            task_or_report_actions = [action for action in actions_player_can_take if action.type == ActionType.TASK or action.type == ActionType.REPORT]
+            if current_player.role == PlayerRole.IMPOSTOR and kill_actions and greedy:
                 action_taken = random.choice(kill_actions)
-            elif current_player.role == PlayerRole.CREWMATE and task_actions:
-                action_taken = random.choice(task_actions)
+            elif current_player.role == PlayerRole.CREWMATE and task_or_report_actions and greedy:
+                action_taken = random.choice(task_or_report_actions)
             llm_response, cot = action_taken.command_perspective, "<think>Was thinking about this option: " + action_taken.command_perspective + "</think>"
         except KeyboardInterrupt:
             action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_player_can_take)
@@ -118,13 +118,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run Among Them game with custom options.")
     parser.add_argument("--reset", action="store_true", 
                         help="Remove the state file and start a new game")
-    parser.add_argument("--always-kill", action="store_true",
-                        help="Impostors will always choose to kill when possible")
-    parser.add_argument("--remove-last-n", type=int, default=0,
+    parser.add_argument("--greedy", action="store_true",
+                        help="Impostors will always choose to kill when possible and crewmates will always choose to task/report when possible")
+    parser.add_argument("-n", type=int, default=0,
                         help="Remove the last N entries from history and start from there")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(reset=args.reset, always_kill=args.always_kill, remove_last_n=args.remove_last_n)
+    main(reset=args.reset, greedy=args.greedy, remove_last_n=args.n)

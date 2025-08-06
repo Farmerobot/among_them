@@ -331,11 +331,6 @@ try:
                     task_complete = game_config.num_tasks - len(tasks)
                     task_total = game_config.num_tasks
                     
-                    # Count completed tasks
-                    for task in tasks:
-                        if hasattr(task, 'completed') and task.completed:
-                            task_complete += 1
-                    
                     # Show progress bar
                     st.progress(task_complete / task_total)
                     st.write(f"{task_complete}/{task_total} tasks completed")
@@ -344,14 +339,13 @@ try:
                     for task in tasks:
                         task_name = task.name if hasattr(task, 'name') else str(task)
                         task_location = task.location.value if hasattr(task, 'location') and task.location else "Unknown"
-                        task_status = "✅" if hasattr(task, 'completed') and task.completed else "⏳"
                         
                         # If it's a long task, show turns left
                         turns_info = ""
                         if hasattr(task, 'turns_left'):
                             turns_info = f" ({task.turns_left} turns left)"
                         
-                        st.write(f"{task_status} {task_name} at {task_location}{turns_info}")
+                        st.write(f"TODO: {task_name} at {task_location}{turns_info}")
 
     with tabs[3]:  # Player Network
         st.header("Player Interaction Network")

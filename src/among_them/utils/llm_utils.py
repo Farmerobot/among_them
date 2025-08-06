@@ -2,33 +2,7 @@ import re
 from typing import List, Optional, Tuple
 
 from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
-from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 from among_them.models.action import Action, ActionType
-
-
-def create_llm_prompts(actions: List[Action], history_str: str) -> Tuple[str, str]:
-    """Constructs the prompt for the LLM.
-    Args:
-        actions: List of available actions
-        history_str: String representation of game history
-    Returns:
-        Tuple of (system_prompt, user_prompt)
-    """
-    system_prompt = UNIVERSAL_SYSTEM_PROMPT
-    prompt = history_str
-
-    # Add available actions to prompt if needed
-    if actions and actions[0].type != ActionType.SPEAK:
-        actions_text = "<available_actions>\n" + "\n".join(f"<action>{action.text}</action>" for action in actions) + "\n</available_actions>"
-        prompt += f"\n\n{actions_text}\n"
-        if actions[0].type == ActionType.VOTE:
-            prompt += "\n\nChoose one action. Please put your final answer within <action></action> xml tags"
-        else:
-            prompt += "\n\nChoose one action. Please put your final vote within <action></action> xml tags"
-    elif actions and actions[0].type == ActionType.SPEAK:
-        prompt += "\n\nIt is discussion phase now. Respond to others. Please put your message between <message></message> xml tags"
-    
-    return system_prompt, prompt
 
 
 def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, Optional[str]]:
@@ -193,7 +167,6 @@ def parse_llm_response_to_action(
     """
     Parses the raw LLM response to determine the chosen action index and response text.
     """
-    from among_them.models.action import ActionType
 
     if not actions:
         raise ValueError("Cannot parse LLM response without a list of available actions.")

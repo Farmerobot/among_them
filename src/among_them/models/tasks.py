@@ -1,4 +1,3 @@
-from enum import Enum
 import random
 from typing import Optional
 
@@ -7,21 +6,12 @@ from among_them.game_config import GameConfig
 
 
 class Task:
-    def __init__(self, name: str, location: Optional[Location], completed: bool = False):
+    def __init__(self, name: str, location: Optional[Location]):
         self.name = name
-        self.completed = completed
         self.location = location
 
-    def complete(self, location: Location) -> str:
-        if self.completed:
-            return f"Task {self.name} already completed!"
-        if self.location != location:
-            return f"Task {self.name} cannot be completed in {location.value}!"
-        self.completed = True
-        return f"Task {self.name} completed!"
-
     def __str__(self):
-        return f"{'[DONE]' if self.completed else '[TODO]'} | {self.name}"
+        return f"TODO: {self.name}"
 
     def __repr__(self):
         return self.name

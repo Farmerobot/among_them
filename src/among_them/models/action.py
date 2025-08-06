@@ -43,12 +43,16 @@ class Action:
             self.command_perspective = f"report the dead body of {str(self.target_player_name)}"
             self.agent_perspective = f"You reported the dead body of {str(self.target_player_name)} and started a discussion."
             self.observer_perspective = f"You saw {self.player_name} report the dead body of {str(self.target_player_name)} to everyone. Discussion started."
-            self.global_perspective = f"A dead body was reported by {self.player_name}. Discussion started."
+            self.global_perspective = f"{self.player_name} reported the dead body of {str(self.target_player_name)}. Discussion started."
         elif self.type == ActionType.KILL:
             self.command_perspective = f"kill {str(self.target_player_name)}"
             self.agent_perspective = f"You killed {str(self.target_player_name)}."
             self.observer_perspective = f"You witnessed {self.player_name} kill {str(self.target_player_name)}!"
-            self.global_perspective = f"{str(self.target_player_name)} was killed."
+            self.global_perspective = f"{self.player_name} killed {str(self.target_player_name)}."
+            if getattr(self, "target_message", None) and self.player_name == "System":
+                self.agent_perspective = f"System said: {self.target_message}"
+                self.observer_perspective = f"System said: {self.target_message}"
+                self.global_perspective = f"System said: {self.target_message}"
         elif self.type == ActionType.VOTE:
             self.command_perspective = f"vote for {str(self.target_player_name)}"
             self.agent_perspective = f"You voted for {str(self.target_player_name)}."
