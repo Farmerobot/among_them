@@ -117,7 +117,7 @@ def generate_reasoning_and_calculate_probabilities(
         base_sequence = torch.cat([base_sequence[:last_dot_index+1], torch.tensor(end_think_token, device=model.device)])
     
     # Add newline token before action calculations
-    newline_token_id = tokenizer.encode("\n\n", add_special_tokens=False) # always >99% probability for double_newline token after </think>
+    newline_token_id = tokenizer.encode("\n\nAction:", add_special_tokens=False) # always >99% probability for double_newline token after </think>
     extended_sequence = torch.cat([base_sequence, torch.tensor(newline_token_id, device=model.device)])
     generated_text = tokenizer.decode(extended_sequence, skip_special_tokens=False)
     print(generated_text[generated_text.find("<think>"):])
@@ -154,12 +154,19 @@ def generate_reasoning_and_calculate_probabilities(
         total_log_prob = 0.0
         current_logits = last_logits
         current_past_key_values = past_key_values
+        token_probabilities = []  # Store individual token probabilities
+        token_texts = []  # Store individual token texts
         
         for i, token_id in enumerate(action_token_ids):
             # Get probability of this token
             probs = torch.softmax(current_logits, dim=-1)
             token_prob = probs[token_id].item()
-            total_log_prob += math.log(max(token_prob, 1e-10))
+            token_log_prob = math.log(max(token_prob, 1e-10))
+            total_log_prob += token_log_prob
+            
+            # Store token info
+            token_probabilities.append(token_prob * 100)  # Convert to percentage
+            token_texts.append(tokenizer.decode([token_id]))
             
             # If not the last token, get next logits using cached states
             if i < len(action_token_ids) - 1:
@@ -176,11 +183,11 @@ def generate_reasoning_and_calculate_probabilities(
         token_normalized_prob = total_log_prob / num_tokens if num_tokens > 0 else total_log_prob
         word_normalized_prob = total_log_prob / num_words if num_words > 0 else total_log_prob
         
-        results.append((action, total_log_prob, token_normalized_prob, word_normalized_prob))
+        results.append((action, total_log_prob, token_normalized_prob, word_normalized_prob, token_texts, token_probabilities))
     
     # Create separate results for each normalization method
-    token_results = [(action, log_prob, token_norm) for action, log_prob, token_norm, _ in results]
-    word_results = [(action, log_prob, word_norm) for action, log_prob, _, word_norm in results]
+    token_results = [(action, log_prob, token_norm, token_texts, token_probs) for action, log_prob, token_norm, _, token_texts, token_probs in results]
+    word_results = [(action, log_prob, word_norm, token_texts, token_probs) for action, log_prob, _, word_norm, token_texts, token_probs in results]
     
     # Sort both by their respective normalized probabilities (descending)
     token_results.sort(key=lambda x: x[2], reverse=True)
@@ -302,36 +309,46 @@ def main():
     print("-" * 40)
     print(format_game_context(engine))
     
-    print("\n📊 AVAILABLE ACTIONS AND PROBABILITIES (Token Normalization):")
-    print("-" * 40)
-    print(f"{'Action':<40} {'Log P':<12} {'Normalized':<12} {'Confidence':<12}")
-    print("-" * 40)
+    print("\n📊 DETAILED ACTION PROBABILITY BREAKDOWN:")
+    print("=" * 120)
+    print(f"{'Action':<30} {'Tokens':<25} {'Token Probabilities (%)':<35} {'W/O Norm':<12} {'Token Norm':<12} {'Word Norm':<12}")
+    print("=" * 120)
     
-    for action, log_prob, norm_prob in token_norm_results[:10]:  # Show top 10
-        action_text = action.command_perspective[:37] + "..." if len(action.command_perspective) > 40 else action.command_perspective
-        print(f"{action_text:<40} {log_prob:<12.4f} {norm_prob:<12.4f} {math.exp(norm_prob):.4%}")
-    
-    print("\n📊 AVAILABLE ACTIONS AND PROBABILITIES (Word Normalization):")
-    print("-" * 40)
-    print(f"{'Action':<40} {'Log P':<12} {'Normalized':<12} {'Confidence':<12}")
-    print("-" * 40)
-    
-    for action, log_prob, norm_prob in word_norm_results[:10]:  # Show top 10
-        action_text = action.command_perspective[:37] + "..." if len(action.command_perspective) > 40 else action.command_perspective
-        print(f"{action_text:<40} {log_prob:<12.4f} {norm_prob:<12.4f} {math.exp(norm_prob):.4%}")
+    for action, log_prob, token_norm_prob, token_texts, token_probs in token_norm_results[:10]:
+        # Find corresponding word norm result
+        word_norm_prob = next((w_norm for w_action, _, w_norm, _, _ in word_norm_results if w_action == action), token_norm_prob)
+        
+        action_text = action.command_perspective[:27] + "..." if len(action.command_perspective) > 30 else action.command_perspective
+        
+        # Format tokens as [token1, token2, ...]
+        token_list = "[" + ", ".join([repr(t) for t in token_texts]) + "]"
+        if len(token_list) > 25:
+            token_list = token_list[:22] + "...]"
+        
+        # Format probabilities as [prob1, prob2, ...]
+        prob_list = "[" + ", ".join([f"{p:.3f}" for p in token_probs]) + "]"
+        if len(prob_list) > 35:
+            prob_list = prob_list[:32] + "...]"
+        
+        # Calculate action probability without normalization (geometric mean)
+        action_prob_wo_norm = math.exp(log_prob) * 100  # Convert to percentage
+        
+        print(f"{action_text:<30} {token_list:<25} {prob_list:<35} {action_prob_wo_norm:<11.4f} {math.exp(token_norm_prob)*100:<11.4f} {math.exp(word_norm_prob)*100:<11.4f}")
     
     # Most probable action
     print("\n🎯 MOST PROBABLE ACTION (Token Normalization):")
     print("-" * 40)
-    best_action_token, best_log_prob_token, best_norm_prob_token = token_norm_results[0]
+    best_action_token, best_log_prob_token, best_norm_prob_token, best_tokens, best_token_probs = token_norm_results[0]
     print(f"Action: {best_action_token.command_perspective}")
+    print(f"Tokens: {best_tokens}")
+    print(f"Token Probabilities: {[f'{p:.3f}%' for p in best_token_probs]}")
     print(f"Log Probability: {best_log_prob_token:.4f}")
     print(f"Normalized Probability: {best_norm_prob_token:.4f}")
     print(f"Confidence Score: {math.exp(best_norm_prob_token):.4%}")
     
     print("\n🎯 MOST PROBABLE ACTION (Word Normalization):")
     print("-" * 40)
-    best_action_word, best_log_prob_word, best_norm_prob_word = word_norm_results[0]
+    best_action_word, best_log_prob_word, best_norm_prob_word, _, _ = word_norm_results[0]
     print(f"Action: {best_action_word.command_perspective}")
     print(f"Log Probability: {best_log_prob_word:.4f}")
     print(f"Normalized Probability: {best_norm_prob_word:.4f}")

@@ -25,27 +25,27 @@ class Action:
 
     def set_stories(self):
         if self.type == ActionType.MOVE:
-            self.command_perspective = f"move to {self.target_location.value}"
+            self.command_perspective = f" Move to {self.target_location.value}"
             self.agent_perspective = f"You moved to {self.target_location.value}."
             self.observer_perspective = f"You saw {self.player_name} move to {self.target_location.value}."
             self.global_perspective = f"{self.player_name} moved to {self.target_location.value}."
         elif self.type == ActionType.WAIT:
-            self.command_perspective = "wait"
+            self.command_perspective = " Wait"
             self.agent_perspective = "You waited."
             self.observer_perspective = f"You noticed {self.player_name} was waiting."
             self.global_perspective = f"{self.player_name} waited."
         elif self.type == ActionType.TASK:
-            self.command_perspective = f"{self.target_task.name}"
+            self.command_perspective = f" {self.target_task.name}"
             self.agent_perspective = f"You completed the {self.target_task.name} task."
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} completed the {self.target_task.name} task."
         elif self.type == ActionType.REPORT:
-            self.command_perspective = f"report the dead body of {str(self.target_player_name)}"
+            self.command_perspective = f" Report the dead body of {str(self.target_player_name)}"
             self.agent_perspective = f"You reported the dead body of {str(self.target_player_name)} and started a discussion."
             self.observer_perspective = f"You saw {self.player_name} report the dead body of {str(self.target_player_name)} to everyone. Discussion started."
             self.global_perspective = f"{self.player_name} reported the dead body of {str(self.target_player_name)}. Discussion started."
         elif self.type == ActionType.KILL:
-            self.command_perspective = f"kill {str(self.target_player_name)}"
+            self.command_perspective = f" Kill {str(self.target_player_name)}"
             self.agent_perspective = f"You killed {str(self.target_player_name)}."
             self.observer_perspective = f"You witnessed {self.player_name} kill {str(self.target_player_name)}!"
             self.global_perspective = f"{self.player_name} killed {str(self.target_player_name)}."
@@ -54,12 +54,12 @@ class Action:
                 self.observer_perspective = f"System said: {self.target_message}"
                 self.global_perspective = f"System said: {self.target_message}"
         elif self.type == ActionType.VOTE:
-            self.command_perspective = f"vote for {str(self.target_player_name)}"
+            self.command_perspective = f" Vote for {str(self.target_player_name)}"
             self.agent_perspective = f"You voted for {str(self.target_player_name)}."
             self.observer_perspective = f"You heard {self.player_name} vote for {str(self.target_player_name)}."
             self.global_perspective = f"{self.player_name} voted for {str(self.target_player_name)}."
         elif self.type == ActionType.PRETEND:
-            self.command_perspective = f"pretend to do task: {self.target_task.name}"
+            self.command_perspective = f" Pretend to do task: {self.target_task.name}"
             self.agent_perspective = f"You pretended to do the {self.target_task.name} task."
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} pretended to do the {self.target_task.name} task."
