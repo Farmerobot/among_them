@@ -18,7 +18,7 @@ from among_them.models.player_role import PlayerRole
 from among_them.models.phase import GamePhase
 from among_them.game_config import GameConfig
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
-from among_them.utils.player_utils import get_players_in_room, get_last_player_action
+from among_them.utils.player_utils import get_dead_players, get_players_in_room, get_last_player_action
 from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 
 
@@ -173,6 +173,13 @@ def get_observations_at_history_point(
         pretend_tasks = get_impostor_pretend_tasks_at_location(player_location, game_config)
         if pretend_tasks:
             observations.append(f"You can pretend to do the {pretend_tasks[0].name} task here.")
+
+    # Report dead players in room
+    
+    dead_players_in_room_names = [name for name, dead_location in get_dead_players(history).items() if dead_location == player_location.value]
+    if dead_players_in_room_names:
+        observations.append(f"You see dead bodies here: {', '.join(dead_players_in_room_names)}.")
+        observations.append(f"You can report the dead body of {' or '.join(dead_players_in_room_names)}.")
     
     # Impostor-specific observations
     if player.role == PlayerRole.IMPOSTOR:

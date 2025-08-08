@@ -59,7 +59,7 @@ class Action:
             self.observer_perspective = f"You heard {self.player_name} vote for {str(self.target_player_name)}."
             self.global_perspective = f"{self.player_name} voted for {str(self.target_player_name)}."
         elif self.type == ActionType.PRETEND:
-            self.command_perspective = f" Pretend to do task: {self.target_task.name}"
+            self.command_perspective = f" {self.target_task.name}"
             self.agent_perspective = f"You pretended to do the {self.target_task.name} task."
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} pretended to do the {self.target_task.name} task."

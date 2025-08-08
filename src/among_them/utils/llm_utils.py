@@ -29,7 +29,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
     for message in messages:
         print(f"{message['role']}: {message['content']}")
 
-    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
+    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX or LLM_BACKEND == LLMBackend.OLLAMA else ""
     raw_reasoning = ""
     raw_content = ""
     
@@ -48,7 +48,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
             
         elif LLM_BACKEND == LLMBackend.OLLAMA:
             from ollama import chat
-            chunks = chat(model=model_name, messages=messages, stream=True)
+            chunks = chat(model=model_name, messages=messages, stream=True, think=True)
             
         elif LLM_BACKEND == LLMBackend.OPENROUTER:
             from openai import OpenAI
@@ -77,7 +77,8 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
             response = ollama.chat(
                 model=HUGGINGFACE_MODEL_NAME,
                 messages=messages,
-                stream=True
+                stream=True,
+                think=True,
             )
             chunks = response
         
@@ -91,9 +92,14 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
                 print("\033[94m" + content + "\033[0m", end="", flush=True)
                 
             elif LLM_BACKEND in [LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
-                content = chunk["message"]["content"]
-                raw += content
-                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                reasoning = getattr(chunk["message"], "thinking", "")
+                content = getattr(chunk["message"], "content", "")
+                if reasoning:
+                    raw_reasoning += reasoning
+                    print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
+                if content:
+                    raw_content += content
+                    print("\033[94m" + content + "\033[0m", end="", flush=True)
                 
             elif LLM_BACKEND == LLMBackend.OPENROUTER:
                 try:
@@ -121,7 +127,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         raise KeyboardInterrupt("User interrupted LLM generation")
 
     # Extract chain of thought and cleanup
-    if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+    if LLM_BACKEND in [LLMBackend.MLX]:
         cot = ""
         cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
         cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
@@ -134,7 +140,7 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         else:
             cot = ""
             response_text = raw
-    else:  # OpenRouter
+    else:  # OpenRouter or Ollama
         cot = "<think>\n" + raw_reasoning + "\n</think>"
         response_text = raw_content
 
@@ -145,13 +151,13 @@ def normalize_and_check_action_valid(
 ) -> tuple[int, str]:
     """Check if the chosen action is valid and return its index"""
     chosen_action = chosen_action.strip().lower()
-    available_actions = [a.lower() for a in available_actions]
+    available_actions = [a.strip().lower() for a in available_actions]
     
     for action in range(len(available_actions) - 1, -1, -1): 
         if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
             return action, available_actions[action]
-        if available_actions[action].startswith("pretend"):
-            if re.search(rf"\b{re.escape(available_actions[action].split(": ")[1])}\b", chosen_action, re.IGNORECASE) or re.search(rf"\b{re.escape("pretend")}\b", chosen_action, re.IGNORECASE):
+        if "vote" in available_actions[action]:
+            if re.search(rf"\b{re.escape(' '.join(available_actions[action].split(" for ")))}\b", chosen_action, re.IGNORECASE):
                 return action, available_actions[action]
 
     warning_str = (

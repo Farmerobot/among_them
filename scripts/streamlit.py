@@ -11,6 +11,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import streamlit as st
+from streamlit import set_page_config, markdown, sidebar, cache_data, rerun, tabs, header, columns, pyplot, subheader, dataframe, selectbox, info, write, progress, expander, slider, table, error, code
 from matplotlib.path import Path
 
 from among_them.config import STATE_FILE
@@ -23,7 +24,7 @@ from among_them.models.phase import GamePhase
 from among_them.models.player import Player
 from among_them.models.player_role import PlayerRole
 
-st.set_page_config(
+set_page_config(
     page_title="Among Them - Game Visualizer",
     page_icon="🔍",
     layout="wide",
@@ -31,7 +32,7 @@ st.set_page_config(
 )
 
 # Style
-st.markdown("""
+markdown("""
 <style>
     .task-complete { color: green; }
     .task-incomplete { color: orange; }
@@ -43,7 +44,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # File selector in sidebar
-st.sidebar.title("Among Them Game Visualizer")
+sidebar.title("Among Them Game Visualizer")
 
 # Load most recent by default, but allow selection of other files
 data_dir = "data"
@@ -54,19 +55,19 @@ if STATE_FILE.split('/')[-1] in game_files:
     game_files.remove(STATE_FILE.split('/')[-1])
     game_files = [STATE_FILE.split('/')[-1]] + game_files  # Put current game at top
 
-selected_file = st.sidebar.selectbox("Select Game File", game_files)
+selected_file = sidebar.selectbox("Select Game File", game_files)
 file_path = os.path.join(data_dir, selected_file)
 
 # Add auto-refresh
-auto_refresh = st.sidebar.checkbox("Auto Refresh", value=False)
-refresh_interval = st.sidebar.slider("Refresh Interval (seconds)", 1, 30, 5)
+auto_refresh = sidebar.checkbox("Auto Refresh", value=False)
+refresh_interval = sidebar.slider("Refresh Interval (seconds)", 1, 30, 5)
 
 last_modified_time = os.path.getmtime(file_path)
 last_modified_str = datetime.fromtimestamp(last_modified_time).strftime("%Y-%m-%d %H:%M:%S")
-st.sidebar.write(f"Last Modified: {last_modified_str}")
+sidebar.write(f"Last Modified: {last_modified_str}")
 
 # Load game state
-@st.cache_data(ttl=refresh_interval)
+@cache_data(ttl=refresh_interval)
 def load_game_state(file_path, last_modified_time) -> Tuple[List[History], List[Player], float, GameConfig]:
     with open(file_path, 'r') as f:
         state_str = f.read()
@@ -86,15 +87,15 @@ try:
     
     # Check if auto-refresh is enabled
     if auto_refresh:
-        st.sidebar.write("Auto-refreshing...")
+        sidebar.write("Auto-refreshing...")
         time.sleep(2)  # Small delay to prevent excessive refreshing
-        st.rerun()
+        rerun()
         
     # Main tabs
-    tabs = st.tabs(["Game Map", "Timeline", "Tasks", "Player Network", "Voting Patterns", "Raw Data"])
+    tabs = tabs(["Game Map", "Timeline", "Tasks", "Player Network", "Voting Patterns", "Raw Data"])
 
     with tabs[0]:  # Game Map
-        st.header("Game Map Visualization")
+        header("Game Map Visualization")
         
         # Create a figure for the map
         fig, ax = plt.subplots(figsize=(10, 8))
@@ -121,7 +122,7 @@ try:
         
         # Go through history to find player last known locations
         for entry in history:
-            player_name = entry.action_taken.player_name
+            player_name = entry.action_taken.set_stories().player_name
             if player_name != "System" and hasattr(entry, 'location') and entry.location:
                 player_positions[player_name] = entry.location
         
@@ -185,25 +186,25 @@ try:
         ax.set_title(f"Game Map - Turn {len(history)}")
         
         # Display the map
-        st.pyplot(fig)
+        pyplot(fig)
         
         # Current game phase
         current_phase = latest_entry.phase
         actions_left = latest_entry.actions_until_phase_ends
-        st.info(f"Current Phase: {current_phase} (Actions remaining: {actions_left})")
+        info(f"Current Phase: {current_phase} (Actions remaining: {actions_left})")
         
         # Latest action information
-        st.subheader("Latest Action")
-        cols = st.columns(3)
+        subheader("Latest Action")
+        cols = columns(3)
         cols[0].write(f"Player: {latest_entry.action_taken.player_name}")
         cols[1].write(f"Action: {latest_entry.action_taken.type}")
         cols[2].write(f"Location: {latest_entry.location}")
         
-        if latest_entry.action_taken.spectator:
-            st.write(f"Result: {latest_entry.action_taken.spectator}")
+        if latest_entry.action_taken.command_perspective:
+            write(f"Result: {latest_entry.action_taken.command_perspective}")
 
     with tabs[1]:  # Timeline
-        st.header("Game Timeline")
+        header("Game Timeline")
         
         # Create a dataframe of history entries
         timeline_data = []
@@ -215,14 +216,14 @@ try:
                 "Phase": entry.phase,
                 "Action": entry.action_taken.type,
                 "Location": entry.location,
-                "Result": entry.action_taken.spectator
+                "Result": entry.action_taken.command_perspective
             })
         
         df_timeline = pd.DataFrame(timeline_data)
         
         # Allow filtering by player
         player_names = ["All"] + sorted(list(set(df_timeline["Player"])))
-        selected_player = st.selectbox("Filter by Player", player_names)
+        selected_player = selectbox("Filter by Player", player_names)
         
         # Apply filter
         if selected_player != "All":
@@ -231,7 +232,7 @@ try:
             df_filtered = df_timeline
         
         # Show the timeline
-        st.dataframe(df_filtered, use_container_width=True)
+        dataframe(df_filtered, use_container_width=True)
         
         # Create a visual timeline with matplotlib
         if not df_filtered.empty:
@@ -298,16 +299,16 @@ try:
                      ncol=3)
             
             # Display the timeline
-            st.pyplot(fig)
+            pyplot(fig)
 
     with tabs[2]:  # Tasks
-        st.header("Task Completion Status")
+        header("Task Completion Status")
         
         # Get task status from the last history entry
         tasks_status = latest_entry.tasks_left_to_do
         
         # Create columns for each player
-        player_cols = st.columns(len(tasks_status))
+        player_cols = columns(len(tasks_status))
         
         # Display tasks for each player
         for i, (player_name, tasks) in enumerate(tasks_status.items()):
@@ -321,19 +322,19 @@ try:
                 
                 # Display player header with status
                 status_text = "🟢 Alive" if is_alive else "💀 Dead"
-                st.subheader(f"{player_name} ({status_text})")
-                st.write(f"Role: {role_text}")
+                subheader(f"{player_name} ({status_text})")
+                write(f"Role: {role_text}")
                 
                 # Display tasks
                 if not tasks:
-                    st.write("No tasks remaining! 🎉")
+                    write("No tasks remaining! 🎉")
                 else:
                     task_complete = game_config.num_tasks - len(tasks)
                     task_total = game_config.num_tasks
                     
                     # Show progress bar
-                    st.progress(task_complete / task_total)
-                    st.write(f"{task_complete}/{task_total} tasks completed")
+                    progress(task_complete / task_total)
+                    write(f"{task_complete}/{task_total} tasks completed")
                     
                     # List individual tasks
                     for task in tasks:
@@ -345,10 +346,10 @@ try:
                         if hasattr(task, 'turns_left'):
                             turns_info = f" ({task.turns_left} turns left)"
                         
-                        st.write(f"TODO: {task_name} at {task_location}{turns_info}")
+                        write(f"TODO: {task_name} at {task_location}{turns_info}")
 
     with tabs[3]:  # Player Network
-        st.header("Player Interaction Network")
+        header("Player Interaction Network")
         
         # Create a network graph
         G = nx.Graph()
@@ -422,10 +423,10 @@ try:
         plt.title("Player Interaction Network")
         
         # Display the graph
-        st.pyplot(plt.gcf())
+        pyplot(plt.gcf())
         
         # Display interaction tables
-        st.subheader("Player Co-Location Frequency")
+        subheader("Player Co-Location Frequency")
         
         # Create a DataFrame for interactions
         interaction_data = []
@@ -443,10 +444,10 @@ try:
         )
         
         # Display table
-        st.dataframe(interaction_df)
+        dataframe(interaction_df)
         
         # Display suspicion analysis
-        st.subheader("Suspicion Analysis")
+        subheader("Suspicion Analysis")
         
         # Extract SPEAK actions related to suspicion
         discussions = []
@@ -454,7 +455,7 @@ try:
         for entry in history:
             if entry.action_taken.type == ActionType.SPEAK:
                 speaker = entry.action_taken.player_name
-                message = entry.action_taken.spectator
+                message = entry.action_taken.target_message
                 discussions.append({
                     "Speaker": speaker,
                     "Message": message
@@ -463,12 +464,12 @@ try:
         # Display discussion records
         if discussions:
             discussion_df = pd.DataFrame(discussions)
-            st.dataframe(discussion_df)
+            dataframe(discussion_df)
         else:
-            st.write("No discussions recorded yet.")
+            write("No discussions recorded yet.")
 
     with tabs[4]:  # Voting Patterns
-        st.header("Voting Pattern Visualization")
+        header("Voting Pattern Visualization")
         
         # Extract all discussion phase entries with voting data
         voting_data = []
@@ -491,11 +492,11 @@ try:
                             "Votee": votee,
                             "CoT": cot,
                             "Speaker": entry.action_taken.player_name,
-                            "Message": entry.action_taken.spectator if entry.action_taken.spectator else "No message"
+                            "Message": entry.action_taken.target_message if entry.action_taken.target_message else "No message"
                         })
         
         if not voting_data:
-            st.info("No voting data available. Voting data only appears during discussion phases.")
+            info("No voting data available. Voting data only appears during discussion phases.")
         else:
             # Create a dataframe from voting data
             df_votes = pd.DataFrame(voting_data)
@@ -508,11 +509,11 @@ try:
             vote_turns = sorted(df_votes["Turn"].unique())
             
             # Allow users to select which turns to compare
-            st.subheader("Select Turns to Compare Votes")
-            col1, col2 = st.columns(2)
+            subheader("Select Turns to Compare Votes")
+            col1, col2 = columns(2)
             
             with col1:
-                start_turn = st.selectbox(
+                start_turn = selectbox(
                     "Starting Turn", 
                     vote_turns, 
                     index=0,
@@ -522,7 +523,7 @@ try:
             with col2:
                 # Filter for turns after the start turn
                 valid_end_turns = [t for t in vote_turns if t > start_turn]
-                end_turn = st.selectbox(
+                end_turn = selectbox(
                     "Ending Turn", 
                     valid_end_turns if valid_end_turns else [start_turn], 
                     index=min(1, len(valid_end_turns)-1) if valid_end_turns else 0,
@@ -535,7 +536,7 @@ try:
             
             # Create Sankey diagram to show vote changes
             if not start_votes.empty and not end_votes.empty:
-                st.subheader(f"Vote Changes Between Turn {start_turn} and Turn {end_turn}")
+                subheader(f"Vote Changes Between Turn {start_turn} and Turn {end_turn}")
                 
                 # Get the vote maps for easier comparison
                 start_vote_map = dict(zip(start_votes["Voter"], start_votes["Votee"]))
@@ -597,10 +598,10 @@ try:
                     ax.axis('off')
                     
                     # Display the directed graph
-                    st.pyplot(fig)
+                    pyplot(fig)
                     
                     # Display vote change details in a table
-                    st.subheader("Players Who Changed Their Votes")
+                    subheader("Players Who Changed Their Votes")
                     
                     # Create a more descriptive table of vote changes
                     change_data = []
@@ -614,33 +615,33 @@ try:
                     if change_data:
                         # Display as a styled table
                         vote_change_df = pd.DataFrame(change_data)
-                        st.table(vote_change_df)
+                        table(vote_change_df)
                     else:
-                        st.info("No players changed their votes between these turns.")
+                        info("No players changed their votes between these turns.")
                 else:
                     # Show before and after vote tables side by side
-                    st.info("No vote changes detected between these turns.")
+                    info("No vote changes detected between these turns.")
                     
                 # Show the before and after votes side by side for comparison
-                st.subheader("Vote Comparison")
-                col1, col2 = st.columns(2)
+                subheader("Vote Comparison")
+                col1, col2 = columns(2)
                 
                 with col1:
-                    st.write(f"Turn {start_turn} Votes:")
+                    write(f"Turn {start_turn} Votes:")
                     start_vote_df = pd.DataFrame(list(start_vote_map.items()), 
                                                 columns=["Voter", "Voted For"])
-                    st.table(start_vote_df)
+                    table(start_vote_df)
                 
                 with col2:
-                    st.write(f"Turn {end_turn} Votes:")
+                    write(f"Turn {end_turn} Votes:")
                     end_vote_df = pd.DataFrame(list(end_vote_map.items()), 
                                               columns=["Voter", "Voted For"])
-                    st.table(end_vote_df)
+                    table(end_vote_df)
             else:
-                st.info("Please select valid turns with voting data to compare.")
+                info("Please select valid turns with voting data to compare.")
             
             # Display a heatmap of voting patterns
-            st.subheader("Voting Heatmap")
+            subheader("Voting Heatmap")
             
             # Create a matrix of who voted for whom
             vote_matrix = pd.pivot_table(
@@ -681,10 +682,10 @@ try:
             fig.tight_layout()
             
             # Display the heatmap
-            st.pyplot(fig)
+            pyplot(fig)
             
             # Show vote progression over time
-            st.subheader("Vote Progression Over Time")
+            subheader("Vote Progression Over Time")
             
             # Create line chart to show vote counts over time
             vote_counts = df_votes.groupby(["Turn", "Votee"]).size().reset_index(name="Count")
@@ -705,14 +706,14 @@ try:
             # Set x-ticks to match turns
             ax.set_xticks(vote_turns)
             
-            st.pyplot(fig)
+            pyplot(fig)
             
             # Display chain of thought for each vote
-            st.subheader("Voting Reasoning (Chain of Thought)")
+            subheader("Voting Reasoning (Chain of Thought)")
             
             # Group votes by turn for easier navigation
             vote_turns_for_cot = sorted(df_votes["Turn"].unique())
-            selected_turn_for_cot = st.selectbox(
+            selected_turn_for_cot = selectbox(
                 "Select Turn to View Reasoning", 
                 vote_turns_for_cot,
                 key="turn_for_cot"
@@ -723,28 +724,28 @@ try:
             
             if not turn_votes.empty:
                 for _, vote in turn_votes.iterrows():
-                    with st.expander(f"{vote['Voter']} voted for {vote['Votee']}"):
+                    with expander(f"{vote['Voter']} voted for {vote['Votee']}"):
                         # Format the chain of thought text
                         cot_text = vote['CoT']
                         # Remove <think> and </think> tags if present
                         cot_text = cot_text.replace("<think>", "").replace("</think>", "")
                         # Display the formatted text
-                        st.markdown(f"**Chain of Thought:**\n\n{cot_text}")
+                        markdown(f"**Chain of Thought:**\n\n{cot_text}")
             else:
-                st.info("No voting data available for this turn.")
+                info("No voting data available for this turn.")
             
             # Show raw voting data for reference
-            with st.expander("View Raw Voting Data"):
-                st.dataframe(df_votes)
+            with expander("View Raw Voting Data"):
+                dataframe(df_votes)
     
     with tabs[5]:  # Raw Data
-        st.header("Raw Game Data")
+        header("Raw Game Data")
         
         # Allow exploration of raw history data
-        st.subheader("History Entries")
+        subheader("History Entries")
         
         # Select history entry
-        history_index = st.slider("Select History Entry", 0, len(history) - 1, len(history) - 1)
+        history_index = slider("Select History Entry", 0, len(history) - 1, len(history) - 1)
         selected_entry = history[history_index]
         
         # Convert to dictionary for easier display
@@ -764,23 +765,23 @@ try:
         
         # Display votes in a more readable format if they exist
         if hasattr(selected_entry, 'votes_before_this_discussion_message') and selected_entry.votes_before_this_discussion_message:
-            st.subheader("Votes Before Discussion")
+            subheader("Votes Before Discussion")
             
             # Create a more readable format for the votes
             for voter, vote_info in selected_entry.votes_before_this_discussion_message.items():
-                with st.expander(f"{voter} voted for {vote_info.get('voted_player', 'unknown')}"):
+                with expander(f"{voter} voted for {vote_info.get('voted_player', 'unknown')}"):
                     if 'chain_of_thought' in vote_info:
                         # Format the chain of thought text
                         cot_text = vote_info['chain_of_thought']
                         # Remove <think> and </think> tags if present
                         cot_text = cot_text.replace("<think>", "").replace("</think>", "")
                         # Display the formatted text
-                        st.markdown(f"**Chain of Thought:**\n\n{cot_text}")
+                        markdown(f"**Chain of Thought:**\n\n{cot_text}")
                     else:
-                        st.write("No reasoning provided")
+                        write("No reasoning provided")
         
         # Display players
-        st.subheader("Players")
+        subheader("Players")
         
         player_data = []
         for player in players:
@@ -790,10 +791,10 @@ try:
             }
             player_data.append(player_dict)
         
-        st.dataframe(pd.DataFrame(player_data))
+        dataframe(pd.DataFrame(player_data))
 
 except Exception as e:
-    st.error(f"Error loading game state: {e}")
+    error(f"Error loading game state: {e}")
     # import traceback
     # traceback.print_exc()
-    st.code(str(e))
+    code(str(e))
