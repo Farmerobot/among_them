@@ -176,7 +176,7 @@ def get_observations_at_history_point(
 
     # Report dead players in room
     
-    dead_players_in_room_names = [name for name, dead_location in get_dead_players(history).items() if dead_location == player_location.value]
+    dead_players_in_room_names = [name for name, dead_location in get_dead_players(history_slice).items() if dead_location == player_location.value]
     if dead_players_in_room_names:
         observations.append(f"You see dead bodies here: {', '.join(dead_players_in_room_names)}.")
         observations.append(f"You can report the dead body of {' or '.join(dead_players_in_room_names)}.")

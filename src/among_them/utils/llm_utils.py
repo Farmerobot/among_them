@@ -141,6 +141,14 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
             cot = ""
             response_text = raw
     else:  # OpenRouter or Ollama
+        if not raw_reasoning:
+            manual_response = input("LLM did not provide chain of thought or provided it using content and that's weird. Please copy paste actual response from the terminal. Rest would be considered CoT.")
+            response_text = manual_response
+            raw_reasoning = raw_content[:raw_content.find(manual_response)]
+            raw_content = manual_response
+            if input(f"Please check and type 'yes' if this is correct: Response: '{manual_response}' CoT: '{raw_reasoning}'") != "yes":
+                raise ValueError("LLM did not provide chain of thought or provided it using content and that's weird.")
+
         cot = "<think>\n" + raw_reasoning + "\n</think>"
         response_text = raw_content
 
