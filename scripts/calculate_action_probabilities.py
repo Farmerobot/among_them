@@ -255,8 +255,6 @@ def generate_reasoning_and_calculate_probabilities(
     token_results.sort(key=lambda x: x[2], reverse=True)
     word_results.sort(key=lambda x: x[2], reverse=True)
 
-    # Normalize W/O Norm, Token Norm and Word Norm probabilities to add up to 100%
-    
     action_calc_end_time = time.time()
     action_calc_time = action_calc_end_time - action_calc_start_time
     
@@ -382,6 +380,10 @@ def main():
     print(f"{'Action':<30} {'Tokens':<25} {'Token Probabilities (%)':<35} {'W/O Norm':<12} {'Token Norm':<12} {'Word Norm':<12}")
     print("=" * 120)
     
+    wo_norm_sum = sum(math.exp(log_prob) for _, log_prob, _, _, _ in token_norm_results[:10])
+    token_norm_sum = sum(math.exp(prob) for _, _, prob, _, _ in token_norm_results[:10])
+    word_norm_sum = sum(math.exp(prob) for _, _, prob, _, _ in word_norm_results[:10])
+    
     for action, log_prob, token_norm_prob, token_texts, token_probs in token_norm_results[:10]:
         # Find corresponding word norm result
         word_norm_prob = next((w_norm for w_action, _, w_norm, _, _ in word_norm_results if w_action == action), token_norm_prob)
@@ -399,9 +401,11 @@ def main():
             prob_list = prob_list[:32] + "...]"
         
         # Calculate action probability without normalization (geometric mean)
-        action_prob_wo_norm = math.exp(log_prob) * 100  # Convert to percentage
+        action_prob_wo_norm = math.exp(log_prob) * 100 / wo_norm_sum 
+        action_prob_token_norm = math.exp(token_norm_prob) * 100 / token_norm_sum
+        action_prob_word_norm = math.exp(word_norm_prob) * 100 / word_norm_sum
         
-        print(f"{action_text:<30} {token_list:<25} {prob_list:<35} {action_prob_wo_norm:<11.4f} {math.exp(token_norm_prob)*100:<11.4f} {math.exp(word_norm_prob)*100:<11.4f}")
+        print(f"{action_text:<30} {token_list:<25} {prob_list:<35} {action_prob_wo_norm:<11.4f} {action_prob_token_norm:<11.4f} {action_prob_word_norm:<11.4f}")
     
     # Most probable action
     print("\n🎯 MOST PROBABLE ACTION (Token Normalization):")
