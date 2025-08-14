@@ -4,13 +4,13 @@ Calculate action probabilities for Among Us game AI using DeepSeek 1.5b model
 and TWOSOME methodology for fair action comparison.
 """
 
+import os
 import time
 import torch
 import numpy as np
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer, GenerationConfig, StaticCache
+from transformers import AutoTokenizer, AutoModelForCausalLM, StaticCache
 from typing import List, Tuple, Dict
 import math
-import torch
 
 from among_them.game_engine import GameEngine
 from among_them.game_config import GameConfig
@@ -20,6 +20,7 @@ from among_them.models.action import Action
 def load_deepseek_model():
     """Load DeepSeek-R1-Distill-Qwen-1.5B model and tokenizer."""
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    load_start_time = time.time()
     
     print(f"Loading model: {model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
@@ -38,10 +39,26 @@ def load_deepseek_model():
         device_map=device
     )
     model.eval()
-
+    load_end_time = time.time()
+    load_time = load_end_time - load_start_time
+    
+    print(f"Model loaded in {load_time:.2f}s")
+    
+    compile_start_time = time.time()
     model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
+    compile_end_time = time.time()
+    compile_time = compile_end_time - compile_start_time
+    
+    print(f"Model compiled in {compile_time:.2f}s")
     
     return model, tokenizer
+
+def stream_print(token_id, tokenizer):
+    try:
+        text = tokenizer.decode([token_id])
+    except Exception:
+        text = f"<id:{token_id}>"
+    print(text, end="", flush=True)
 
 
 def generate_reasoning_and_calculate_probabilities(
@@ -63,35 +80,17 @@ def generate_reasoning_and_calculate_probabilities(
         # {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
     ]
-    
+    tokenizer_start_time = time.time()
     input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     
     # 2. Generate reasoning until </think> - this creates our KV-cache checkpoint
     inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
     think_close_token = tokenizer.encode("</think>", add_special_tokens=False)[0]
-    
-    from transformers import StoppingCriteria, StoppingCriteriaList
-    
-    class ThinkStoppingCriteria(StoppingCriteria):
-        def __init__(self, stop_token_id):
-            self.stop_token_id = stop_token_id
-            
-        def __call__(self, input_ids, scores, **kwargs):
-            return input_ids[0, -1] == self.stop_token_id
-    
-    stopping_criteria = StoppingCriteriaList([ThinkStoppingCriteria(think_close_token)])
-    
-    # Generate reasoning and get KV cache checkpoint (streamed)
-    reasoning_start_time = time.time()
-    
-    # Stream reasoning tokens as they are generated until </think>
-    reasoning_streamer = TextStreamer(
-        tokenizer,
-        skip_prompt=True,
-        skip_special_tokens=False,
-    )
+    tokenizer_end_time = time.time()
+    tokenizer_time = tokenizer_end_time - tokenizer_start_time
 
-    # Static cache to persist KV states across generate() and manual decoding
+    # Static cache to persist KV states across manual decoding
+    static_cache_start_time = time.time()
     past_key_values = StaticCache(
         config=model.config,
         max_batch_size=1,
@@ -100,75 +99,95 @@ def generate_reasoning_and_calculate_probabilities(
         device=next(model.parameters()).device,
         dtype=next(model.parameters()).dtype,
     )
+    static_cache_end_time = time.time()
+    static_cache_time = static_cache_end_time - static_cache_start_time
 
     print("\nStreaming reasoning (until </think>)...")
-    
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"  # To prevent long warnings :)
+    print("<think>") # already in chat template
+
+    first_token_start_time = time.time()
+    device = next(model.parameters()).device
+    attention_mask = inputs.get("attention_mask", torch.ones_like(inputs.input_ids))
     with torch.no_grad():
-        model.generation_config.max_new_tokens = 50
-        reasoning_output = model.generate(
+        # 1) Fill cache with the prompt
+        prompt_len = inputs.input_ids.shape[1]
+        cache_position = torch.arange(prompt_len, device=device)
+        logits = model(
             inputs.input_ids,
-            stopping_criteria=stopping_criteria,
-            streamer=reasoning_streamer,
-            return_dict_in_generate=True,
-            use_cache=True,
-            pad_token_id=tokenizer.eos_token_id,
-            attention_mask=torch.ones_like(inputs.input_ids),  # Add attention mask
+            attention_mask=attention_mask,
+            cache_position=cache_position,
             past_key_values=past_key_values,
-        )
+            use_cache=True,
+            return_dict=False,
+        )[0]
+        first_token_end_time = time.time()
+        first_token_time = first_token_end_time - first_token_start_time
     
-    reasoning_end_time = time.time()
-    reasoning_time = reasoning_end_time - reasoning_start_time
+        # Generate reasoning and get KV cache checkpoint (streamed)
+        reasoning_start_time = time.time()
+
+        # 2) Greedy decode until </think> (one-token stop) or step cap
+        max_reason_tokens = 50
+        generated_reason_ids = []
+        cur_pos = torch.tensor([prompt_len], device=device)
+        for step in range(max_reason_tokens):
+            next_token = torch.argmax(logits[:, -1], dim=-1)  # [1]
+            token_id = next_token.item()
+            # Do not include </think> in generation; append it later
+            if token_id == think_close_token:
+                break
+            generated_reason_ids.append(token_id)
+            # stream token text
+            stream_print(token_id, tokenizer)
+
+            # Write token into cache and compute next logits
+            out = model(
+                next_token[:, None],
+                past_key_values=past_key_values,
+                use_cache=True,
+                cache_position=cur_pos,
+            )
+            logits = out.logits
+            cur_pos += 1
+
+        reasoning_end_time = time.time()
+        reasoning_time = reasoning_end_time - reasoning_start_time
     
-    base_sequence = reasoning_output.sequences[0]  # Full sequence with reasoning
+    appending_start_time = time.time()
+
+    base_sequence = torch.cat([inputs.input_ids[0], torch.tensor(generated_reason_ids, device=device)])
     generated_text = tokenizer.decode(base_sequence, skip_special_tokens=False)
     
-    # Print reasoning
-    # print("\nGenerated reasoning:")
-    think_end = generated_text.find("</think>")
-    if think_end == -1:
-        print("No </think> found in generated text")
-        # Add </think> token before action calculations
-        end_think_token = tokenizer.encode("\n</think>", add_special_tokens=False)
-        # And remove everything from the end until last sentence (dot)
-        # Find the last occurrence of the period token in the tensor
-        dot_token_id = tokenizer.encode(".", add_special_tokens=False)[0]
-        last_dot_indices = torch.where(base_sequence == dot_token_id)[0]
-        last_dot_index = last_dot_indices[-1] if len(last_dot_indices) > 0 else len(base_sequence) - 1
-        base_sequence = torch.cat([base_sequence[:last_dot_index+1], torch.tensor(end_think_token, device=model.device)])
-    
-    # Add Action: prefix (do NOT recompute base; continue writing into StaticCache)
+    # Append </think> and Action: prefix directly into the cache (continue from cur_pos)
+    end_think_token_ids = tokenizer.encode("\n</think>", add_special_tokens=False)
     action_prefix_token_ids = tokenizer.encode("\n\nAction:", add_special_tokens=False)
-    # We'll feed only the prefix tokens while advancing cache_position
     base_seq_len = base_sequence.shape[0]
-    cache_position = torch.tensor([base_seq_len], device=next(model.parameters()).device)
     current_logits = None
     with torch.no_grad():
-        for tid in action_prefix_token_ids:
-            tok = torch.tensor([[tid]], dtype=torch.long, device=next(model.parameters()).device)
+        for tid in end_think_token_ids + action_prefix_token_ids:
+            stream_print(tid, tokenizer)
+            tok = torch.tensor([[tid]], dtype=torch.long, device=device)
             out = model(
                 tok,
                 past_key_values=past_key_values,
                 use_cache=True,
-                cache_position=cache_position,
+                cache_position=cur_pos,
             )
             current_logits = out.logits[0, -1, :]
-            cache_position += 1
+            cur_pos += 1
     # Logits after the Action: prefix
     last_logits = current_logits
-    prefix_end_pos = base_seq_len + len(action_prefix_token_ids)
+    prefix_end_pos = base_seq_len + len(end_think_token_ids) + len(action_prefix_token_ids)
     # For display, you can still decode the extended text if desired
     # extended_sequence = torch.cat([base_sequence, torch.tensor(action_prefix_token_ids, device=model.device)])
     # generated_text = tokenizer.decode(extended_sequence, skip_special_tokens=False)
     
-    print(f"\n⏱️ Reasoning generation time: {reasoning_time:.2f} seconds")
+    appending_end_time = time.time()
+    appending_time = appending_end_time - appending_start_time
     
     # 3. Add newline token and get checkpoint (cached KV states)
     action_calc_start_time = time.time()
-    
-    print(f"\nCalculating probabilities for {len(actions)} actions using KV-cache checkpoint...")
-    print("Streaming action tokens for each candidate (teacher forcing)...")
-    
-    # Cache is already advanced through the Action: prefix; last_logits reflects that state
     
     # 4. Calculate probabilities for each action using the checkpoint
     results = []
@@ -188,13 +207,9 @@ def generate_reasoning_and_calculate_probabilities(
         # Calculate probability using teacher forcing with cached states
         total_log_prob = 0.0
         current_logits = last_logits
-        current_past_key_values = past_key_values
         token_probabilities = []  # Store individual token probabilities
         token_texts = []  # Store individual token texts
         
-        # Begin streaming for this action
-        print(f"\nAction candidate: {action_text}")
-        print("Action tokens: ", end="", flush=True)
         # Reset cache position to the end of the Action: prefix so we overwrite any prior action tokens
         cache_position_act = torch.tensor([prefix_end_pos], device=next(model.parameters()).device)
 
@@ -210,11 +225,7 @@ def generate_reasoning_and_calculate_probabilities(
             token_texts.append(tokenizer.decode([token_id]))
             
             # Stream this token
-            try:
-                _tok_txt = tokenizer.decode([token_id])
-            except Exception:
-                _tok_txt = f"<id:{int(token_id)}>"
-            print(_tok_txt, end="", flush=True)
+            stream_print(token_id, tokenizer)
             
             # If not the last token, get next logits using cached states
             if i < len(action_token_ids) - 1:
@@ -243,18 +254,24 @@ def generate_reasoning_and_calculate_probabilities(
     # Sort both by their respective normalized probabilities (descending)
     token_results.sort(key=lambda x: x[2], reverse=True)
     word_results.sort(key=lambda x: x[2], reverse=True)
+
+    # Normalize W/O Norm, Token Norm and Word Norm probabilities to add up to 100%
     
     action_calc_end_time = time.time()
     action_calc_time = action_calc_end_time - action_calc_start_time
     
-    print(f"\n⏱️ Action probability calculation time: {action_calc_time:.2f} seconds")
     print(f"\n📊 Total time breakdown:")
-    print(f"   • Reasoning generation: {reasoning_time:.2f}s")
-    print(f"   • Action probabilities: {action_calc_time:.2f}s")
-    print(f"   • Total: {reasoning_time + action_calc_time:.2f}s")
+    print(f"   • Tokenizer: {tokenizer_time:.2f}s")
+    print(f"   • Static cache: {static_cache_time:.2f}s")
+    print(f"   • First token: {first_token_time:.2f}s")
+    print(f"   • Reasoning generation: {reasoning_time:.2f}s ({len(generated_reason_ids) / reasoning_time:.2f} tokens/s)")
+    action_prefix_and_action_tokens_per_s = (len(end_think_token_ids) + len(action_prefix_token_ids) + len(action_token_ids)) / (action_calc_time + appending_time)
+    print(f"   • Appending Action: prefix: {appending_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
+    print(f"   • Action probabilities: {action_calc_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
+    print(f"   • Total: {tokenizer_time + static_cache_time + first_token_time + reasoning_time + appending_time + action_calc_time:.2f}s")
     
-    # Show top token probabilities after </think> + newline
-    print(f"\n🎯 TOP TOKEN PROBABILITIES after </think> + newline:")
+    # Show top token probabilities after Action: prefix
+    print(f"\n🎯 TOP TOKEN PROBABILITIES after Action: prefix:")
     print("-" * 60)
     probs_after_think = torch.softmax(last_logits, dim=-1)
     top_k = 10
