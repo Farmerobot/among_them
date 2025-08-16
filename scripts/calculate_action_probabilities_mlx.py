@@ -16,6 +16,8 @@ from typing import List, Tuple
 import mlx.core as mx
 from mlx_lm import load as mlx_load
 from mlx_lm import stream_generate
+from mlx_lm.models import cache as mlx_cache
+from mlx_lm.models.cache import make_prompt_cache
 
 from among_them.game_engine import GameEngine
 from among_them.game_config import GameConfig
@@ -84,6 +86,7 @@ def generate_reasoning_and_calculate_probabilities(
         return "", [], []
 
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    prompt_cache = make_prompt_cache(model)
 
     # 1. Prepare base prompt
     messages = [
@@ -108,6 +111,7 @@ def generate_reasoning_and_calculate_probabilities(
         model,
         tokenizer,
         prompt=input_text,
+        prompt_cache=prompt_cache,
         # temp=0.0,
         # top_p=1.0,
         max_tokens=max_reason_tokens,
@@ -127,31 +131,32 @@ def generate_reasoning_and_calculate_probabilities(
     action_prefix_str = "\n\nAction:"
     prefix_str = input_text + generated_text + end_think_str + action_prefix_str
 
-    # Probe top-k after Action: prefix
+    # Pre-tokenize the prefix and prefill the KV cache once
+    prefix_ids = tokenizer.encode(prefix_str, add_special_tokens=False)
+    y = mx.array(prefix_ids, dtype=mx.uint32)
+    prompt_cache = mlx_cache.make_prompt_cache(model)
+
+    # Prefill in chunks (mirrors mlx_lm.generate.generate_step)
+    prefill_step_size = 2048
+    while y.size > prefill_step_size:
+        model(y[:prefill_step_size][None], cache=prompt_cache)
+        mx.eval([c.state for c in prompt_cache])
+        y = y[prefill_step_size:]
+        mx.clear_cache()
+
+    # Compute base logprobs for the next token after the prefix
+    logits = model(y[None], cache=prompt_cache)
+    logits_last = logits[:, -1, :]
+    base_logprobs = (logits_last - mx.logsumexp(logits_last, keepdims=True)).squeeze(0)
+
+    # Probe top-k after Action: prefix using the base logprobs
     print()
     print("\n🎯 TOP TOKEN PROBABILITIES after Action: prefix:")
     print("-" * 60)
-    first_step_logprobs = None
-    for i, resp in enumerate(
-        stream_generate(
-            model,
-            tokenizer,
-            prompt=prefix_str,
-            # temp=0.0,
-            # top_p=1.0,
-            max_tokens=1,
-        )
-    ):
-        if i == 0:
-            first_step_logprobs = resp.logprobs
-            break
-
-    if first_step_logprobs is not None:
-        # top-10 by probability
+    if base_logprobs is not None:
         import numpy as np
 
-        # Convert MLX array to NumPy safely via .tolist() to avoid buffer dtype issues
-        logp_np = np.asarray(first_step_logprobs.tolist(), dtype=np.float32)
+        logp_np = np.asarray(base_logprobs.tolist(), dtype=np.float32)
         probs_np = np.exp(logp_np)
         top_k = 10
         top_idx = probs_np.argsort()[-top_k:][::-1]
@@ -187,43 +192,37 @@ def generate_reasoning_and_calculate_probabilities(
             results.append((action, 0.0, 0.0, 0.0, [], []))
             continue
 
-        # Teacher-force the model to emit action tokens and collect per-token probs
+        # Teacher-force using the shared KV cache. Start from the base logprobs,
+        # then append each forced token and compute the next-step distribution.
         total_log_prob = 0.0
         token_probs: List[float] = []
         token_texts: List[str] = []
 
-        sampler = _forced_sampler(action_token_ids)
-        step_idx = 0
-        for resp in stream_generate(
-            model,
-            tokenizer,
-            prompt=prefix_str,
-            # temp=0.0,
-            # top_p=1.0,
-            max_tokens=num_tokens,
-            sampler=sampler,
-        ):
-            # stream_generate yields an extra final response with finish_reason set.
-            if getattr(resp, "finish_reason", None) is not None:
-                break
-            # Guard against extra iterations
-            if step_idx >= num_tokens:
-                break
-
-            forced_tid = action_token_ids[step_idx]
-            # Probability under the returned distribution
-            logprobs = resp.logprobs
+        # Use base_logprobs as the distribution for the first forced token
+        current_logprobs = base_logprobs
+        tokens_appended = 0
+        for forced_tid in action_token_ids:
             # Access log p(token)
-            lp = float(logprobs[int(forced_tid)].item())
+            lp = float(current_logprobs[int(forced_tid)].item())
             total_log_prob += lp
             p = math.exp(lp)
             token_probs.append(p * 100.0)  # percent
             token_texts.append(tokenizer.decode([int(forced_tid)]))
 
             # Stream the token text as in the original script
-            stream_print(forced_tid, tokenizer)
+            stream_print(int(forced_tid), tokenizer)
 
-            step_idx += 1
+            # Advance the cache by feeding the forced token and compute next logprobs
+            y_step = mx.array([int(forced_tid)], dtype=mx.uint32)
+            logits = model(y_step[None], cache=prompt_cache)
+            logits_last = logits[:, -1, :]
+            current_logprobs = (logits_last - mx.logsumexp(logits_last, keepdims=True)).squeeze(0)
+            tokens_appended += 1
+
+        # Roll back cache to the prefix-only state for the next action
+        if tokens_appended > 0:
+            mlx_cache.trim_prompt_cache(prompt_cache, tokens_appended)
+            mx.clear_cache()
 
         # Newline after streaming this action's tokens
         print()
