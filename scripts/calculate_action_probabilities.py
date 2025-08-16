@@ -107,7 +107,6 @@ def generate_reasoning_and_calculate_probabilities(
 
     print("\nStreaming reasoning (until </think>)...")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"  # To prevent long warnings :)
-    print("<think>") # already in chat template
 
     first_token_start_time = time.time()
     device = next(model.parameters()).device
@@ -131,13 +130,57 @@ def generate_reasoning_and_calculate_probabilities(
         # Generate reasoning and get KV cache checkpoint (streamed)
         reasoning_start_time = time.time()
 
-        # 2) Greedy decode until </think> (one-token stop) or step cap
+        # 2) Sampled decode until </think> (one-token stop) or step cap
         max_reason_tokens = 50
         generated_reason_ids = []
         cur_pos = torch.tensor([prompt_len], device=device)
+
+        # Read defaults from generation config to mimic HF generate behavior
+        gen_cfg = getattr(model, "generation_config", None)
+        temperature = float(getattr(gen_cfg, "temperature", 1.0) or 1.0)
+        top_p = float(getattr(gen_cfg, "top_p", 1.0) or 1.0)
+        top_k = int(getattr(gen_cfg, "top_k", 0) or 0)
+        print(f"Sampling with temp={temperature}, top_p={top_p}, top_k={top_k}")
+
         for step in range(max_reason_tokens):
-            next_token = torch.argmax(logits[:, -1], dim=-1)  # [1]
+            # Take last-step logits [vocab]
+            if logits.dim() == 3:
+                step_logits = logits[:, -1, :].squeeze(0)  # [vocab]
+            else:
+                step_logits = logits[:, -1].squeeze(0)  # [vocab]
+
+            # Temperature scaling
+            if temperature != 1.0:
+                step_logits = step_logits / max(temperature, 1e-6)
+
+            # Top-k filtering
+            if top_k and top_k > 0 and top_k < step_logits.numel():
+                kth_vals, _ = torch.topk(step_logits, top_k)
+                min_keep = kth_vals[-1]
+                step_logits = torch.where(step_logits < min_keep, torch.tensor(float('-inf'), device=step_logits.device, dtype=step_logits.dtype), step_logits)
+
+            # Top-p (nucleus) filtering
+            if top_p and top_p < 1.0:
+                sorted_logits, sorted_indices = torch.sort(step_logits, descending=True)
+                sorted_probs = torch.softmax(sorted_logits, dim=-1)
+                cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+                # Mask tokens with cumulative probability above threshold
+                sorted_mask = cumulative_probs > top_p
+                # Ensure at least one token is kept
+                if sorted_mask.any():
+                    # Shift mask right to keep the first token above the threshold
+                    sorted_mask[..., 1:] = sorted_mask[..., :-1].clone()
+                    sorted_mask[..., 0] = False
+                sorted_logits = torch.where(sorted_mask, torch.tensor(float('-inf'), device=sorted_logits.device, dtype=sorted_logits.dtype), sorted_logits)
+                # Scatter back
+                step_logits = torch.full_like(step_logits, float('-inf'))
+                step_logits.scatter_(0, sorted_indices, sorted_logits)
+
+            # Sample
+            probs = torch.softmax(step_logits, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)  # [1]
             token_id = next_token.item()
+
             # Do not include </think> in generation; append it later
             if token_id == think_close_token:
                 break
@@ -152,7 +195,7 @@ def generate_reasoning_and_calculate_probabilities(
             # Write token into cache and compute next logits
             with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
                 out = model(
-                    next_token[:, None],
+                    next_token[:, None].to(dtype=torch.long),
                     past_key_values=past_key_values,
                     use_cache=True,
                     cache_position=cur_pos,
