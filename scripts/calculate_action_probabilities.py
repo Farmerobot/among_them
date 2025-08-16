@@ -11,6 +11,7 @@ import numpy as np
 from transformers import AutoTokenizer, AutoModelForCausalLM, StaticCache
 from typing import List, Tuple, Dict
 import math
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from among_them.game_engine import GameEngine
 from among_them.game_config import GameConfig
@@ -45,6 +46,8 @@ def load_deepseek_model():
     print(f"Model loaded in {load_time:.2f}s")
     
     compile_start_time = time.time()
+    model.set_attn_implementation("flash_attention_2")
+    # compilation might occur later in the code (when model is called)
     model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
     compile_end_time = time.time()
     compile_time = compile_end_time - compile_start_time
@@ -113,16 +116,17 @@ def generate_reasoning_and_calculate_probabilities(
         # 1) Fill cache with the prompt
         prompt_len = inputs.input_ids.shape[1]
         cache_position = torch.arange(prompt_len, device=device)
-        logits = model(
-            inputs.input_ids,
-            attention_mask=attention_mask,
-            cache_position=cache_position,
-            past_key_values=past_key_values,
-            use_cache=True,
-            return_dict=False,
-        )[0]
-        first_token_end_time = time.time()
-        first_token_time = first_token_end_time - first_token_start_time
+
+        with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+            logits = model(
+                inputs.input_ids,
+                attention_mask=attention_mask,
+                cache_position=cache_position,
+                past_key_values=past_key_values,
+                use_cache=True,
+            ).logits
+            first_token_end_time = time.time()
+            first_token_time = first_token_end_time - first_token_start_time
     
         # Generate reasoning and get KV cache checkpoint (streamed)
         reasoning_start_time = time.time()
@@ -138,18 +142,23 @@ def generate_reasoning_and_calculate_probabilities(
             if token_id == think_close_token:
                 break
             generated_reason_ids.append(token_id)
-            # stream token text
+
+            # stream token text. First token ("Okay") will be fast since we have logits from prompt prefill
+            # but the second one might cause recompile (torch.compile) because single token pass 
+            # (Shape/args differ from prefill: input_ids goes from [1, prompt_len] to [1, 1].)
+            # Subsequent decode steps (", so I'm ...") reuse the compiled graph, hence smooth
             stream_print(token_id, tokenizer)
 
             # Write token into cache and compute next logits
-            out = model(
-                next_token[:, None],
-                past_key_values=past_key_values,
-                use_cache=True,
-                cache_position=cur_pos,
-            )
-            logits = out.logits
-            cur_pos += 1
+            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+                out = model(
+                    next_token[:, None],
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    cache_position=cur_pos,
+                )
+                logits = out.logits
+                cur_pos += 1
 
         reasoning_end_time = time.time()
         reasoning_time = reasoning_end_time - reasoning_start_time
@@ -168,14 +177,15 @@ def generate_reasoning_and_calculate_probabilities(
         for tid in end_think_token_ids + action_prefix_token_ids:
             stream_print(tid, tokenizer)
             tok = torch.tensor([[tid]], dtype=torch.long, device=device)
-            out = model(
-                tok,
-                past_key_values=past_key_values,
-                use_cache=True,
-                cache_position=cur_pos,
-            )
-            current_logits = out.logits[0, -1, :]
-            cur_pos += 1
+            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+                out = model(
+                    tok,
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    cache_position=cur_pos,
+                )
+                current_logits = out.logits[0, -1, :]
+                cur_pos += 1
     # Logits after the Action: prefix
     last_logits = current_logits
     prefix_end_pos = base_seq_len + len(end_think_token_ids) + len(action_prefix_token_ids)
@@ -230,16 +240,15 @@ def generate_reasoning_and_calculate_probabilities(
             # If not the last token, get next logits using cached states
             if i < len(action_token_ids) - 1:
                 with torch.no_grad():
-                    next_output = model(
-                        token_id.unsqueeze(0).unsqueeze(0),
-                        past_key_values=past_key_values,
-                        use_cache=True,
-                        cache_position=cache_position_act,
-                    )
-                    current_logits = next_output.logits[0, -1, :]
-                    cache_position_act += 1
-        # End of stream for this action
-        print("")
+                    with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+                        next_output = model(
+                            token_id.unsqueeze(0).unsqueeze(0),
+                            past_key_values=past_key_values,
+                            use_cache=True,
+                            cache_position=cache_position_act,
+                        )
+                        current_logits = next_output.logits[0, -1, :]
+                        cache_position_act += 1
         
         # Calculate BOTH normalizations
         token_normalized_prob = total_log_prob / num_tokens if num_tokens > 0 else total_log_prob
