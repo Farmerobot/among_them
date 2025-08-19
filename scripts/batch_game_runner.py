@@ -47,7 +47,7 @@ game_config = GameConfig(
 )
 
 # Run the game with the specific state file path
-main(game_config, "{state_file_path}")
+main(game_config=game_config, state_file_path="{state_file_path}")
 '''
     
     # Write temporary script with UTF-8 encoding
@@ -98,7 +98,7 @@ def main():
     PLAYER_COUNTS = [7, 6, 5]
     
     # Paths
-    data_dir = Path("src/among_them/data")
+    data_dir = Path("data")
     data_dir.mkdir(parents=True, exist_ok=True)
     
     # Get the next available file number
@@ -133,37 +133,34 @@ def main():
             )
             
             try:
-                # Create a unique state file path for this game
-                state_file_path = f"src/among_them/data/game_state_temp_{current_game}.json"
-                
-                # Run the game by calling manual_llm_game.py
+                # Compute direct numbered output path from the start
+                target_filename = f"game_state_{next_file_number}.json"
+                state_file_path = str(data_dir / target_filename)
+
+                # Run the game by calling manual_llm_game.py and write directly to numbered file
                 success = run_single_game(game_config, state_file_path)
-                
+
                 # Check if the state file exists and has content
                 if os.path.exists(state_file_path):
                     file_size = os.path.getsize(state_file_path)
                     print(f"State file exists: {state_file_path} (size: {file_size} bytes)")
                 else:
                     print(f"WARNING: State file does not exist: {state_file_path}")
-                
+
                 if success:
-                    # Copy the game state to numbered file
-                    if copy_game_state_to_numbered_file(state_file_path, data_dir, next_file_number):
-                        next_file_number += 1
-                        print(f"Game {current_game} completed successfully!")
-                    else:
-                        print(f"Game {current_game} completed but failed to save state")
+                    next_file_number += 1
+                    print(f"Game {current_game} completed successfully!")
                 else:
                     print(f"Game {current_game} failed to complete")
-                    # Even if game failed, save the partial state
+                    # Save partial state to a failed file if exists
                     if os.path.exists(state_file_path):
-                        failed_file_path = f"src/among_them/data/game_state_failed_{current_game}.json"
+                        failed_file_path = str(data_dir / f"game_state_failed_{current_game}.json")
                         shutil.copy2(state_file_path, failed_file_path)
                         print(f"Partial game state saved to: {failed_file_path}")
-                
+
                 # DON'T DELETE THE FILES - keep them for debugging
                 print(f"Game state file preserved at: {state_file_path}")
-                
+
             except Exception as e:
                 print(f"Error in game {current_game}: {e}")
                 print("Continuing with next game...")
