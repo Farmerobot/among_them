@@ -165,7 +165,7 @@ def normalize_and_check_action_valid(
         if re.search(rf"\b{re.escape(available_actions[action])}\b", chosen_action, re.IGNORECASE):
             return action, available_actions[action]
         if "vote" in available_actions[action]:
-            if re.search(rf"\b{re.escape(' '.join(available_actions[action].split(" for ")))}\b", chosen_action, re.IGNORECASE):
+            if re.search(rf"\b{re.escape(' '.join(available_actions[action].split(' for ')))}\b", chosen_action, re.IGNORECASE):
                 return action, available_actions[action]
 
     warning_str = (
