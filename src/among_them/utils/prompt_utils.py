@@ -20,6 +20,7 @@ from among_them.game_config import GameConfig
 from among_them.models.tasks import get_impostor_pretend_tasks_at_location
 from among_them.utils.player_utils import get_dead_players, get_players_in_room, get_last_player_action
 from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
+from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions
 
 
 def get_player_context(player: Player, history: List[History], all_players: List[Player], game_config: GameConfig) -> str:
@@ -121,9 +122,6 @@ def get_observations_at_history_point(
     if phase == GamePhase.DISCUSS:
         observations = ["Given the situation, the best message to send is:"]
         return " ".join(observations)
-    elif phase == GamePhase.VOTING:
-        observations = ["Given the situation, the best action to take is:"]
-        return " ".join(observations)
     
     observations = []
 
@@ -189,7 +187,24 @@ def get_observations_at_history_point(
         else:
             observations.append("You can kill now.")
     
-    observations.append("Given the situation, the best action to take is:")
+    # Explicit list of available actions for Task and Voting phases in XML format
+    # This helps the model choose one exact action string that our parser expects
+    actions_list: list[Action] = []
+    history_slice = history[:history_index + 1]
+    if phase == GamePhase.TASKS:
+        actions_list = get_task_phase_actions(player, history_slice, all_players, game_config)
+    elif phase == GamePhase.VOTING:
+        actions_list = get_vote_actions(history_slice, all_players, player)
+
+    if actions_list:
+        observations.append(
+            "\n\nActions you can choose from (return the chosen action text exactly as written, with NO '*' at the beginning):"
+        )
+        for a in actions_list:
+            option_text = a.set_stories().command_perspective.strip()
+            observations.append(f"\n* {option_text}")
+
+    observations.append("\n\nGiven the situation, the best action to take is:")
     
     return " ".join(observations)
 
@@ -217,6 +232,19 @@ def reconstruct_environment_prompt_from_history(
     
     # System context (static)
     prompt_parts.append(UNIVERSAL_SYSTEM_PROMPT)
+    prompt_parts.append("")
+
+    # Add a simple map overview to help agents understand connectivity without nudging
+    doors_map, _, active_locations = get_map(game_config.map_size)
+    map_lines: list[str] = []
+    for loc in active_locations:
+        neighbors = doors_map.get(loc, [])
+        if neighbors:
+            neighbor_names = ", ".join([n.value for n in neighbors])
+            map_lines.append(f"{loc.value} -> {neighbor_names}")
+        else:
+            map_lines.append(f"{loc.value}: (no direct connections)")
+    prompt_parts.append("Map overview (room -> directly reachable rooms):\n" + "\n".join(map_lines))
     prompt_parts.append("")
     
     # Player context (with role-specific information)
