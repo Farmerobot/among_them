@@ -24,7 +24,8 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
         {"role": "user", "content": system_prompt + "\n" + prompt},
     ]
 
-    # Print chat history
+    # Print chat history (ensure terminal color is reset beforehand)
+    print("\033[0m", end="")
     print("\n\nChat history:\n")
     for message in messages:
         print(f"{message['role']}: {message['content']}")
@@ -120,11 +121,15 @@ def invoke_llm(system_prompt: str, prompt: str, model_name: str) -> Tuple[str, O
                 all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
                 if len(all_tags) > 2:
                     raise Exception("LLM did hallucinate")
+        # Ensure a newline after streaming
         print("")
 
     except KeyboardInterrupt:
         print("\n\033[93mKeyboardInterrupt detected! Switching to manual action selection.\033[0m")
         raise KeyboardInterrupt("User interrupted LLM generation")
+    finally:
+        # Always reset terminal color to avoid leaking color to subsequent output
+        print("\033[0m", end="")
 
     # Extract chain of thought and cleanup
     if LLM_BACKEND in [LLMBackend.MLX]:
