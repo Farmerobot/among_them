@@ -65,8 +65,15 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                 
                 while retry_count < max_retries:
                     try:
-                        # Here, you would insert your custom LLM call and log probability logic.
-                        llm_response, cot = invoke_llm(system_prompt_pd, user_prompt_pd, player.llm_model_name)
+                        # Build allowed actions for early-stop single-line streaming
+                        allowed_actions_pd = [a.set_stories().command_perspective for a in actions_pd]
+                        llm_response, cot = invoke_llm(
+                            system_prompt_pd,
+                            user_prompt_pd,
+                            player.llm_model_name,
+                            allowed_actions=allowed_actions_pd,
+                            single_line_only=True,
+                        )
                         
                         # Try to parse the response
                         try:
@@ -120,8 +127,18 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
         
         while retry_count < max_retries:
             try:
-                # Attempt to invoke the LLM
-                llm_response, cot = invoke_llm(system_prompt, user_prompt, current_player.llm_model_name)
+                # Attempt to invoke the LLM with early-stop on first valid action for non-speak phases
+                allowed_actions_main = [a.set_stories().command_perspective for a in actions_player_can_take if a.type.name != "SPEAK"]
+                single_line_only = len(allowed_actions_main) > 0
+                allowed_actions_for_call = allowed_actions_main if single_line_only else None
+                llm_response, cot = invoke_llm(
+                    system_prompt,
+                    user_prompt,
+                    current_player.llm_model_name,
+                    allowed_actions=allowed_actions_for_call,
+                    single_line_only=single_line_only,
+                    max_output_chars=None if single_line_only else 1500,
+                )
                 
                 # Try to parse the response
                 try:

@@ -120,7 +120,7 @@ def get_observations_at_history_point(
     state_at_point = history[history_index]
     
     if phase == GamePhase.DISCUSS:
-        observations = ["Given the situation, the best message to send is:"]
+        observations = ["Given the situation, the best message to send is (Strict output requirement: Respond with exactly ONE message and NOTHING else. No explanations, no additional sentences, no future planning, no markdown)."]
         return " ".join(observations)
     
     observations = []
@@ -198,13 +198,13 @@ def get_observations_at_history_point(
 
     if actions_list:
         observations.append(
-            "\n\nActions you can choose from (return the chosen action text exactly as written, with NO '*' at the beginning):"
+            "\n\nActions you can choose from (return the chosen action text exactly as written, with NO '*' at the beginning). Strict output requirement: Respond with exactly ONE action line and NOTHING else. No explanations, no additional sentences, no future planning, no markdown."
         )
         for a in actions_list:
             option_text = a.set_stories().command_perspective.strip()
             observations.append(f"\n* {option_text}")
 
-    observations.append("\n\nGiven the situation, the best action to take is:")
+    observations.append("\n\nGiven the situation, the best action to take is (exactly ONE action line and NOTHING else):")
     
     return " ".join(observations)
 
@@ -252,6 +252,7 @@ def reconstruct_environment_prompt_from_history(
     prompt_parts.append("")
 
     # Reconstruct the environment flow from history
+    prompt_parts.append("\nHistory (This is not the output format but just a list of observations and actions): '''")
     for i, hist_entry in enumerate(history):
         # Check if this was the player's turn
         if hist_entry.action_taken.player_name == player.name:
@@ -272,7 +273,8 @@ def reconstruct_environment_prompt_from_history(
             player.name,
             hist_entry.spectators_who_saw
         ))
-    
+    prompt_parts.append("'''\n\n")
+
     # Add final prompt for the next turn (consistent for all entries)
     prompt_parts.append(get_observations_at_history_point(
         player, history, all_players, game_config, len(history) - 1, history[-1].phase

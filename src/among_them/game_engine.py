@@ -304,7 +304,7 @@ class GameEngine:
                 json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
                 f.write(json_str)
             
-            # print(f"Game state saved to: {self.file_path}")
+            print(f"Game state saved to: {self.file_path}")
         except Exception as e:
             print(f"ERROR saving game state to {self.file_path}: {e}")
             raise
