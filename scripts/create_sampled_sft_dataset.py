@@ -25,8 +25,14 @@ def main():
     output_csv_file = data_dir / "sampled_sft_dataset.csv"
     generated_dir = Path("generated") # Centralized generated folder
     trace_analysis_file = generated_dir / "trace_analysis.txt"
-    alpaca_data_dir = data_dir / "alpaca"
-    sft_data_dir = data_dir / "sft"
+    alpaca_data_dir = data_dir / "alpaca_sampled"
+    # sft_data_dir = data_dir / "sft_sampled"
+    
+    # Ensure required directories exist
+    data_dir.mkdir(parents=True, exist_ok=True)
+    generated_dir.mkdir(parents=True, exist_ok=True)
+    alpaca_data_dir.mkdir(parents=True, exist_ok=True)
+    # sft_data_dir.mkdir(parents=True, exist_ok=True)
 
     fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
     traces = pd.read_csv(sft_csv_file, names=fieldnames)

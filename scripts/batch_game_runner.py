@@ -94,6 +94,7 @@ def main():
     """Run multiple games with different player configurations."""
     
     # Configuration parameters
+
     GAMES_PER_PLAYER_COUNT = 5
     PLAYER_COUNTS = [7, 6, 5]
     
