@@ -95,8 +95,8 @@ def main():
     
     # Configuration parameters
 
-    GAMES_PER_PLAYER_COUNT = 5
-    PLAYER_COUNTS = [7, 6, 5]
+    GAMES_PER_PLAYER_COUNT = 7
+    PLAYER_COUNTS = [5, 6, 7]
     
     # Paths
     data_dir = Path("data")
