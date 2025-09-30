@@ -160,23 +160,23 @@ def main():
     # write_jsonl(test_data, test_file)
         
     # Write Alpaca JSON files
-    alpaca_train_file = alpaca_data_dir / "among_them_train_sampled.json"
-    alpaca_eval_file = alpaca_data_dir / "among_them_eval_sampled.json"
+    alpaca_train_file = alpaca_data_dir / "among_them_train.json"
+    alpaca_eval_file = alpaca_data_dir / "among_them_eval.json"
     train_stats = write_alpaca_json(train_data, alpaca_train_file, True)
     eval_stats = write_alpaca_json(eval_data, alpaca_eval_file, True)
         
     # Create a single dataset_info.json file with both datasets
     dataset_info = {
-        "among_them_train_sampled": {
-            "file_name": "among_them_train_sampled.json",
+        "among_them_train": {
+            "file_name": "among_them_train.json",
             "columns": {
                 "prompt": "instruction",
                 "response": "output"
             },
             "formatting": "alpaca"
         },
-        "among_them_eval_sampled": {
-            "file_name": "among_them_eval_sampled.json",
+        "among_them_eval": {
+            "file_name": "among_them_eval.json",
             "columns": {
                 "prompt": "instruction",
                 "response": "output"
@@ -185,7 +185,7 @@ def main():
         }
     }
         
-    info_file = os.path.join(alpaca_data_dir, "dataset_info_sampled.json")
+    info_file = os.path.join(alpaca_data_dir, "dataset_info.json")
     with open(info_file, 'w') as f:
         json.dump(dataset_info, f, indent=2)
 
