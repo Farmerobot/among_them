@@ -1,232 +1,297 @@
 # Among Them
 
-A text-based social deduction game where AI agents play a game similar to "Among Us". In this game, players explore an environment while trying to complete objectives, with some players secretly assigned as impostors trying to sabotage the crew's efforts.
+A text-based social deduction game where AI agents play a game similar to "Among Us". AI agents use Large Language Models (LLMs) to make decisions, reason about the game state, and interact with other players.
 
-## Game Overview
+## Quick Start
 
-"Among Them" is a social deduction game where:
+### Prerequisites
 
-- Players explore a spaceship-like environment with multiple interconnected rooms
-- Crewmates work to complete tasks while impostors try to eliminate them
-- When a dead body is found or reported, players discuss and vote on who to eject
-- Game ends when either all impostors are ejected, crewmates complete all tasks, or impostors outnumber crewmates
+- Python 3.8+ with Poetry
+- Ollama (for local inference) or OpenRouter API key
 
-## Key Game Elements
+### Installation
 
-### Roles
-- **Crewmates**: Complete tasks to win the game, report bodies, and vote out impostors
-- **Impostors**: Eliminate crewmates, blend in with the crew, and avoid detection
+1. Install dependencies:
+```bash
+poetry install
+```
 
-### Game Phases
-1. **Task Phase**: Players move between rooms and perform various actions
-2. **Discussion Phase**: Following a dead body report, players discuss to identify impostors
-3. **Voting Phase**: Players vote to eject someone from the game
+2. Set up Ollama (if using local inference):
+```bash
+# Install Ollama from https://ollama.ai
+# Pull a reasoning model
+ollama pull deepseek-r1:14b
+```
 
-### Player Actions
-- **Move**: Travel between connected rooms
-- **Task**: Complete an assigned task in a specific location
-- **Kill**: (Impostor only) Eliminate a crewmate
-- **Report**: Report a dead body to start a discussion
-- **Speak**: Communicate during discussion phase
-- **Vote**: Vote to eject a player (or skip voting)
-- **Pretend**: (Impostor only) Pretend to complete a task
-- **Wait**: Do nothing
+3. Configure environment variables:
+```bash
+# Copy the example environment file
+cp .env.example .env
 
-## State Tracking and Game Progression
+# Edit .env with your settings
+```
 
-### History-Based State Management
+### Running a Game
 
-The game uses a history-based approach to state management, with the `History` class being central to the entire system. Each game action creates a new immutable history entry that captures the complete state at that point.
+```bash
+python .\scripts\manual_llm_game.py
+```
 
-#### History Structure
+The game will start with AI-controlled players making decisions. You can interrupt at any time with `Ctrl+C` to take manual control or exit.
 
-Each `History` object contains:
-- **Player state**: Who acted, who will act next
-- **Game phase**: Current phase and actions until phase ends
-- **Action details**: Type of action, target, result text
-- **Spectator information**: Which players witnessed the action
-- **LLM data**: Chain of thought, response text, token usage
-- **Task state**: Tasks remaining for each player
-- **Location**: Where the action occurred
-- **Impostor cooldown**: Impostor cooldown
+## Configuration
 
-#### State Transitions
+All configuration is done through environment variables in the `.env` file.
 
-State transitions are primarily handled in `phase_utils.py`:
-1. `get_phase_and_when_it_ends()`: Determines the next phase based on current history
-2. `handle_phase_change()`: Manages automatic phase transitions
-3. `count_votes()`: Tallies votes during voting phase
-4. `determine_ejection_result()`: Processes voting outcomes
+### Required Variables
 
-### Game Step Execution (`perform_step()`)
+#### `LLM_BACKEND`
+**Values:** `ollama`, `mlx`, or `openrouter`  
+**Default:** `ollama`
 
-The `perform_step()` method in `GameEngine` is the core function that advances the game. For each step:
+Selects which LLM backend to use for AI agents:
+- `ollama` - Local inference using Ollama (recommended for most users)
+- `mlx` - Local inference using MLX (macOS with Apple Silicon only)
+- `openrouter` - Cloud inference via OpenRouter API
 
-1. Get alive players and current phase
-2. Check for game end conditions
-3. Select the next player to act
-4. Determine available actions based on:
-   - Player role
-   - Current location
-   - Current phase
-   - Cooldown status
-5. Generate history string for the LLM prompt
-6. Get action choice from player (via LLM or human input)
-7. Process action consequences
-8. Create new history entry with updated state
-9. Save game state
-10. Return whether the game has ended
+**Example:**
+```bash
+LLM_BACKEND=ollama
+```
 
-This approach ensures immutability of past events while maintaining a complete record of game progression.
+### Optional Variables
 
-### Player and Location Tracking
+#### `MODEL_NAME`
+**Default:** Backend-specific (see below)
 
-Player tracking is managed through several utility functions in `player_utils.py`:
-- `get_alive_players()`: Filters players who haven't been killed
-- `get_last_player_action()`: Finds most recent action for a player
-- `get_dead_players()`: Maps dead players to their death locations
-- `get_players_in_room()`: Identifies all players in a specific location
+Specifies the model to use. If not set, uses backend-specific defaults:
+- **Ollama default:** `deepseek-r1:14b`
+- **MLX default:** `mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit`
+- **OpenRouter default:** `deepseek/deepseek-r1:free`
 
-Location tracking is handled implicitly through the `location` field in each history entry, with movement actions updating this field.
+You can use any model compatible with your backend. For Ollama, you can also use GGUF models from Hugging Face:
 
-## Technical Architecture
+**Examples:**
+```bash
+# Use Ollama with a GGUF model from Hugging Face
+MODEL_NAME=hf.co/Farmerobot/deepseek-r1-among-them-gguf
 
-### Core Components
+# Use a different Ollama model
+MODEL_NAME=deepseek-r1:1.5b
 
-#### Game Engine (`game_engine.py`)
-The central component that manages game logic, player actions, state transitions, and win conditions. Key responsibilities:
-- `__init__()`: Initializes the game with players and assigns roles
-- `perform_step()`: Processes game steps where players perform actions
-- `save_state()` and `load_state()`: Manages game persistence
-- `check_players_set_impostors()`: Handles role assignment
+# Use OpenRouter with a specific model
+MODEL_NAME=deepseek/deepseek-chat
+```
 
-The engine deliberately maintains no mutable state outside of the history list, ensuring all game logic can be derived from history entries.
+#### `OPENROUTER_API_KEY`
+**Required when:** `LLM_BACKEND=openrouter`
 
-#### AI Agents (`models.player.py`)
-AI-controlled player behavior using Large Language Models (LLMs):
-- `normalize_and_check_action_valid()`: Validates LLM outputs against available actions
+Your OpenRouter API key for cloud inference.
 
-The agent is designed with error recovery, attempting to self-correct when invalid responses are given.
+**Example:**
+```bash
+OPENROUTER_API_KEY=sk-or-v1-abc123...
+```
 
-#### Player Types
-The game supports both AI and human players:
-- **AI Player**: LLM-powered agents that make decisions based on game state
-- **Human Player**: Console interface for human players to interact with the game
+Get your API key at: https://openrouter.ai/keys
 
-#### Action Generation (`action_utils.py`)
-Functions that determine available actions based on game state:
-- `get_task_phase_actions()`: Generates available actions during task phase based on player role, location, and cooldown
-- `get_vote_actions()`: Creates voting options during voting phase
+#### `OPENAI_API_KEY`
+**Required for:** `trace_analyzer.py` script only (optional workflow)
 
-#### Models
-- `Action`: Represents a player action with text representations for both the player and spectators
-- `Player`: Base class with AIPlayer and HumanPlayer implementations
-- `Location`: Defines the game map with rooms and connections via the `DOORS` dictionary
-- `Phase`: Enumerates game phases (Task, Discuss, Vote)
-- `History`: The core data structure that tracks game state
-- `Task`: Implements ShortTask and LongTask with location-specific completion logic
+Your OpenAI API key, used only if you want to evaluate dataset quality with GPT-4o-mini.
 
-### Design Choices
+**Example:**
+```bash
+OPENAI_API_KEY=sk-abc123...
+```
 
-#### 1. Immutable History-Based State
-The game uses an append-only history list rather than mutable state objects. This design:
-- Simplifies debugging by preserving complete game history
-- Allows game replay and analysis
-- Makes state transitions explicit and traceable
-- Supports save/load functionality without additional logic
-- Simply deleting last entry is enough to revert the game state
+#### `STATE_FILE`
+**Default:** `data/game_state.json`
 
-#### 2. Function-Based Action Generation
-Instead of hardcoding available actions, the system uses functions to generate actions dynamically:
-- Adapts to changing game conditions
-- Enforces game rules consistently
-- Makes adding new action types easier
+Path where the game state is saved. Useful if you want to continue interrupted games.
 
-#### 3. Location-Based Task System
-Tasks are tied to specific locations:
-- Forces players to move around the map
-- Creates opportunities for player interaction
-- Mirrors the gameplay of the original Among Us inspiration
+**Example:**
+```bash
+STATE_FILE=data/my_game.json
+```
 
-#### 4. Room-Based Observation Model
-Actions are only visible to players in the same room (if moved, players from both rooms see the action):
-- Creates information asymmetry critical for deduction
-- Encourages strategic movement
-- Makes alibis and witness testimony meaningful
+### Complete Configuration Example
 
-#### 5. JSON Serialization
-Game state is serialized using json:
-- Allows game state to be saved and restored
-- Supports archiving completed games
-- Makes debugging and analysis easier
+```bash
+# Use Ollama with a custom GGUF model
+LLM_BACKEND=ollama
+MODEL_NAME=hf.co/Farmerobot/deepseek-r1-among-them-gguf
 
-## LLM Integration
+# Or use OpenRouter
+# LLM_BACKEND=openrouter
+# MODEL_NAME=deepseek/deepseek-r1:free
+# OPENROUTER_API_KEY=sk-or-v1-abc123...
 
-The game leverages Large Language Models to control AI players:
-- Each player is powered by an LLM (default is "deepseek-r1:14b")
-- The game provides the LLM with game context, available actions, and history
-- The LLM decides what action to take and provides reasoning
-- Special prompting techniques are used to enforce valid outputs
+# Optional: Custom state file location
+STATE_FILE=data/game_state.json
+```
 
-### Prompt Structure
-The LLM prompt is carefully structured to provide:
-1. Player information (role, tasks, allies/enemies)
-2. Action history (what the player has seen/done)
-3. Current situation (location, phase, other players present)
-4. Available actions
+## Creating Training Datasets
 
-### Chain of Thought Reasoning
-The LLM agent uses chain-of-thought reasoning enclosed in `<think>` tags to make decisions. This allows the agent to:
-- Analyze the game state
-- Consider possible strategies
-- Evaluate the consequences of actions
-- Make decisions based on the current situation
+The project includes tools to generate fine-tuning datasets in Alpaca format from completed games.
 
-## Running the Game
+### Workflow Overview
 
-To run the game:
-1. Install dependencies with `poetry install`
-2. Start the game with `poetry run main`
+1. **Run games** → Saves game traces as JSON files in `data/`
+2. **Generate full dataset** → Extracts all conversations
+3. **Evaluate traces** (optional) → Score trace quality with GPT-4o-mini
+4. **Generate sampled dataset** (optional) → Filter high-quality traces only
 
-The game requires Ollama to be installed and running with the specified model.
+### Step 1: Run Games
 
-## Environment Variables
+Run multiple games to generate training data:
 
-The project uses a `.env` file for configuration (via `python-dotenv`). The example environment file is provided in `.env.example`.
+```bash
+# Run a single game
+python .\scripts\manual_llm_game.py
 
-## Configuration Constants
+# Or run multiple games in batch
+python .\scripts\batch_game_runner.py
+```
 
-The `game_config.py` file defines important game parameters:
+Games are saved as JSON files in the `data/` directory (e.g., `data/game_state_15.json`).
 
-- `num_tasks`: Number of tasks assigned to each player
-- `num_players`: Number of all players in the game
-- `num_impostors`: Number of impostors in the game
-- `map_size`: Map size: 0 = small, 1 = medium, 2 = large
-- `num_task_phase_actions_per_player`: Number of actions per player in the task phase
-- `num_discuss_phase_actions_per_player`: Number of actions per player in the discuss phase
-- `impostor_cooldown`: Turns between impostor kill actions
+### Step 2: Generate Full (Unsampled) Dataset
 
-## Game Progression and Win Conditions
+Extract all conversations from game traces into Alpaca format:
 
-The game progresses through turns where:
-1. A random player is selected to act
-2. The player is provided with available actions based on their role and location
-3. The player's agent (LLM) decides what action to take
-4. The action is processed and the game state is updated
-5. This continues until a win condition is met
+```bash
+python .\scripts\create_sft_dataset.py
+```
 
-The game can end in several ways (`end_game.py`):
-- **Crewmate Victory**: All impostors eliminated or all tasks completed
-- **Impostor Victory**: Equal number of impostors and crewmates remain
-- **Game End**: No actions left to perform
+**What it does:**
+- Processes all JSON files in `data/` folder
+- Extracts multi-turn conversations for each player
+- Generates token statistics and visualizations
+- Creates train/eval splits (80%/20%)
 
-## Key Features
+**Output files:**
+- `data/alpaca/among_them_train.json` - Training set
+- `data/alpaca/among_them_eval.json` - Evaluation set
+- `data/alpaca/dataset_info.json` - Dataset metadata
+- `generated/token_usage_distribution.png` - Token distribution plots
+- `generated/alpaca_dataset_stats.md` - Detailed statistics
+
+**Configuration (in script):**
+```python
+use_actual_tokenizer = True  # Use real tokenizer for accurate counts
+tokenizer_model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF = 3000  # Filter very long responses
+```
+
+### Step 3: Evaluate Traces (Optional)
+
+Use GPT-4o-mini to score trace quality on a scale of 0-3:
+
+```bash
+# First, set your OpenAI API key in .env
+echo "OPENAI_API_KEY=sk-abc123..." >> .env
+
+# Run the trace analyzer
+python .\scripts\trace_analyzer.py
+```
+
+**What it does:**
+- Evaluates each trace for quality (0=hallucination, 3=outstanding)
+- Creates `generated/trace_analysis.txt` with scores
+
+**Scoring criteria:**
+- **0** - Hallucination or invalid output
+- **1** - Poor quality or inconsistent
+- **2** - Good quality (minimum for sampled dataset)
+- **3** - Excellent quality
+
+**Note:** This requires creating the CSV dataset first (outdated workflow). You may need to adapt the script for the new multi-turn conversation format.
+
+### Step 4: Generate Sampled (High-Quality) Dataset
+
+Filter the dataset to include only high-quality traces (score ≥ 2):
+
+```bash
+python .\scripts\create_sampled_sft_dataset.py
+```
+
+**What it does:**
+- Reads `generated/trace_analysis.txt` scores
+- Filters traces with score ≥ `TRACE_QUALITY_THRESHOLD` (default: 2)
+- Creates sampled train/eval splits
+
+**Output files:**
+- `data/alpaca_sampled/among_them_train.json` - High-quality training set
+- `data/alpaca_sampled/among_them_eval.json` - High-quality evaluation set
+- `data/alpaca_sampled/dataset_info.json` - Dataset metadata
+- `generated/alpaca_sampled_dataset_stats.md` - Statistics with quality distribution
+
+**Configuration (in script):**
+```python
+TRACE_QUALITY_THRESHOLD = 2  # Minimum score to include
+```
+
+### Dataset Format
+
+Generated datasets use the Alpaca/ShareGPT multi-turn conversation format:
+
+```json
+[
+  {
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<game context and prompt>"
+      },
+      {
+        "role": "assistant",
+        "content": "<think>reasoning...</think>action"
+      },
+      {
+        "role": "user",
+        "content": "<incremental observations>"
+      },
+      {
+        "role": "assistant",
+        "content": "<think>reasoning...</think>action"
+      }
+    ]
+  }
+]
+```
+
+## Game Features
 
 - **Spatial Navigation**: Players move between interconnected rooms
-- **Role-Based Actions**: Different actions available based on player role
-- **Discussion & Voting**: Players discuss and vote after bodies are reported
-- **State Persistence**: Game state is saved after each action
-- **LLM-Powered Agents**: AI players make decisions using language models
-- **Local LLM Support**: Uses Ollama to run models locally without requiring cloud API access
+- **Role-Based Actions**: Different actions for crewmates vs impostors
+- **Discussion & Voting**: Social deduction through conversation and voting
+- **Chain-of-Thought Reasoning**: AI agents show their reasoning in `<think>` blocks
+- **Multiple LLM Backends**: Local (Ollama, MLX) or cloud (OpenRouter) inference
+- **State Persistence**: Games can be saved and resumed
 
-This project demonstrates how LLMs can be used to create emergent gameplay in a social deduction setting, with AI agents exhibiting complex reasoning and social interaction.
+## Scripts Overview
+
+- `manual_llm_game.py` - Play a game with AI agents (main entry point)
+- `batch_game_runner.py` - Run multiple games automatically
+- `create_sft_dataset.py` - Generate full Alpaca dataset from game traces
+- `create_sampled_sft_dataset.py` - Generate high-quality filtered dataset
+- `trace_analyzer.py` - Evaluate trace quality with GPT-4o-mini
+- `streamlit.py` - Web UI for game visualization
+
+## Project Structure
+
+```
+among_them/
+├── src/among_them/          # Core game engine
+│   ├── config.py            # Configuration and LLM backend setup
+│   ├── game_engine.py       # Main game loop and logic
+│   ├── models/              # Game entities (Player, Action, etc.)
+│   └── utils/               # Helper functions (prompts, LLM utils)
+├── scripts/                 # Utility scripts
+├── data/                    # Game traces and datasets
+│   ├── *.json              # Saved game files
+│   ├── alpaca/             # Full dataset
+│   └── alpaca_sampled/     # High-quality filtered dataset
+└── generated/              # Generated statistics and plots
+```
