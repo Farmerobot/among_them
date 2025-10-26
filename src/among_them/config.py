@@ -10,17 +10,23 @@ class LLMBackend(Enum):
     OLLAMA = "ollama"
     MLX = "mlx"
     OPENROUTER = "openrouter"
-    HUGGINGFACE = "huggingface"
 
 # LLM Backend Selection
 LLM_BACKEND = LLMBackend(os.getenv("LLM_BACKEND", "ollama").lower())
 
 # Model configurations
-OLLAMA_LLM_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "deepseek-r1:14b")
-MLX_LLM_MODEL_NAME = os.getenv("MLX_LLM_MODEL_NAME", "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit")
+# Default model names per backend
+DEFAULT_MODELS = {
+    LLMBackend.OLLAMA: "deepseek-r1:14b",
+    LLMBackend.MLX: "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit",
+    LLMBackend.OPENROUTER: "deepseek/deepseek-r1:free",
+}
+
+# Single model name configuration with backend-specific default
+MODEL_NAME = os.getenv("MODEL_NAME", DEFAULT_MODELS[LLM_BACKEND])
+
+# API keys
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL_NAME = os.getenv("OPENROUTER_MODEL_NAME")
-HUGGINGFACE_MODEL_NAME = os.getenv("HUGGINGFACE_MODEL_NAME")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Other configurations
@@ -30,9 +36,8 @@ STATE_FILE = os.getenv("STATE_FILE", "data/game_state.json")
 USE_MLX = LLM_BACKEND == LLMBackend.MLX
 RUN_LOCALLY = LLM_BACKEND in [LLMBackend.OLLAMA, LLMBackend.MLX]
 USE_OPENROUTER = LLM_BACKEND == LLMBackend.OPENROUTER
-USE_HUGGINGFACE = LLM_BACKEND == LLMBackend.HUGGINGFACE
 
 # Load MLX model if needed
 if LLM_BACKEND == LLMBackend.MLX:
     from mlx_lm import load
-    MLX_MODEL, MLX_TOKENIZER = load(MLX_LLM_MODEL_NAME)
+    MLX_MODEL, MLX_TOKENIZER = load(MODEL_NAME)
