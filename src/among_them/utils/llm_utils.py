@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional, Tuple
 
-from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
+from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, MODEL_NAME
 from among_them.models.action import Action, ActionType
 
 
@@ -37,17 +37,17 @@ def invoke_llm(
     for message in messages:
         print(f"{message['role']}: {message['content']}")
 
-    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX or LLM_BACKEND == LLMBackend.OLLAMA else ""
+    raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
     raw_reasoning = ""
     raw_content = ""
 
-    max_reasoning_retries = 3 if LLM_BACKEND in [LLMBackend.OPENROUTER, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE] else 1
+    max_reasoning_retries = 3 if LLM_BACKEND in [LLMBackend.OPENROUTER, LLMBackend.OLLAMA] else 1
     attempt = 0
 
     while True:
         # Reset buffers for each attempt
         if attempt > 0:
-            raw = "<think>" if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA] else ""
+            raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
             raw_reasoning = ""
             raw_content = ""
 
@@ -65,8 +65,16 @@ def invoke_llm(
                 )
             
             elif LLM_BACKEND == LLMBackend.OLLAMA:
-                from ollama import chat
-                chunks = chat(model=model_name, messages=messages, stream=True, think=True)
+                import ollama
+                
+                print(f"Using Ollama with model: {model_name}")
+                
+                response = ollama.chat(
+                    model=model_name,
+                    messages=messages,
+                    stream=True,
+                )
+                chunks = response
             
             elif LLM_BACKEND == LLMBackend.OPENROUTER:
                 from openai import OpenAI
@@ -77,24 +85,9 @@ def invoke_llm(
                 )
 
                 response = client.chat.completions.create(
-                    model=OPENROUTER_MODEL_NAME,
+                    model=MODEL_NAME,
                     messages=messages,
                     stream=True
-                )
-                chunks = response
-            
-            elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
-                # Use Ollama to run the GGUF model instead of direct HuggingFace transformers
-                # This avoids Windows encoding issues and handles GGUF models natively
-                import ollama
-                
-                # Use the GGUF model via Ollama
-                print(f"Using Ollama with GGUF model: {model_name}")
-                
-                response = ollama.chat(
-                    model=HUGGINGFACE_MODEL_NAME,
-                    messages=messages,
-                    stream=True,
                 )
                 chunks = response
             
@@ -111,20 +104,41 @@ def invoke_llm(
                         stop_stream = True
                         break
                     
-                elif LLM_BACKEND in [LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+                elif LLM_BACKEND == LLMBackend.OLLAMA:
+                    # Handle both native .thinking attribute and <think> tags in content
                     reasoning = getattr(chunk["message"], "thinking", "")
                     content = getattr(chunk["message"], "content", "")
+                    
                     if reasoning:
+                        # Model provides separate thinking attribute
                         raw_reasoning += reasoning
                         print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
+                    
                     if content:
+                        # Accumulate in raw for <think> tag extraction
+                        raw += content
                         raw_content += content
-                        print("\033[94m" + content + "\033[0m", end="", flush=True)
-                        if max_output_chars is not None and len(raw_content) >= max_output_chars:
+                        
+                        # Color code the output based on whether it's in <think> tags
+                        # Count opening and closing tags to determine if we're inside a think block
+                        open_tags = raw.count("<think>")
+                        close_tags = raw.count("</think>")
+                        inside_think = open_tags > close_tags
+                        
+                        if inside_think:
+                            # Inside think block - use cyan (light blue)
+                            print("\033[96m" + content + "\033[0m", end="", flush=True)
+                        else:
+                            # Outside think block - use blue
+                            print("\033[94m" + content + "\033[0m", end="", flush=True)
+                        
+                        if max_output_chars is not None and len(raw) >= max_output_chars:
                             stop_stream = True
                             break
                         if single_line_only and allowed_actions:
-                            first_line = next((ln for ln in raw_content.splitlines() if ln.strip()), "")
+                            # Only check content outside <think> tags
+                            content_without_think = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL)
+                            first_line = next((ln for ln in content_without_think.splitlines() if ln.strip()), "")
                             normalized_first = first_line.lstrip("*- ").strip().lower()
                             if normalized_first in [a.strip().lower() for a in allowed_actions]:
                                 stop_stream = True
@@ -154,7 +168,7 @@ def invoke_llm(
                         print("\n\033[91mError parsing OpenRouter response\033[0m")
                 
                 # Check for hallucination (only for local backends that use raw)
-                if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE]:
+                if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA]:
                     all_tags = re.findall(r"<(?!/?(?:think))[^>]+>", raw)
                     if len(all_tags) > 2:
                         raise Exception("LLM did hallucinate")
@@ -173,7 +187,7 @@ def invoke_llm(
             print("\033[0m", end="")
 
         # If this backend expects separate reasoning and we didn't get any, optionally retry
-        if LLM_BACKEND in [LLMBackend.OPENROUTER, LLMBackend.OLLAMA, LLMBackend.HUGGINGFACE] and not raw_reasoning:
+        if LLM_BACKEND == LLMBackend.OPENROUTER and not raw_reasoning:
             attempt += 1
             if attempt < max_reasoning_retries:
                 print("\n\033[93mWarning: No reasoning provided by the LLM, retrying...\033[0m")
@@ -181,20 +195,26 @@ def invoke_llm(
         break
 
     # Extract chain of thought and cleanup
-    if LLM_BACKEND in [LLMBackend.MLX]:
-        cot = ""
-        cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
-        cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
-        if cot_match:
-            cot = cot_match.group(0)
-            response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
-        elif cot_match_end:
-            cot = cot_match_end.group(0)
-            response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
+    if LLM_BACKEND in [LLMBackend.MLX, LLMBackend.OLLAMA]:
+        # Check if we have reasoning from .thinking attribute first
+        if raw_reasoning:
+            cot = "<think>\n" + raw_reasoning + "\n</think>"
+            response_text = raw_content
         else:
+            # Extract <think> tags from raw content
             cot = ""
-            response_text = raw
-    else:  # OpenRouter, Ollama, or HuggingFace via Ollama
+            cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
+            cot_match_end = re.search(r".*?</think>", raw, re.DOTALL)
+            if cot_match:
+                cot = cot_match.group(0)
+                response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+            elif cot_match_end:
+                cot = cot_match_end.group(0)
+                response_text = re.sub(r".*?</think>", "", raw, flags=re.DOTALL).strip()
+            else:
+                cot = ""
+                response_text = raw.strip()
+    else:  # OpenRouter
         if not raw_reasoning:
             print("\n\033[93mWarning: LLM did not provide chain of thought. Proceeding without CoT.\033[0m")
             cot = ""

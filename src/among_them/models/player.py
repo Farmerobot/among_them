@@ -1,6 +1,6 @@
 from typing import Optional
 from among_them.models.player_role import PlayerRole
-from among_them.config import LLMBackend, LLM_BACKEND, OLLAMA_LLM_MODEL_NAME, OPENROUTER_MODEL_NAME, HUGGINGFACE_MODEL_NAME
+from among_them.config import MODEL_NAME
 
 
 class Player:
@@ -20,16 +20,9 @@ class Player:
         self.role = role
         self.manual_human_control = manual_human_control
         
-        # Set model name based on backend if not provided
+        # Set model name from config or use provided override
         if llm_model_name is None:
-            if LLM_BACKEND == LLMBackend.OLLAMA:
-                self.llm_model_name = OLLAMA_LLM_MODEL_NAME
-            elif LLM_BACKEND == LLMBackend.OPENROUTER:
-                self.llm_model_name = OPENROUTER_MODEL_NAME
-            elif LLM_BACKEND == LLMBackend.HUGGINGFACE:
-                self.llm_model_name = HUGGINGFACE_MODEL_NAME
-            else:  # MLX
-                self.llm_model_name = "mlx-model"  # MLX uses loaded model, not name
+            self.llm_model_name = MODEL_NAME
         else:
             self.llm_model_name = llm_model_name
             
