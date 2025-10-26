@@ -2,7 +2,7 @@
 """
 Run the current environment model on the benchmark examples and score results.
 
-- Loads data/benchmark_examples.json
+- Loads data/benchmarks/benchmark_dataset.json (or specified benchmark file)
 - For each example, reconstructs the environment prompt (already stored as full_prompt in dataset)
 - Invokes the LLM using existing env (through among_them.utils.llm_utils.invoke_llm)
 - Parses the LLM output into an action using among_them.utils.llm_utils.parse_llm_response_to_action
@@ -49,10 +49,10 @@ from among_them.config import (  # type: ignore
 def load_benchmark(path: str) -> Dict[str, Any]:
     with open(path, 'r') as f:
         data = json.load(f)
-        # Handle both formats: benchmark_examples or candidates
-        if "candidates" in data and "benchmark_examples" not in data:
-            # Convert candidates format to benchmark_examples format
-            data["benchmark_examples"] = data["candidates"]
+        # Handle both formats: benchmark_dataset or candidates
+        if "candidates" in data and "benchmark_dataset" not in data:
+            # Convert candidates format to benchmark_dataset format
+            data["benchmark_dataset"] = data["candidates"]
         return data
 
 
@@ -249,14 +249,14 @@ def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dic
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--benchmark', default=os.path.join(os.path.dirname(__file__), '..', 'data', 'benchmark_examples.json'))
+    parser.add_argument('--benchmark', default=os.path.join(os.path.dirname(__file__), '..', 'data', 'benchmarks', 'benchmark_dataset.json'))
     parser.add_argument('--repeats', type=int, default=1)
     parser.add_argument('--model', dest='model_name', default=None)
     parser.add_argument('--outdir', default=os.path.join(os.path.dirname(__file__), '..', 'generated', 'benchmarks'))
     args = parser.parse_args()
 
     data = load_benchmark(args.benchmark)
-    examples: List[Dict[str, Any]] = data.get('benchmark_examples', [])
+    examples: List[Dict[str, Any]] = data.get('benchmark_dataset', [])
     if not examples:
         print('No examples found in benchmark file.')
         return
