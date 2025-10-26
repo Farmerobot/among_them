@@ -1,18 +1,16 @@
 {
   "among_them_train": {
     "file_name": "among_them_train.json",
+    "formatting": "sharegpt",
     "columns": {
-      "prompt": "instruction",
-      "response": "output"
-    },
-    "formatting": "alpaca"
+      "messages": "conversations"
+    }
   },
   "among_them_eval": {
     "file_name": "among_them_eval.json",
+    "formatting": "sharegpt",
     "columns": {
-      "prompt": "instruction",
-      "response": "output"
-    },
-    "formatting": "alpaca"
+      "messages": "conversations"
+    }
   }
 }

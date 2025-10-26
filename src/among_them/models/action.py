@@ -64,10 +64,11 @@ class Action:
             self.observer_perspective = f"You saw {self.player_name} complete the {self.target_task.name} task."
             self.global_perspective = f"{self.player_name} pretended to do the {self.target_task.name} task."
         elif self.type == ActionType.SPEAK:
-            self.command_perspective = f"{self.target_message}"
-            self.agent_perspective = f"You said: {self.target_message}"
-            self.observer_perspective = f"{self.player_name} said: {self.target_message}"
-            self.global_perspective = f"{self.player_name} said: {self.target_message}"
+            message = getattr(self, "target_message", "")
+            self.command_perspective = f"{message}"
+            self.agent_perspective = f"You said: {message}"
+            self.observer_perspective = f"{self.player_name} said: {message}"
+            self.global_perspective = f"{self.player_name} said: {message}"
         else:
             raise ValueError(f"Unknown action type: {self.type}")
         return self

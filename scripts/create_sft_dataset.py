@@ -38,7 +38,8 @@ def format_num(n):
         return str(n) # Fallback for non-numeric
 
 def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
-    """Process a single game file and extract discussion messages"""
+    """Process a single game file and extract multi-turn conversations per player"""
+    from among_them.utils.prompt_utils import get_initial_turn_prompt, get_incremental_observations
     
     # Use GameEngine to load the state
     engine = GameEngine()
@@ -47,61 +48,80 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
     
     results = []
     
-    # Process each history item that is a discussion message
-    for i, event in enumerate(engine.history):
-        # if event.phase != GamePhase.DISCUSS or event.action_taken.type != ActionType.SPEAK:
-        #     continue
+    # Build conversations per player
+    for player in engine.players:
+        # Find all turns for this player
+        player_turn_indices = []
+        for i, event in enumerate(engine.history):
+            if event.action_taken.player_name == player.name:
+                player_turn_indices.append(i)
         
-        player_name = event.action_taken.player_name
-        player = next((p for p in engine.players if p.name == player_name), None)
-        if player is None:
-            if player_name == "System":
-                continue
+        if not player_turn_indices:
+            continue  # Player never took a turn
+        
+        # Build conversation turns
+        conversation = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        
+        for turn_idx, history_index in enumerate(player_turn_indices):
+            event = engine.history[history_index]
+            
+            # Generate user prompt
+            if turn_idx == 0:
+                # First turn: include system context
+                user_prompt = get_initial_turn_prompt(
+                    player,
+                    engine.history,
+                    engine.players,
+                    engine.game_config,
+                    history_index
+                )
             else:
-                raise ValueError(f"Player {player_name} not found in game")
+                # Subsequent turns: only incremental observations
+                last_turn_index = player_turn_indices[turn_idx - 1]
+                user_prompt = get_incremental_observations(
+                    player,
+                    engine.history,
+                    engine.players,
+                    engine.game_config,
+                    last_turn_index,
+                    history_index
+                )
+            
+            # Generate assistant response (model's reasoning + action)
+            event.action_taken.set_stories()
+            assistant_response = f"{event.llm_cot}{event.action_taken.command_perspective}"
+            
+            # Count tokens if tokenizer available
+            if tokenizer_for_counting:
+                input_tokens = len(tokenizer_for_counting.encode(user_prompt))
+                output_tokens = len(tokenizer_for_counting.encode(assistant_response))
+                total_input_tokens += input_tokens
+                total_output_tokens += output_tokens
+            
+            # Add turn to conversation
+            conversation.append({
+                "role": "user",
+                "content": user_prompt
+            })
+            conversation.append({
+                "role": "assistant",
+                "content": assistant_response
+            })
         
-        history_until_now = engine.history[:i]
-        history_str = reconstruct_environment_prompt_from_history(
-            player, 
-            history_until_now, 
-            engine.players, 
-            engine.game_config
-        )
-
-        # Get votes before (from the current message)
-        votes_before = {}
-        if event.votes_before_this_discussion_message:
-            votes_before = {p.name: event.votes_before_this_discussion_message.get(p.name, {}).get("voted_player", None) for p in engine.players if p.name in event.votes_before_this_discussion_message}
-        
-        # Get votes after (from the next message)
-        votes_after = {}
-        j = 0
-        for next_event in engine.history[i+1:]:
-            if next_event.votes_before_this_discussion_message and event.phase == GamePhase.DISCUSS:
-                votes_after = {p.name: next_event.votes_before_this_discussion_message.get(p.name, {}).get("voted_player", None) for p in engine.players if p.name in next_event.votes_before_this_discussion_message}
-                break
-            elif next_event.phase == GamePhase.VOTING and event.phase == GamePhase.DISCUSS:
-                _, votes_after = count_votes(engine.history[:i+1+j])
-                break
-            j += 1
-        
-        # Combine chain of thought and response if both exist
-        model_output = f"{event.llm_cot}{event.action_taken.set_stories().command_perspective}"
-        
+        # Create result item for this player's conversation
         item_data = {
             "json_file_name": os.path.basename(file_path),
-            "player_name": player_name,
+            "player_name": player.name,
             "player_role": player.role.value,
-            "votes_before": json.dumps(votes_before),
-            "votes_after": json.dumps(votes_after),
-            "prompt": history_str,
-            "model_cot_and_cleaned_output": model_output,
+            "num_turns": len(player_turn_indices),
+            "conversations": conversation,
         }
         
         if tokenizer_for_counting:
-            instruction_text_for_count = history_str
-            item_data['instruction_token_count_actual'] = len(tokenizer_for_counting.encode(instruction_text_for_count))
-            item_data['output_token_count_actual'] = len(tokenizer_for_counting.encode(model_output))
+            item_data['total_input_tokens'] = total_input_tokens
+            item_data['total_output_tokens'] = total_output_tokens
         
         results.append(item_data)
     
@@ -120,109 +140,118 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
 
 
 def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
-    """Writes data to Alpaca JSON and calculates token statistics using pre-tokenized counts if available."""
+    """Writes data to Alpaca JSON (conversations format) and calculates token statistics."""
     output_data = []
-    total_instruction_tokens = 0
+    total_input_tokens = 0
     total_output_tokens = 0
-    max_instruction_tokens = 0
-    max_output_tokens = 0
+    max_conversation_input_tokens = 0
+    max_conversation_output_tokens = 0
+    max_single_turn_output_tokens = 0
     filtered_count = 0
 
     for item in data:
-        instruction_text = item["prompt"]
-        output_text = item["model_cot_and_cleaned_output"]
+        conversations = item["conversations"]
         
-        instruction_tokens_count = 0
-        output_tokens_count = 0
-
+        # Calculate token counts for this conversation
         if use_tokenizer_for_stats:
-            instruction_tokens_count = item.get('instruction_token_count_actual')
-            output_tokens_count = item.get('output_token_count_actual')
-            # Fallback if actual counts are somehow not present (should not happen with new logic)
-            if instruction_tokens_count is None:
-                print(f"Warning: Missing actual instruction token count for an item from {item.get('json_file_name', 'Unknown Game')}. Approximating.")
-                instruction_tokens_count = len(instruction_text) // CHARS_PER_TOKEN
-            if output_tokens_count is None:
-                print(f"Warning: Missing actual output token count for an item from {item.get('json_file_name', 'Unknown Game')}. Approximating.")
-                output_tokens_count = len(output_text) // CHARS_PER_TOKEN
+            conversation_input_tokens = item.get('total_input_tokens', 0)
+            conversation_output_tokens = item.get('total_output_tokens', 0)
         else:
-            instruction_tokens_count = len(instruction_text) // CHARS_PER_TOKEN
-            output_tokens_count = len(output_text) // CHARS_PER_TOKEN
-
-        # Filter out responses that are too long
-        if output_tokens_count > MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF:
+            # Approximate from character counts
+            conversation_input_tokens = sum(
+                len(msg["content"]) // CHARS_PER_TOKEN 
+                for msg in conversations if msg["role"] == "user"
+            )
+            conversation_output_tokens = sum(
+                len(msg["content"]) // CHARS_PER_TOKEN 
+                for msg in conversations if msg["role"] == "assistant"
+            )
+        
+        # Check max single turn output (for filtering very long responses)
+        max_turn_output = 0
+        for msg in conversations:
+            if msg["role"] == "assistant":
+                if use_tokenizer_for_stats:
+                    # Recalculate individual turn token count for filtering
+                    turn_tokens = len(msg["content"]) // CHARS_PER_TOKEN
+                else:
+                    turn_tokens = len(msg["content"]) // CHARS_PER_TOKEN
+                max_turn_output = max(max_turn_output, turn_tokens)
+        
+        # Filter out conversations with any turn exceeding the limit
+        if max_turn_output > MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF:
             filtered_count += 1
             continue
 
-        total_instruction_tokens += instruction_tokens_count
-        total_output_tokens += output_tokens_count
-        max_instruction_tokens = max(max_instruction_tokens, instruction_tokens_count)
-        max_output_tokens = max(max_output_tokens, output_tokens_count)
+        total_input_tokens += conversation_input_tokens
+        total_output_tokens += conversation_output_tokens
+        max_conversation_input_tokens = max(max_conversation_input_tokens, conversation_input_tokens)
+        max_conversation_output_tokens = max(max_conversation_output_tokens, conversation_output_tokens)
+        max_single_turn_output_tokens = max(max_single_turn_output_tokens, max_turn_output)
 
         output_data.append({
-            "instruction": instruction_text,
-            "output": output_text
+            "conversations": conversations
         })
     
     if filtered_count > 0:
-        print(f"Filtered out {filtered_count} examples with output token count exceeding {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens.")
+        print(f"Filtered out {filtered_count} conversations with turn exceeding {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens.")
     
     with open(output_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     
     return {
-        "max_instruction_tokens": max_instruction_tokens,
-        "max_output_tokens": max_output_tokens,
-        "total_instruction_tokens": total_instruction_tokens,
+        "max_conversation_input_tokens": max_conversation_input_tokens,
+        "max_conversation_output_tokens": max_conversation_output_tokens,
+        "max_single_turn_output_tokens": max_single_turn_output_tokens,
+        "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
-        "examples_count": len(data),
+        "conversations_count": len(output_data),
         "filtered_count": filtered_count
     }
 
 
 def calculate_and_plot_token_metrics(all_results, output_path: Path, use_tokenizer_for_calc: bool, tokenizer_model_name_for_report: str):
-    """Calculate token metrics using pre-tokenized counts if available, plot distributions, and print summary stats. Returns a dictionary of stats."""
+    """Calculate token metrics for multi-turn conversations and plot distributions. Returns a dictionary of stats."""
     stats_data = {}
-    input_list = []
-    output_list = []
-
-    # Tokenizer is not loaded here anymore; we use pre-calculated counts or approximation
+    conversation_input_list = []
+    conversation_output_list = []
+    num_turns_list = []
 
     for r_item in all_results:
         input_tokens = 0
         output_tokens = 0
 
         if use_tokenizer_for_calc:
-            input_tokens = r_item.get('instruction_token_count_actual')
-            output_tokens = r_item.get('output_token_count_actual')
+            input_tokens = r_item.get('total_input_tokens', 0)
+            output_tokens = r_item.get('total_output_tokens', 0)
             # Fallback if actual counts are somehow not present
-            if input_tokens is None:
-                print(f"Warning: Missing actual instruction token count for distribution summary for an item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
-                instruction_text_for_approx = r_item["prompt"]
-                input_tokens = len(instruction_text_for_approx) // CHARS_PER_TOKEN
-            if output_tokens is None:
-                print(f"Warning: Missing actual output token count for distribution summary for an item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
-                output_text_for_approx = r_item["model_cot_and_cleaned_output"]
-                output_tokens = len(output_text_for_approx) // CHARS_PER_TOKEN
+            if input_tokens == 0:
+                print(f"Warning: Missing actual input token count for item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
+                conversations = r_item["conversations"]
+                input_tokens = sum(len(msg["content"]) // CHARS_PER_TOKEN for msg in conversations if msg["role"] == "user")
+            if output_tokens == 0:
+                print(f"Warning: Missing actual output token count for item from {r_item.get('json_file_name', 'Unknown Game')}. Approximating.")
+                conversations = r_item["conversations"]
+                output_tokens = sum(len(msg["content"]) // CHARS_PER_TOKEN for msg in conversations if msg["role"] == "assistant")
         else:
-            instruction_text_for_approx = r_item["prompt"]
-            output_text_for_approx = r_item["model_cot_and_cleaned_output"]
-            input_tokens = len(instruction_text_for_approx) // CHARS_PER_TOKEN
-            output_tokens = len(output_text_for_approx) // CHARS_PER_TOKEN
+            conversations = r_item["conversations"]
+            input_tokens = sum(len(msg["content"]) // CHARS_PER_TOKEN for msg in conversations if msg["role"] == "user")
+            output_tokens = sum(len(msg["content"]) // CHARS_PER_TOKEN for msg in conversations if msg["role"] == "assistant")
         
-        input_list.append(input_tokens)
-        output_list.append(output_tokens)
+        conversation_input_list.append(input_tokens)
+        conversation_output_list.append(output_tokens)
+        num_turns_list.append(r_item.get('num_turns', len(r_item["conversations"]) // 2))
 
     # Calculate total tokens (input + output)
-    total_list = [i + o for i, o in zip(input_list, output_list)]
+    total_list = [i + o for i, o in zip(conversation_input_list, conversation_output_list)]
     
-    if not input_list or not output_list or not total_list:
+    if not conversation_input_list or not conversation_output_list or not total_list:
         print("No token data available to calculate metrics or plot.")
         return stats_data
     
-    print(f"\nToken Count Distribution Summary:")
+    print(f"\nConversation Token Count Distribution Summary:")
     
-    for name, arr in [("Input", input_list), ("Output", output_list), ("Total", total_list)]:
+    for name, arr in [("Input", conversation_input_list), ("Output", conversation_output_list), ("Total", total_list)]:
         count = len(arr)
         min_val = min(arr)
         median_val = statistics.median(arr)
@@ -237,18 +266,22 @@ def calculate_and_plot_token_metrics(all_results, output_path: Path, use_tokeniz
             "max": max_val,
             "std": std_val
         }
-        print(f"  {name} tokens: count={format_num(count)}, min={format_num(min_val)}, median={format_num(median_val)}, mean={format_num(mean_val)}, max={format_num(max_val)}, std={format_num(std_val)}")
+        print(f"  {name} tokens per conversation: count={format_num(count)}, min={format_num(min_val)}, median={format_num(median_val)}, mean={format_num(mean_val)}, max={format_num(max_val)}, std={format_num(std_val)}")
+    
+    # Print turns distribution
+    if num_turns_list:
+        print(f"\n  Turns per conversation: count={format_num(len(num_turns_list))}, min={format_num(min(num_turns_list))}, median={format_num(statistics.median(num_turns_list))}, mean={format_num(statistics.mean(num_turns_list))}, max={format_num(max(num_turns_list))}")
     
     fig, axs = plt.subplots(1, 3, figsize=(18,5))
-    axs[0].hist(input_list, bins=50, color="C0", alpha=0.7)
-    axs[0].set_title("Input tokens distribution")
+    axs[0].hist(conversation_input_list, bins=50, color="C0", alpha=0.7)
+    axs[0].set_title("Input tokens per conversation")
     axs[0].set_xlabel("Tokens")
     axs[0].set_ylabel("Count")
-    axs[1].hist(output_list, bins=50, color="C1", alpha=0.7)
-    axs[1].set_title("Output tokens distribution")
+    axs[1].hist(conversation_output_list, bins=50, color="C1", alpha=0.7)
+    axs[1].set_title("Output tokens per conversation")
     axs[1].set_xlabel("Tokens")
     axs[2].hist(total_list, bins=50, color="C2", alpha=0.7)
-    axs[2].set_title("Total tokens distribution")
+    axs[2].set_title("Total tokens per conversation")
     axs[2].set_xlabel("Tokens")
     plt.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -350,19 +383,17 @@ def main():
     dataset_info = {
         "among_them_train": {
             "file_name": "among_them_train.json",
+            "formatting": "sharegpt",
             "columns": {
-                "prompt": "instruction",
-                "response": "output"
-            },
-            "formatting": "alpaca"
+                "messages": "conversations"
+            }
         },
         "among_them_eval": {
             "file_name": "among_them_eval.json",
+            "formatting": "sharegpt",
             "columns": {
-                "prompt": "instruction",
-                "response": "output"
-            },
-            "formatting": "alpaca"
+                "messages": "conversations"
+            }
         }
     }
         
@@ -371,10 +402,11 @@ def main():
         json.dump(dataset_info, f, indent=2)
         
     # Calculate overall stats
-    max_instruction_tokens = max(train_stats["max_instruction_tokens"], eval_stats["max_instruction_tokens"])
-    max_output_tokens = max(train_stats["max_output_tokens"], eval_stats["max_output_tokens"])
+    max_conversation_input_tokens = max(train_stats["max_conversation_input_tokens"], eval_stats["max_conversation_input_tokens"])
+    max_conversation_output_tokens = max(train_stats["max_conversation_output_tokens"], eval_stats["max_conversation_output_tokens"])
+    max_single_turn_output = max(train_stats["max_single_turn_output_tokens"], eval_stats["max_single_turn_output_tokens"])
         
-    total_instruction_tokens = train_stats["total_instruction_tokens"] + eval_stats["total_instruction_tokens"]
+    total_input_tokens = train_stats["total_input_tokens"] + eval_stats["total_input_tokens"]
     total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
     
     # Get filtered count information
@@ -382,13 +414,10 @@ def main():
     eval_filtered_count = eval_stats.get("filtered_count", 0)
     total_filtered_count = train_filtered_count + eval_filtered_count
         
-    print(f"Successfully wrote {format_num(len(all_results))} rows to {output_csv_file}")
-    # print(f"  {format_num(len(train_data))} examples to {train_file}")
-    # print(f"  {format_num(len(valid_data))} examples to {valid_file}")
-    # print(f"  {format_num(len(test_data))} examples to {test_file}")
-    print(f"\nAlpaca format datasets:")
-    print(f"  {format_num(train_stats['examples_count'])} examples to {alpaca_train_file}")
-    print(f"  {format_num(eval_stats['examples_count'])} examples to {alpaca_eval_file}")
+    print(f"Successfully processed {format_num(len(all_results))} conversations")
+    print(f"\nAlpaca format datasets (multi-turn conversations):")
+    print(f"  {format_num(train_stats['conversations_count'])} conversations to {alpaca_train_file}")
+    print(f"  {format_num(eval_stats['conversations_count'])} conversations to {alpaca_eval_file}")
     
     # Print information about filtered examples if any
     if total_filtered_count > 0:
@@ -400,14 +429,15 @@ def main():
     token_counting_method_info_oneline = f"Tokenizer: {tokenizer_model_name}" if use_actual_tokenizer else "Token Count Method: Estimated (4 chars = 1 token)"
     print(f"\n--- Alpaca Dataset Token Statistics ({token_counting_method_info_oneline}) ---")
 
-    print(f"\nMaximum Token Lengths Per Example:")
-    print(f"  Longest instruction: {format_num(max_instruction_tokens)} tokens")
-    print(f"  Longest output: {format_num(max_output_tokens)} tokens")
+    print(f"\nMaximum Token Lengths:")
+    print(f"  Longest conversation input (all user turns): {format_num(max_conversation_input_tokens)} tokens")
+    print(f"  Longest conversation output (all assistant turns): {format_num(max_conversation_output_tokens)} tokens")
+    print(f"  Longest single turn output: {format_num(max_single_turn_output)} tokens")
 
     print(f"\nTotal Token Counts:")
-    print(f"  Total instruction tokens: {format_num(total_instruction_tokens)} tokens")
-    print(f"  Total output tokens: {format_num(total_output_tokens)} tokens")
-    print(f"  Overall total (all instructions + all outputs): {format_num(total_instruction_tokens + total_output_tokens)} tokens")
+    print(f"  Total input tokens (all user turns): {format_num(total_input_tokens)} tokens")
+    print(f"  Total output tokens (all assistant turns): {format_num(total_output_tokens)} tokens")
+    print(f"  Overall total: {format_num(total_input_tokens + total_output_tokens)} tokens")
 
     # Calculate and plot token metrics using the selected method
     # The tokenizer_model_name is passed for reporting purposes in the MD file, actual tokenization uses stored counts or approximation.
@@ -431,10 +461,10 @@ def main():
         else:
             f.write("Token counts are estimated (4 characters = 1 token).\n\n")
             
-        total_examples_count = train_stats['examples_count'] + eval_stats['examples_count']
-        f.write(f"- **Training examples:** {format_num(train_stats['examples_count'])}\n")
-        f.write(f"- **Evaluation examples:** {format_num(eval_stats['examples_count'])}\n")
-        f.write(f"- **Total examples:** {format_num(total_examples_count)}\n")
+        total_conversations_count = train_stats['conversations_count'] + eval_stats['conversations_count']
+        f.write(f"- **Training conversations:** {format_num(train_stats['conversations_count'])}\n")
+        f.write(f"- **Evaluation conversations:** {format_num(eval_stats['conversations_count'])}\n")
+        f.write(f"- **Total conversations:** {format_num(total_conversations_count)}\n")
         
         # Add information about filtered examples if any
         if total_filtered_count > 0:
@@ -445,16 +475,17 @@ def main():
             f.write(f"{MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens is excluded from the generated dataset ")
             f.write("to keep file sizes manageable, reduce context length during training, and therefore save VRAM.\n")
             
-        f.write("\n## Maximum Token Lengths Per Example\n")
-        f.write(f"- **Longest instruction:** {format_num(max_instruction_tokens)} tokens\n")
-        f.write(f"- **Longest output:** {format_num(max_output_tokens)} tokens\n")
+        f.write("\n## Maximum Token Lengths\n")
+        f.write(f"- **Longest conversation input (all user turns):** {format_num(max_conversation_input_tokens)} tokens\n")
+        f.write(f"- **Longest conversation output (all assistant turns):** {format_num(max_conversation_output_tokens)} tokens\n")
+        f.write(f"- **Longest single turn output:** {format_num(max_single_turn_output)} tokens\n")
         if token_distribution_stats and 'total' in token_distribution_stats and 'max' in token_distribution_stats['total']:
              f.write(f"- **Longest combined (instruction + output):** {format_num(token_distribution_stats['total']['max'])} tokens\n")
             
         f.write("\n## Total Token Counts\n")
-        f.write(f"- **Total instruction tokens:** {format_num(total_instruction_tokens)} tokens\n")
-        f.write(f"- **Total output tokens:** {format_num(total_output_tokens)} tokens\n")
-        f.write(f"- **Overall total (all instructions + all outputs):** {format_num(total_instruction_tokens + total_output_tokens)} tokens\n")
+        f.write(f"- **Total input tokens (all user turns):** {format_num(total_input_tokens)} tokens\n")
+        f.write(f"- **Total output tokens (all assistant turns):** {format_num(total_output_tokens)} tokens\n")
+        f.write(f"- **Overall total (all inputs + all outputs):** {format_num(total_input_tokens + total_output_tokens)} tokens\n")
 
         if token_distribution_stats:
             f.write("\n## Token Count Distribution Summary\n")

@@ -95,7 +95,6 @@ def invoke_llm(
                     model=HUGGINGFACE_MODEL_NAME,
                     messages=messages,
                     stream=True,
-                    think=True,
                 )
                 chunks = response
             

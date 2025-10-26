@@ -209,6 +209,108 @@ def get_observations_at_history_point(
     return " ".join(observations)
 
 
+def get_initial_turn_prompt(
+    player: Player,
+    history: List[History],
+    all_players: List[Player],
+    game_config: GameConfig,
+    history_index: int
+) -> str:
+    """
+    Generate the first turn prompt for a player, including system context and initial observations.
+    
+    Args:
+        player: The player this prompt is for
+        history: Game history entries
+        all_players: All players in the game
+        game_config: Game configuration
+        history_index: Index in history where this player's first turn occurs
+        
+    Returns:
+        Initial prompt with system context and first observations
+    """
+    prompt_parts = []
+    
+    # System context (static)
+    prompt_parts.append(UNIVERSAL_SYSTEM_PROMPT)
+    prompt_parts.append("")
+
+    # Add a simple map overview to help agents understand connectivity without nudging
+    doors_map, _, active_locations = get_map(game_config.map_size)
+    map_lines: list[str] = []
+    for loc in active_locations:
+        neighbors = doors_map.get(loc, [])
+        if neighbors:
+            neighbor_names = ", ".join([n.value for n in neighbors])
+            map_lines.append(f"{loc.value} -> {neighbor_names}")
+        else:
+            map_lines.append(f"{loc.value}: (no direct connections)")
+    prompt_parts.append("Map overview (room -> directly reachable rooms):\n" + "\n".join(map_lines))
+    prompt_parts.append("")
+    
+    # Player context (with role-specific information)
+    prompt_parts.append(get_player_context(player, history, all_players, game_config))
+    prompt_parts.append("")
+    
+    # Add initial observations
+    phase = history[history_index].phase if history_index < len(history) else GamePhase.TASKS
+    prompt_parts.append(get_observations_at_history_point(
+        player, history, all_players, game_config, history_index - 1, phase
+    ))
+    
+    return "\n".join(prompt_parts)
+
+
+def get_incremental_observations(
+    player: Player,
+    history: List[History],
+    all_players: List[Player],
+    game_config: GameConfig,
+    last_turn_index: int,
+    current_turn_index: int
+) -> str:
+    """
+    Generate observations for a player's turn, including only what happened since their last turn.
+    
+    Args:
+        player: The player this prompt is for
+        history: Game history entries
+        all_players: All players in the game
+        game_config: Game configuration
+        last_turn_index: Index of the player's previous turn
+        current_turn_index: Index of the player's current turn
+        
+    Returns:
+        Observations of what happened since last turn + current state
+    """
+    prompt_parts = []
+    
+    # Add observations of what happened between turns
+    observations_since_last = []
+    for i in range(last_turn_index + 1, current_turn_index):
+        hist_entry = history[i]
+        observation = generate_action_observations(
+            hist_entry.action_taken,
+            player.name,
+            hist_entry.spectators_who_saw
+        )
+        if observation.strip():
+            observations_since_last.append(observation)
+    
+    if observations_since_last:
+        prompt_parts.append("Since your last turn:")
+        prompt_parts.extend(observations_since_last)
+        prompt_parts.append("")
+    
+    # Add current state observations
+    phase = history[current_turn_index].phase if current_turn_index < len(history) else GamePhase.TASKS
+    prompt_parts.append(get_observations_at_history_point(
+        player, history, all_players, game_config, current_turn_index - 1, phase
+    ))
+    
+    return "\n".join(prompt_parts)
+
+
 def reconstruct_environment_prompt_from_history(
     player: Player,
     history: List[History], 
