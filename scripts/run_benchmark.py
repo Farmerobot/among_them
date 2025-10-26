@@ -40,9 +40,7 @@ from among_them.models.phase import GamePhase  # type: ignore
 from among_them.config import (  # type: ignore
     LLMBackend,
     LLM_BACKEND,
-    OLLAMA_LLM_MODEL_NAME,
-    OPENROUTER_MODEL_NAME,
-    HUGGINGFACE_MODEL_NAME,
+    MODEL_NAME,
 )  
 
 
@@ -68,14 +66,7 @@ def resolve_backend_model_name() -> str:
     This ignores the CLI --model for execution to ensure we use the same config as other scripts.
     The CLI --model is treated as a display label only.
     """
-    if LLM_BACKEND == LLMBackend.OLLAMA:
-        return OLLAMA_LLM_MODEL_NAME
-    if LLM_BACKEND == LLMBackend.OPENROUTER:
-        return OPENROUTER_MODEL_NAME
-    if LLM_BACKEND == LLMBackend.HUGGINGFACE:
-        return HUGGINGFACE_MODEL_NAME
-    # MLX or others may not need a model string; return empty string
-    return ""
+    return MODEL_NAME
 
 
 def try_reconstruct_full_prompt(example: Dict[str, Any], dataset_meta: Dict[str, Any]) -> Optional[str]:
