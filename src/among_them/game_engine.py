@@ -130,22 +130,18 @@ class GameEngine:
         from among_them.utils.prompt_utils import build_conversation_for_player, get_initial_turn_prompt, get_incremental_observations
         
         # Get past conversation turns for this player
-        conversation = build_conversation_for_player(
+        conversation, last_turn_index = build_conversation_for_player(
             current_player, self.history, self.players, self.game_config
         )
         
-        # Find last turn index for this player to determine if this is first turn
-        player_turn_indices = [i for i, event in enumerate(self.history) if event.action_taken.player_name == current_player.name]
-        
         # Generate new user message for current turn
-        if not player_turn_indices:
+        if last_turn_index is None:
             # First turn: include system prompt
             new_user_msg = get_initial_turn_prompt(
                 current_player, self.history, self.players, self.game_config, len(self.history)
             )
         else:
-            # Subsequent turn: only incremental observations
-            last_turn_index = player_turn_indices[-1]
+            # Subsequent turn: only incremental observations  
             new_user_msg = get_incremental_observations(
                 current_player, self.history, self.players, self.game_config, 
                 last_turn_index, len(self.history)
@@ -171,21 +167,17 @@ class GameEngine:
                 )
                 
                 # Build conversation for this player up to voting phase
-                voting_conversation = build_conversation_for_player(
+                voting_conversation, last_turn_index = build_conversation_for_player(
                     player, fake_history, self.players, self.game_config
                 )
                 
-                # Find last turn for this player in fake_history
-                player_turn_indices = [i for i, event in enumerate(fake_history) if event.action_taken.player_name == player.name]
-                
                 # Generate voting prompt message
-                if not player_turn_indices:
+                if last_turn_index is None:
                     # First turn scenario (shouldn't happen in voting but handle it)
                     voting_user_msg = get_initial_turn_prompt(
                         player, fake_history, self.players, self.game_config, len(fake_history)
                     )
                 else:
-                    last_turn_index = player_turn_indices[-1]
                     voting_user_msg = get_incremental_observations(
                         player, fake_history, self.players, self.game_config,
                         last_turn_index, len(fake_history)

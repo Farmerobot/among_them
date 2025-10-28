@@ -316,7 +316,7 @@ def build_conversation_for_player(
     history: List[History],
     all_players: List[Player],
     game_config: GameConfig
-) -> List[dict]:
+) -> tuple[List[dict], int | None]:
     """
     Reconstructs the conversation history for a player from game history.
     No data duplication - everything derived from existing history.
@@ -328,7 +328,9 @@ def build_conversation_for_player(
         game_config: Game configuration
         
     Returns:
-        List of message dicts: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        Tuple of (conversation, last_turn_index):
+        - conversation: List of message dicts [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        - last_turn_index: Index of player's last turn in history, or None if no past turns
     """
     conversation = []
     player_turn_indices = []
@@ -362,4 +364,5 @@ def build_conversation_for_player(
         conversation.append({"role": "user", "content": user_msg})
         conversation.append({"role": "assistant", "content": assistant_msg})
     
-    return conversation
+    last_turn_index = player_turn_indices[-1] if player_turn_indices else None
+    return conversation, last_turn_index

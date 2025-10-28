@@ -129,7 +129,8 @@ def try_reconstruct_conversation(example: Dict[str, Any], dataset_meta: Dict[str
 
     history_slice = history[: hist_idx + 1]
     try:
-        return build_conversation_for_player(current_player_obj, history_slice, players, game_config)
+        conversation, _ = build_conversation_for_player(current_player_obj, history_slice, players, game_config)
+        return conversation
     except Exception:
         return None
 

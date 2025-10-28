@@ -72,7 +72,7 @@ def analyze_action_with_llm(
     
     # Build conversation up to this point
     try:
-        conversation = build_conversation_for_player(current_player, history, players, game_config)
+        conversation, _ = build_conversation_for_player(current_player, history, players, game_config)
         # Get last user message as the "full prompt" for analysis
         full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
     except Exception as e:
@@ -303,7 +303,7 @@ def extract_scenario_data(
         current_player = next((p for p in players if p.name == player_name), None)
         if not current_player:
             return None
-        conversation = build_conversation_for_player(current_player, history, players, game_config)
+        conversation, _ = build_conversation_for_player(current_player, history, players, game_config)
         # Get last user message as the "full prompt" for analysis
         full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
     except Exception as e:
@@ -425,7 +425,7 @@ def main():
 
             # CoT quality judge
             current_player_cot = next((p for p in players if p.name == history_entry.action_taken.player_name), players[0])
-            conversation = build_conversation_for_player(current_player_cot, history_slice, players, game_config)
+            conversation, _ = build_conversation_for_player(current_player_cot, history_slice, players, game_config)
             full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
             cot_quality = analyze_cot_quality_with_llm(
                 history_entry,
