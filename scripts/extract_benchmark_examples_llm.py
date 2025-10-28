@@ -24,7 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from among_them.game_jsonencoder import game_object_hook
 from among_them.models.history import History
 from among_them.models.action_type import ActionType
-from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
+from among_them.utils.prompt_utils import build_conversation_for_player
 from among_them.utils.player_utils import get_last_player_action, get_players_in_room, get_dead_players
 
 
@@ -70,11 +70,13 @@ def analyze_action_with_llm(
     if history_entry.phase.name == "DISCUSS":
         return None
     
-    # Reconstruct the full prompt
+    # Build conversation up to this point
     try:
-        full_prompt = reconstruct_environment_prompt_from_history(current_player, history, players, game_config)
+        conversation = build_conversation_for_player(current_player, history, players, game_config)
+        # Get last user message as the "full prompt" for analysis
+        full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
     except Exception as e:
-        print(f"Error reconstructing prompt for {player_name}: {e}")
+        print(f"Error building conversation for {player_name}: {e}")
         return None
     
     # Get LLM response and chain of thought
@@ -296,14 +298,16 @@ def extract_scenario_data(
     llm_cot = getattr(history_entry, "llm_cot", "")
     llm_response = getattr(history_entry, "llm_response", "")
     
-    # Reconstruct the full prompt
+    # Build conversation up to this point
     try:
         current_player = next((p for p in players if p.name == player_name), None)
         if not current_player:
             return None
-        full_prompt = reconstruct_environment_prompt_from_history(current_player, history, players, game_config)
+        conversation = build_conversation_for_player(current_player, history, players, game_config)
+        # Get last user message as the "full prompt" for analysis
+        full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
     except Exception as e:
-        print(f"Error reconstructing prompt for {player_name}: {e}")
+        print(f"Error building conversation for {player_name}: {e}")
         return None
     
     return {
@@ -420,12 +424,9 @@ def main():
             margin_ok = (chosen_baseline - baseline_best) >= 0.15
 
             # CoT quality judge
-            full_prompt = reconstruct_environment_prompt_from_history(
-                next((p for p in players if p.name == history_entry.action_taken.player_name), players[0]),
-                history_slice,
-                players,
-                game_config,
-            )
+            current_player_cot = next((p for p in players if p.name == history_entry.action_taken.player_name), players[0])
+            conversation = build_conversation_for_player(current_player_cot, history_slice, players, game_config)
+            full_prompt = conversation[-1]["content"] if conversation and conversation[-1]["role"] == "user" else ""
             cot_quality = analyze_cot_quality_with_llm(
                 history_entry,
                 history_entry.action_taken.player_name,

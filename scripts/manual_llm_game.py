@@ -45,7 +45,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
         print(history_item)
 
     while True:
-        turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context()
+        turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = engine.get_turn_context()
         if not turn_context_history:
             print("Game over!")
             break
@@ -55,8 +55,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
             print("--- Collecting Pre-Discussion Votes ---")
             for vote_prompt in pre_discussion_vote_prompts:
                 player = vote_prompt["player"]
-                system_prompt_pd = vote_prompt["system_prompt"]
-                user_prompt_pd = vote_prompt["user_prompt"]
+                pd_conversation = vote_prompt["conversation"]
                 actions_pd = vote_prompt["actions"]
 
                 # Retry loop for pre-discussion votes
@@ -68,8 +67,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                         # Build allowed actions for early-stop single-line streaming
                         allowed_actions_pd = [a.set_stories().command_perspective for a in actions_pd]
                         llm_response, cot = invoke_llm(
-                            system_prompt_pd,
-                            user_prompt_pd,
+                            pd_conversation,
                             player.llm_model_name,
                             allowed_actions=allowed_actions_pd,
                             single_line_only=True,
@@ -132,8 +130,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                 single_line_only = len(allowed_actions_main) > 0
                 allowed_actions_for_call = allowed_actions_main if single_line_only else None
                 llm_response, cot = invoke_llm(
-                    system_prompt,
-                    user_prompt,
+                    conversation,
                     current_player.llm_model_name,
                     allowed_actions=allowed_actions_for_call,
                     single_line_only=single_line_only,
@@ -182,7 +179,9 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
 
         # Calculate token usage with tiktoken
         encoding = tiktoken.encoding_for_model("gpt-4o")
-        input_tokens = len(encoding.encode(system_prompt + user_prompt))
+        # Count tokens for all messages in conversation
+        conversation_text = "\n".join([msg["content"] for msg in conversation])
+        input_tokens = len(encoding.encode(conversation_text))
         output_tokens = len(encoding.encode(response_text + (cot or "")))
         token_usage = {"input_tokens": input_tokens, "output_tokens": output_tokens}
 

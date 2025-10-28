@@ -41,7 +41,7 @@ def main(reset=False, greedy=False, remove_last_n=0):
         print(history_item)
 
     while True:
-        turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context()
+        turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = engine.get_turn_context()
         if not turn_context_history:
             print("Game over!")
             break
