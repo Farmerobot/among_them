@@ -19,9 +19,6 @@ import matplotlib.pyplot as plt
 from transformers import AutoTokenizer
 
 from among_them.game_engine import GameEngine
-from among_them.models.phase import GamePhase
-from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
-from among_them.utils.phase_utils import count_votes
 
 # Used as fallback to calculate token counts if actual tokenizer is not available
 CHARS_PER_TOKEN = 4

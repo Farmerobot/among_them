@@ -6,20 +6,21 @@ from among_them.models.action import Action, ActionType
 
 
 def invoke_llm(
-    system_prompt: str,
-    prompt: str,
+    conversation: List[dict],
     model_name: str,
     allowed_actions: Optional[List[str]] = None,
     single_line_only: bool = False,
     max_output_chars: Optional[int] = None,
 ) -> Tuple[str, Optional[str]]:
     """
-    Invoke the LLM with the given prompts and handle exceptions.
+    Invoke the LLM with the given conversation history and handle exceptions.
 
     Args:
-        system_prompt: The system prompt to use
-        prompt: The user prompt to send to the LLM
+        conversation: List of message dicts [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
         model_name: The model name to use
+        allowed_actions: Optional list of allowed actions for validation
+        single_line_only: Whether to enforce single-line responses
+        max_output_chars: Maximum output characters allowed
 
     Returns:
         Tuple of (response_text, chain_of_thought)
@@ -27,15 +28,7 @@ def invoke_llm(
     Raises:
         ValueError: If no chain of thought is found in the response
     """
-    messages = [
-        {"role": "user", "content": system_prompt + "\n" + prompt},
-    ]
-
-    # Print chat history (ensure terminal color is reset beforehand)
-    print("\033[0m", end="")
-    print("\n\nChat history:\n")
-    for message in messages:
-        print(f"{message['role']}: {message['content']}")
+    messages = conversation
 
     raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""
     raw_reasoning = ""

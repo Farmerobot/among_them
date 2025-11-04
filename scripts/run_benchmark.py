@@ -34,7 +34,7 @@ from among_them.models.action import Action  # type: ignore
 from among_them.models.action_type import ActionType  # type: ignore
 from among_them.models.player import Player  # type: ignore
 from among_them.game_jsonencoder import game_object_hook  # type: ignore
-from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history  # type: ignore
+from among_them.utils.prompt_utils import build_conversation_for_player  # type: ignore
 from among_them.utils.action_utils import get_task_phase_actions, get_vote_actions  # type: ignore
 from among_them.models.phase import GamePhase  # type: ignore
 from among_them.config import (  # type: ignore
@@ -69,10 +69,11 @@ def resolve_backend_model_name() -> str:
     return MODEL_NAME
 
 
-def try_reconstruct_full_prompt(example: Dict[str, Any], dataset_meta: Dict[str, Any]) -> Optional[str]:
-    """Reconstruct the full prompt from original game_state using example id and current_player.
+def try_reconstruct_conversation(example: Dict[str, Any], dataset_meta: Dict[str, Any]) -> Optional[List[dict]]:
+    """Reconstruct the conversation from original game_state using example id and current_player.
 
     Expects example['id'] like 'game_state_10.json:52' and example['current_player'].
+    Returns a conversation (list of message dicts) or None if reconstruction fails.
     """
     ex_id = example.get('id', '')
     if ':' not in ex_id:
@@ -128,17 +129,18 @@ def try_reconstruct_full_prompt(example: Dict[str, Any], dataset_meta: Dict[str,
 
     history_slice = history[: hist_idx + 1]
     try:
-        return reconstruct_environment_prompt_from_history(current_player_obj, history_slice, players, game_config)
+        conversation, _ = build_conversation_for_player(current_player_obj, history_slice, players, game_config)
+        return conversation
     except Exception:
         return None
 
 
-def call_model_with_retry(full_prompt: str, exec_model_name: str, max_retries: int = 10) -> Tuple[str, Optional[str]]:
+def call_model_with_retry(conversation: List[dict], exec_model_name: str, max_retries: int = 10) -> Tuple[str, Optional[str]]:
     """Call invoke_llm with simple retry/backoff on rate-limit (429) errors."""
     last_err: Optional[Exception] = None
     for attempt in range(max_retries):
         try:
-            return invoke_llm(system_prompt="", prompt=full_prompt, model_name=exec_model_name, single_line_only=False)
+            return invoke_llm(conversation=conversation, model_name=exec_model_name, single_line_only=False)
         except Exception as e:
             last_err = e
             msg = str(e)
@@ -212,16 +214,19 @@ def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dic
     """Run the model once on an example.
     Returns: (raw_output, chosen_idx, chosen_action_str)
     """
-    # Build prompts: we store full_prompt in the example; system prompt is included.
-    full_prompt = example.get('full_prompt', '')
-    if not full_prompt:
-        # Reconstruct from original game state if possible
-        full_prompt = try_reconstruct_full_prompt(example, dataset_meta) or ''
-    if not full_prompt:
-        raise ValueError(f"Example {example.get('id')} missing full_prompt")
+    # Try to get conversation from reconstruction first (returns List[dict])
+    conversation = try_reconstruct_conversation(example, dataset_meta)
+    
+    # Fall back to stored full_prompt (string) if reconstruction fails
+    if not conversation:
+        full_prompt = example.get('full_prompt', '')
+        if not full_prompt:
+            raise ValueError(f"Example {example.get('id')} missing full_prompt and cannot reconstruct")
+        # Convert string prompt to conversation format
+        conversation = [{"role": "user", "content": full_prompt}]
 
-    # Our invoke_llm expects system_prompt and prompt; we pass system empty and put all into user prompt
-    response_text, cot = call_model_with_retry(full_prompt, exec_model_name)
+    # Our invoke_llm expects conversation format
+    response_text, cot = call_model_with_retry(conversation, exec_model_name)
 
     actions = actions_from_strings(example.get('available_actions', []))
     if not actions:

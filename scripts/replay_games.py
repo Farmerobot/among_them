@@ -106,7 +106,7 @@ def replay_game(json_file: Path, output_folder: Path):
             print("Game over - no turn context")
             break
             
-        turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = turn_context_result
+        turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = turn_context_result
         
         # Ensure available tasks match between replay and original game
         # The tasks are stored in the history item's tasks_left_to_do attribute

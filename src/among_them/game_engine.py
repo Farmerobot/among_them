@@ -20,7 +20,6 @@ from among_them.utils.player_utils import (get_last_player_action,
                                            get_players_in_room)
 from among_them.utils.end_utils import get_end_game_reason
 from among_them.utils.history_utils import initialize_history, create_system_message
-from among_them.utils.prompt_utils import reconstruct_environment_prompt_from_history
 from among_them.game_config import GameConfig
 
 class GameEngine:
@@ -44,7 +43,7 @@ class GameEngine:
         if file_path is not None:
             self.file_path = file_path
 
-    def get_turn_context(self, player_name: Optional[str] = None) -> Optional[tuple[History, List[Action], str, str, List[dict]]]:
+    def get_turn_context(self, player_name: Optional[str] = None) -> Optional[tuple[History, List[Action], List[dict], List[dict]]]:
         """Gathers all necessary context for the current player's turn.
 
         This method calculates everything needed for a turn up-front to avoid
@@ -56,8 +55,8 @@ class GameEngine:
         Returns:
             A tuple containing:
             - An incomplete History object representing the current turn's context.
-            - The system prompt for the LLM.
-            - The user prompt for the LLM.
+            - List of actions the player can take.
+            - The conversation history with the new user message appended (List[Dict]).
             - A list of pre-discussion vote prompts (empty if not in DISCUSS phase).
             Or None if the game is in a state that doesn't require player input.
         """
@@ -69,7 +68,7 @@ class GameEngine:
         # If game ended no further player input is required.
         if get_end_game_reason(self.history, self.players) is not None:
             print("Game over! {}".format(get_end_game_reason(self.history, self.players)))
-            return None, None, None, None, None
+            return None, None, None, None
 
         current_player, next_player_names = get_next_random_player(self.history, self.players)
         
@@ -104,7 +103,7 @@ class GameEngine:
             actions_player_can_take = get_vote_actions(self.history, self.players, current_player)
             location = Location.CAFETERIA
         else:
-            return None, None, None, None, None
+            return None, None, None, None
 
         # Create a placeholder action for the current player
         placeholder_action = Action(player_name=current_player.name, type=ActionType.SPEAK, target_message="placeholder")
@@ -127,12 +126,29 @@ class GameEngine:
             votes_before_this_discussion_message={},
         )
 
-        # Build new environment-like prompt
-        environment_prompt = reconstruct_environment_prompt_from_history(
+        # Build conversation history from existing turns + new user message
+        from among_them.utils.prompt_utils import build_conversation_for_player, get_initial_turn_prompt, get_incremental_observations
+        
+        # Get past conversation turns for this player
+        conversation, last_turn_index = build_conversation_for_player(
             current_player, self.history, self.players, self.game_config
         )
-        system_prompt = ""  # System context is included in environment_prompt
-        user_prompt = environment_prompt
+        
+        # Generate new user message for current turn
+        if last_turn_index is None:
+            # First turn: include system prompt
+            new_user_msg = get_initial_turn_prompt(
+                current_player, self.history, self.players, self.game_config, len(self.history)
+            )
+        else:
+            # Subsequent turn: only incremental observations  
+            new_user_msg = get_incremental_observations(
+                current_player, self.history, self.players, self.game_config, 
+                last_turn_index, len(self.history)
+            )
+        
+        # Append new user message to conversation
+        conversation.append({"role": "user", "content": new_user_msg})
 
         pre_discussion_vote_prompts = []
         if phase == GamePhase.DISCUSS:
@@ -149,17 +165,34 @@ class GameEngine:
                         alive_player_names=alive_player_names,
                     )
                 )
-                voting_prompt = reconstruct_environment_prompt_from_history(
+                
+                # Build conversation for this player up to voting phase
+                voting_conversation, last_turn_index = build_conversation_for_player(
                     player, fake_history, self.players, self.game_config
                 )
+                
+                # Generate voting prompt message
+                if last_turn_index is None:
+                    # First turn scenario (shouldn't happen in voting but handle it)
+                    voting_user_msg = get_initial_turn_prompt(
+                        player, fake_history, self.players, self.game_config, len(fake_history)
+                    )
+                else:
+                    voting_user_msg = get_incremental_observations(
+                        player, fake_history, self.players, self.game_config,
+                        last_turn_index, len(fake_history)
+                    )
+                
+                # Append the new voting message
+                voting_conversation.append({"role": "user", "content": voting_user_msg})
+                
                 pre_discussion_vote_prompts.append({
                     "player": player,
-                    "system_prompt": "",
-                    "user_prompt": voting_prompt,
+                    "conversation": voting_conversation,  # Now a conversation!
                     "actions": fake_voting_actions
                 })
 
-        return turn_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts
+        return turn_history, actions_player_can_take, conversation, pre_discussion_vote_prompts
 
     def step(self, turn_context: History, action_taken: Action, llm_response: str = "", llm_cot: str = "", token_usage: dict = {}, pre_discussion_votes: Optional[dict] = None) -> tuple[bool, Optional[EndGameReason]]:
         """Executes a single player action and updates the game state using pre-calculated context.
@@ -304,7 +337,7 @@ class GameEngine:
                 json_str = json.dumps((self.history, self.players, self.game_config), indent=2, cls=GameJSONEncoder)
                 f.write(json_str)
             
-            print(f"Game state saved to: {self.file_path}")
+            # print(f"Game state saved to: {self.file_path}")
         except Exception as e:
             print(f"ERROR saving game state to {self.file_path}: {e}")
             raise

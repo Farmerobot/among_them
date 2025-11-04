@@ -311,75 +311,58 @@ def get_incremental_observations(
     return "\n".join(prompt_parts)
 
 
-def reconstruct_environment_prompt_from_history(
+def build_conversation_for_player(
     player: Player,
-    history: List[History], 
+    history: List[History],
     all_players: List[Player],
     game_config: GameConfig
-) -> str:
+) -> tuple[List[dict], int | None]:
     """
-    Reconstruct the complete environment prompt for a player from game history.
-    This includes all previous LLM generations and observations in chronological order.
+    Reconstructs the conversation history for a player from game history.
+    No data duplication - everything derived from existing history.
     
     Args:
-        player: The player this prompt is for
-        history: Game history entries  
+        player: The player to build conversation for
+        history: Game history entries
         all_players: All players in the game
         game_config: Game configuration
         
     Returns:
-        Complete environment prompt including all previous context
+        Tuple of (conversation, last_turn_index):
+        - conversation: List of message dicts [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        - last_turn_index: Index of player's last turn in history, or None if no past turns
     """
-    prompt_parts = []
+    conversation = []
+    player_turn_indices = []
     
-    # System context (static)
-    prompt_parts.append(UNIVERSAL_SYSTEM_PROMPT)
-    prompt_parts.append("")
-
-    # Add a simple map overview to help agents understand connectivity without nudging
-    doors_map, _, active_locations = get_map(game_config.map_size)
-    map_lines: list[str] = []
-    for loc in active_locations:
-        neighbors = doors_map.get(loc, [])
-        if neighbors:
-            neighbor_names = ", ".join([n.value for n in neighbors])
-            map_lines.append(f"{loc.value} -> {neighbor_names}")
+    # Find all turns for this player
+    for i, event in enumerate(history):
+        if event.action_taken.player_name == player.name:
+            player_turn_indices.append(i)
+    
+    # Build conversation from each turn
+    for turn_idx, history_index in enumerate(player_turn_indices):
+        event = history[history_index]
+        
+        # Reconstruct user message
+        if turn_idx == 0:
+            # First turn: include system prompt
+            user_msg = get_initial_turn_prompt(
+                player, history, all_players, game_config, history_index
+            )
         else:
-            map_lines.append(f"{loc.value}: (no direct connections)")
-    prompt_parts.append("Map overview (room -> directly reachable rooms):\n" + "\n".join(map_lines))
-    prompt_parts.append("")
+            # Subsequent turns: only incremental observations
+            last_turn_index = player_turn_indices[turn_idx - 1]
+            user_msg = get_incremental_observations(
+                player, history, all_players, game_config, last_turn_index, history_index
+            )
+        
+        # Get assistant message (already stored in history)
+        event.action_taken.set_stories()
+        assistant_msg = f"{event.llm_cot}{event.action_taken.command_perspective}"
+        
+        conversation.append({"role": "user", "content": user_msg})
+        conversation.append({"role": "assistant", "content": assistant_msg})
     
-    # Player context (with role-specific information)
-    prompt_parts.append(get_player_context(player, history, all_players, game_config))
-    prompt_parts.append("")
-
-    # Reconstruct the environment flow from history
-    prompt_parts.append("\nHistory (This is not the output format but just a list of observations and actions): '''")
-    for i, hist_entry in enumerate(history):
-        # Check if this was the player's turn
-        if hist_entry.action_taken.player_name == player.name:
-            prompt_parts.append(get_observations_at_history_point(
-                player, history, all_players, game_config, i-1, hist_entry.phase
-            ))
-            
-            # Add LLM generation if this was the player's turn and we have the response
-            hist_entry.action_taken.set_stories()
-            if hist_entry.action_taken.command_perspective and hist_entry.llm_cot:
-                # Add the player's LLM output (think + action tags)
-                llm_output = hist_entry.llm_cot + hist_entry.action_taken.command_perspective
-                prompt_parts.append(llm_output)
-
-        # Add observations about what happened (for everyone)
-        prompt_parts.append(generate_action_observations(
-            hist_entry.action_taken,
-            player.name,
-            hist_entry.spectators_who_saw
-        ))
-    prompt_parts.append("'''\n\n")
-
-    # Add final prompt for the next turn (consistent for all entries)
-    prompt_parts.append(get_observations_at_history_point(
-        player, history, all_players, game_config, len(history) - 1, history[-1].phase
-    ))
-    
-    return "\n".join(prompt_parts)
+    last_turn_index = player_turn_indices[-1] if player_turn_indices else None
+    return conversation, last_turn_index

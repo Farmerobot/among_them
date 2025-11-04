@@ -10,25 +10,26 @@ from among_them.game_config import GameConfig
 import os
 import argparse
 
-def main(reset=False, greedy=False, remove_last_n=0):
-    """Runs the game with manual LLM control."""
-    game_config = GameConfig(
-        num_tasks=2,
-        num_players=5,
-        num_impostors=1,
-        map_size=0,
-        num_task_phase_actions_per_player=10,
-        num_discuss_phase_actions_per_player=2,
-        impostor_cooldown=1
-    )
-    engine = GameEngine(game_config)
+def main(reset=False, greedy=False, remove_last_n=0, game_config: GameConfig = None, state_file_path: str = None):
+    """Runs the game with random LLM control."""
+    if game_config is None:
+        game_config = GameConfig(
+            num_tasks=2,
+            num_players=5,
+            num_impostors=1,
+            map_size=0,
+            num_task_phase_actions_per_player=10,
+            num_discuss_phase_actions_per_player=2,
+            impostor_cooldown=1,
+        )
+    engine = GameEngine(game_config, state_file_path)
     
     # Reset state if requested
-    if reset and os.path.exists(STATE_FILE):
-        os.remove(STATE_FILE)
+    if reset and os.path.exists(state_file_path):
+        os.remove(state_file_path)
         print("State file removed.")
     
-    if not reset and os.path.exists(STATE_FILE):
+    if not reset and os.path.exists(state_file_path):
         engine.load_state()
         print(f"Game loaded from state file with {len(engine.history)} history entries")
         
@@ -41,7 +42,7 @@ def main(reset=False, greedy=False, remove_last_n=0):
         print(history_item)
 
     while True:
-        turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context()
+        turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = engine.get_turn_context()
         if not turn_context_history:
             print("Game over!")
             break
@@ -100,7 +101,9 @@ def main(reset=False, greedy=False, remove_last_n=0):
 
         # Calculate token usage with tiktoken
         encoding = tiktoken.encoding_for_model("gpt-4o")
-        input_tokens = len(encoding.encode(system_prompt + user_prompt))
+        # Count tokens for all messages in conversation
+        conversation_text = "\n".join([msg["content"] for msg in conversation])
+        input_tokens = len(encoding.encode(conversation_text))
         output_tokens = len(encoding.encode(response_text + (cot or "")))
         token_usage = {"input_tokens": input_tokens, "output_tokens": output_tokens}
 
