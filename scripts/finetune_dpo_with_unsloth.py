@@ -49,7 +49,7 @@ dpo_beta = 0.1  # Controls how much to penalize rejected responses (typical: 0.1
 per_device_train_batch_size = 1
 per_device_eval_batch_size = 1
 gradient_accumulation_steps = 8
-max_steps = 1000
+max_steps = 10
 learning_rate = 5e-7  # DPO typically uses lower LR than SFT
 warmup_steps = 50
 
@@ -359,6 +359,128 @@ eval_dataset = eval_dataset.map(
 print("\n✅ Dataset ready for DPO training")
 print(f"  Training examples: {len(train_dataset)}")
 print(f"  Validation examples: {len(eval_dataset)}")
+
+# ============================================================================
+# INSPECT DPO DATA FORMAT (WITH CHAT TEMPLATE AND MASKING)
+# ============================================================================
+
+print("\n" + "=" * 80)
+print("DPO DATA INSPECTION - How Trainer Sees Examples")
+print("=" * 80)
+
+def inspect_dpo_example(example, idx):
+    """Show how DPO trainer sees the example with chat template and masking."""
+    print(f"\n--- Example {idx + 1} ---")
+    
+    # Get the messages
+    prompt_messages = example["prompt"]
+    chosen_messages = example["chosen"]
+    rejected_messages = example["rejected"]
+    
+    print("\n📝 PROMPT MESSAGES:")
+    for i, msg in enumerate(prompt_messages):
+        print(f"  {i+1}. Role: {msg['role']}")
+        print(f"     Content: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
+    
+    print("\n✅ CHOSEN MESSAGES:")
+    for i, msg in enumerate(chosen_messages):
+        print(f"  {i+1}. Role: {msg['role']}")
+        print(f"     Content: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
+    
+    print("\n❌ REJECTED MESSAGES:")
+    for i, msg in enumerate(rejected_messages):
+        print(f"  {i+1}. Role: {msg['role']}")
+        print(f"     Content: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
+    
+    # Apply chat template to show what model actually sees
+    print("\n🔧 FULL CHOSEN SEQUENCE (with chat template and masking):")
+    
+    # Build the full sequence: prompt + chosen
+    chosen_full_messages = prompt_messages + chosen_messages
+    
+    # Get the raw text with chat template
+    chosen_text = tokenizer.apply_chat_template(
+        chosen_full_messages, 
+        tokenize=False, 
+        add_generation_prompt=False
+    )
+    
+    # Also get rejected for comparison
+    rejected_full_messages = prompt_messages + rejected_messages
+    rejected_text = tokenizer.apply_chat_template(
+        rejected_full_messages, 
+        tokenize=False, 
+        add_generation_prompt=False
+    )
+    
+    # Tokenize to show exact tokenization
+    chosen_tokens = tokenizer(chosen_text, return_tensors="pt", add_special_tokens=False)
+    chosen_token_ids = chosen_tokens["input_ids"][0].tolist()
+    
+    # Find where the assistant response starts (after all prompt messages)
+    # Tokenize prompt part to find where it ends
+    prompt_text = tokenizer.apply_chat_template(
+        prompt_messages, 
+        tokenize=False, 
+        add_generation_prompt=True  # This adds the assistant prompt
+    )
+    prompt_tokens = tokenizer(prompt_text, return_tensors="pt", add_special_tokens=False)
+    prompt_token_count = prompt_tokens["input_ids"].shape[1]
+    
+    # Create visualization with proper masking
+    print(f"   Total tokens: {len(chosen_token_ids)}")
+    print(f"   Prompt tokens (masked): {prompt_token_count}")
+    print(f"   Response tokens (trained): {len(chosen_token_ids) - prompt_token_count}")
+    print()
+    
+    # Show token-by-token with masking
+    print("   Token sequence (🔒=masked prompt, ✅=trained response):")
+    
+    mask_visualization = []
+    for i, token_id in enumerate(chosen_token_ids):
+        token_text = tokenizer.decode([token_id])
+        
+        # Determine masking: prompt tokens are masked, response tokens are trained
+        is_prompt_part = i < prompt_token_count
+        mask_char = "🔒" if is_prompt_part else "✅"
+        
+        # Add spacing for readability
+        if token_text.strip() and not token_text.startswith(' '):
+            token_text = ' ' + token_text
+        
+        mask_visualization.append(f"{mask_char}{token_text}")
+    
+    # Show tokens in a readable format (grouped)
+    token_groups = []
+    current_line = ""
+    for token_vis in mask_visualization:
+        if len(current_line + token_vis) > 100:  # Line width limit
+            token_groups.append(current_line)
+            current_line = token_vis
+        else:
+            current_line += token_vis
+    if current_line:
+        token_groups.append(current_line)
+    
+    for line in token_groups[:10]:  # Show first 10 lines
+        print(f"   {line}")
+    
+    if len(token_groups) > 10:
+        print(f"   ... ({len(token_groups) - 10} more lines)")
+    
+    # Show the actual text for comparison
+    print(f"\n   Full text (truncated):")
+    print(f"   {chosen_text[:500]}{'...' if len(chosen_text) > 500 else ''}")
+    
+    return chosen_text
+
+# Show 4 examples from training set
+for i in range(min(4, len(train_dataset))):
+    inspect_dpo_example(train_dataset[i], i)
+
+print("\n" + "=" * 80)
+print("END DPO DATA INSPECTION")
+print("=" * 80)
 
 # ============================================================================
 # SETUP DPO TRAINER
