@@ -1,0 +1,92 @@
+{
+  "benchmark_dataset": [
+    {
+      "id": "game_state_9.json:21",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_9.json",
+      "start_history_index": 21,
+      "ejected_player": "Eve",
+      "ejected_player_role": "CREWMATE",
+      "players_alive": [
+        "David",
+        "Bob",
+        "Eve",
+        "Charlie",
+        "Frank"
+      ],
+      "discussion_message_count": 10,
+      "original_messages": [
+        {
+          "speaker": "Frank",
+          "message": "I saw David working in Medbay right when Alice was killed. Who else was near Cafeteria?"
+        },
+        {
+          "speaker": "Charlie",
+          "message": "I was with Bob the whole time fixing tasks. Eve must've killed Alice when I left for a second."
+        },
+        {
+          "speaker": "Bob",
+          "message": "Eve reported the body but didn't see me or Charlie. We need to push suspicion on her. Based on being in Cafeteria and her proximity.  \nI should back up Charlie's story and suggest Eve was alone with Alice. The message should support Charlie's alibi while accusing Eve."
+        },
+        {
+          "speaker": "Eve",
+          "message": "I saw Charlie kill Alice in the Cafeteria. We need to vote him out!"
+        },
+        {
+          "speaker": "David",
+          "message": "I trust Charlie and Bob's alibi. Eve was alone with Alice and has no proof. Let's vote Eve."
+        },
+        {
+          "speaker": "David",
+          "message": "I trust Charlie and Bob's alibi. Eve was alone with Alice and has no proof. Let's vote Eve."
+        },
+        {
+          "speaker": "Frank",
+          "message": "Eve's accusation against Charlie doesn't align with their alibi. Let's vote Eve out to be safe."
+        },
+        {
+          "speaker": "Bob",
+          "message": "Eve was alone with Alice. Vote Eve!"
+        },
+        {
+          "speaker": "Eve",
+          "message": "Charlie killed Alice! I saw it happen. Don't fall for their lies!"
+        },
+        {
+          "speaker": "Charlie",
+          "message": "Eve was alone with Alice in Cafeteria. The evidence points to her. Let's vote Eve out."
+        }
+      ],
+      "voting": {
+        "votes": {
+          "Charlie": "Eve",
+          "Eve": "Charlie",
+          "Frank": "Eve",
+          "Bob": "Eve",
+          "David": "Eve"
+        },
+        "counts": {
+          "Eve": 4,
+          "Charlie": 1
+        }
+      },
+      "reason_summary": "Eve was voted out primarily due to the strong alibis provided by Charlie and Bob, which contradicted her claims and left her without credible evidence to support her innocence."
+    }
+  ],
+  "metadata": {
+    "generated_at": "20251028_150600",
+    "max_examples": 5,
+    "source_game_files": [
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_23.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_2.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_17.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_9.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_26.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_14.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_13.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_18.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_22.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_5.json"
+    ],
+    "notes": "Sampled randomly from discussion episodes that end with ejection"
+  }
+}
