@@ -199,6 +199,11 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
     Only trains on assistant responses while keeping user prompts as context.
     This matches the in-game format exactly without adding any special tokens.
     """
+    training_start_time = datetime.now()
+    print(f"\n{'='*60}")
+    print(f"Training started at: {training_start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*60}\n")
+    
     print("Setting up trainer...")
 
     # Format datasets (converts conversations to text)
@@ -264,7 +269,7 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         max_seq_length=max_seq_length,  # CRITICAL: Must be in SFTConfig for Unsloth
         per_device_train_batch_size=1,
         gradient_accumulation_steps=2,
-        num_train_epochs=10,
+        num_train_epochs=5,
         learning_rate=2e-4,
         fp16=not is_bfloat16_supported(),
         bf16=is_bfloat16_supported(),
@@ -357,7 +362,14 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
 
     print("Starting training...")
     trainer.train()
-    print("Training complete!")
+    
+    training_end_time = datetime.now()
+    training_duration = training_end_time - training_start_time
+    
+    print(f"\n{'='*60}")
+    print(f"Training completed at: {training_end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Total training time: {training_duration}")
+    print(f"{'='*60}\n")
 
     return trainer
 
