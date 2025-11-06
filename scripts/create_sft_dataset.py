@@ -23,8 +23,14 @@ from among_them.game_engine import GameEngine
 # Used as fallback to calculate token counts if actual tokenizer is not available
 CHARS_PER_TOKEN = 4
 
-# Responses with more than this many tokens in the output are filtered out
-MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF = 3000
+# Maximum tokens per conversation (input + output combined)
+# Conversations exceeding this are split into multiple chunks while maintaining temporal order
+# This prevents OOM during training while preserving all training data
+MAX_CONVERSATION_TOKENS = 3000
+
+# Strict enforcement: if True, discard user-assistant pairs that exceed MAX_CONVERSATION_TOKENS
+# This creates a hard limit but loses data. If False (default), allows large pairs as single chunks
+STRICT_TOKEN_LIMIT = False
 
 def format_num(n):
     if isinstance(n, float):
@@ -136,7 +142,149 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
 #             f.write(json.dumps({"messages": conversation}) + "\n")
 
 
-def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
+def split_long_conversations(data, max_tokens: int, use_tokenizer: bool, tokenizer=None, strict_limit=False):
+    """Split conversations that exceed max_tokens into multiple shorter conversations.
+    
+    Each conversation is split by accumulating user-assistant pairs until adding
+    the next pair would exceed the limit. Every subsequence maintains temporal order.
+    
+    Args:
+        data: List of conversation items with 'conversations' field
+        max_tokens: Maximum total tokens per conversation chunk
+        use_tokenizer: Whether to use actual tokenizer or character approximation
+        tokenizer: Tokenizer instance (if use_tokenizer is True)
+        strict_limit: If True, discard pairs exceeding max_tokens. If False, allow them as single chunks
+    
+    Returns:
+        List of conversation items (potentially more than input due to splitting)
+    """
+    result = []
+    split_count = 0
+    discarded_pair_count = 0
+    discarded_conversation_count = 0
+    
+    for item in data:
+        conversations = item["conversations"]
+        
+        # Ensure conversations alternates user/assistant
+        if len(conversations) < 2:
+            result.append(item)
+            continue
+        
+        current_chunk = []
+        current_tokens = 0
+        chunk_input_tokens = 0
+        chunk_output_tokens = 0
+        conversation_has_valid_pairs = False
+        
+        # Process pairs of user-assistant messages
+        for i in range(0, len(conversations), 2):
+            if i + 1 >= len(conversations):
+                # Odd number of messages - just add the last one
+                if current_chunk:
+                    current_chunk.append(conversations[i])
+                break
+            
+            user_msg = conversations[i]
+            assistant_msg = conversations[i + 1]
+            
+            # Calculate tokens for this pair
+            if use_tokenizer and tokenizer:
+                user_tokens = len(tokenizer.encode(user_msg["content"]))
+                assistant_tokens = len(tokenizer.encode(assistant_msg["content"]))
+                pair_tokens = user_tokens + assistant_tokens
+            else:
+                user_tokens = len(user_msg["content"]) // CHARS_PER_TOKEN
+                assistant_tokens = len(assistant_msg["content"]) // CHARS_PER_TOKEN
+                pair_tokens = user_tokens + assistant_tokens
+            
+            # Strict enforcement: skip pairs that exceed limit individually
+            if strict_limit and pair_tokens > max_tokens:
+                discarded_pair_count += 1
+                # Save current chunk if it exists before discarding this pair
+                if current_chunk:
+                    chunk_item = {
+                        "json_file_name": item.get("json_file_name", "unknown"),
+                        "player_name": item.get("player_name", "unknown"),
+                        "player_role": item.get("player_role", "unknown"),
+                        "num_turns": len(current_chunk) // 2,
+                        "conversations": current_chunk,
+                        "is_split_chunk": True
+                    }
+                    if use_tokenizer:
+                        chunk_item["total_input_tokens"] = chunk_input_tokens
+                        chunk_item["total_output_tokens"] = chunk_output_tokens
+                    result.append(chunk_item)
+                    split_count += 1
+                    # Reset for next chunk
+                    current_chunk = []
+                    current_tokens = 0
+                    chunk_input_tokens = 0
+                    chunk_output_tokens = 0
+                continue  # Skip this oversized pair
+            
+            # Check if adding this pair would exceed limit
+            if current_chunk and (current_tokens + pair_tokens > max_tokens):
+                # Save current chunk and start new one
+                chunk_item = {
+                    "json_file_name": item.get("json_file_name", "unknown"),
+                    "player_name": item.get("player_name", "unknown"),
+                    "player_role": item.get("player_role", "unknown"),
+                    "num_turns": len(current_chunk) // 2,
+                    "conversations": current_chunk,
+                    "is_split_chunk": True
+                }
+                if use_tokenizer:
+                    chunk_item["total_input_tokens"] = chunk_input_tokens
+                    chunk_item["total_output_tokens"] = chunk_output_tokens
+                result.append(chunk_item)
+                split_count += 1
+                
+                # Start new chunk with current pair
+                current_chunk = [user_msg, assistant_msg]
+                current_tokens = pair_tokens
+                chunk_input_tokens = user_tokens
+                chunk_output_tokens = assistant_tokens
+            else:
+                # Add pair to current chunk
+                current_chunk.extend([user_msg, assistant_msg])
+                current_tokens += pair_tokens
+                chunk_input_tokens += user_tokens
+                chunk_output_tokens += assistant_tokens
+                conversation_has_valid_pairs = True
+        
+        # Add final chunk if it has valid pairs
+        if current_chunk:
+            chunk_item = {
+                "json_file_name": item.get("json_file_name", "unknown"),
+                "player_name": item.get("player_name", "unknown"),
+                "player_role": item.get("player_role", "unknown"),
+                "num_turns": len(current_chunk) // 2,
+                "conversations": current_chunk,
+                "is_split_chunk": len(result) > 0 and result[-1].get("json_file_name") == item.get("json_file_name")
+            }
+            if use_tokenizer:
+                chunk_item["total_input_tokens"] = chunk_input_tokens
+                chunk_item["total_output_tokens"] = chunk_output_tokens
+            result.append(chunk_item)
+        elif strict_limit and not conversation_has_valid_pairs:
+            # Entire conversation was discarded due to strict limit
+            discarded_conversation_count += 1
+    
+    original_count = len(data)
+    result_count = len(result)
+    if split_count > 0:
+        print(f"Split {split_count} long conversations into {result_count} total conversations (was {original_count})")
+    
+    if strict_limit and discarded_pair_count > 0:
+        print(f"STRICT MODE: Discarded {discarded_pair_count} pairs exceeding {max_tokens} tokens")
+        if discarded_conversation_count > 0:
+            print(f"STRICT MODE: {discarded_conversation_count} conversations completely discarded (all pairs exceeded limit)")
+    
+    return result
+
+
+def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool, tokenizer=None):
     """Writes data to Alpaca JSON (conversations format) and calculates token statistics."""
     output_data = []
     total_input_tokens = 0
@@ -144,7 +292,6 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
     max_conversation_input_tokens = 0
     max_conversation_output_tokens = 0
     max_single_turn_output_tokens = 0
-    filtered_count = 0
 
     for item in data:
         conversations = item["conversations"]
@@ -164,21 +311,15 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
                 for msg in conversations if msg["role"] == "assistant"
             )
         
-        # Check max single turn output (for filtering very long responses)
+        # Track max single turn output for statistics
         max_turn_output = 0
         for msg in conversations:
             if msg["role"] == "assistant":
-                if use_tokenizer_for_stats:
-                    # Recalculate individual turn token count for filtering
-                    turn_tokens = len(msg["content"]) // CHARS_PER_TOKEN
+                if use_tokenizer_for_stats and tokenizer:
+                    turn_tokens = len(tokenizer.encode(msg["content"]))
                 else:
                     turn_tokens = len(msg["content"]) // CHARS_PER_TOKEN
                 max_turn_output = max(max_turn_output, turn_tokens)
-        
-        # Filter out conversations with any turn exceeding the limit
-        if max_turn_output > MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF:
-            filtered_count += 1
-            continue
 
         total_input_tokens += conversation_input_tokens
         total_output_tokens += conversation_output_tokens
@@ -190,9 +331,6 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
             "conversations": conversations
         })
     
-    if filtered_count > 0:
-        print(f"Filtered out {filtered_count} conversations with turn exceeding {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens.")
-    
     with open(output_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     
@@ -202,8 +340,7 @@ def write_alpaca_json(data, output_file, use_tokenizer_for_stats: bool):
         "max_single_turn_output_tokens": max_single_turn_output_tokens,
         "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
-        "conversations_count": len(output_data),
-        "filtered_count": filtered_count
+        "conversations_count": len(output_data)
     }
 
 
@@ -332,6 +469,18 @@ def main():
         print("No data was processed. Check the input directory and file format.")
         return
 
+    # Split long conversations into multiple shorter ones to prevent OOM during training
+    mode_msg = "strict mode - discarding oversized pairs" if STRICT_TOKEN_LIMIT else "soft mode - allowing oversized pairs as single chunks"
+    print(f"\nSplitting conversations longer than {MAX_CONVERSATION_TOKENS} tokens ({mode_msg})...")
+    all_results = split_long_conversations(
+        all_results, 
+        MAX_CONVERSATION_TOKENS, 
+        use_actual_tokenizer,
+        tokenizer_instance_for_counting,
+        STRICT_TOKEN_LIMIT
+    )
+    print(f"After splitting: {len(all_results)} total conversations\n")
+
     # CSV not needed for now
     # with open(output_csv_file, 'w', newline='', encoding='utf-8') as f:
     #     fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
@@ -373,8 +522,8 @@ def main():
     # Write Alpaca JSON files
     alpaca_train_file = alpaca_data_dir / "among_them_train.json"
     alpaca_eval_file = alpaca_data_dir / "among_them_eval.json"
-    train_stats = write_alpaca_json(train_data, alpaca_train_file, use_actual_tokenizer)
-    eval_stats = write_alpaca_json(eval_data, alpaca_eval_file, use_actual_tokenizer)
+    train_stats = write_alpaca_json(train_data, alpaca_train_file, use_actual_tokenizer, tokenizer_instance_for_counting)
+    eval_stats = write_alpaca_json(eval_data, alpaca_eval_file, use_actual_tokenizer, tokenizer_instance_for_counting)
         
     # Create a single dataset_info.json file with both datasets
     dataset_info = {
@@ -405,23 +554,13 @@ def main():
         
     total_input_tokens = train_stats["total_input_tokens"] + eval_stats["total_input_tokens"]
     total_output_tokens = train_stats["total_output_tokens"] + eval_stats["total_output_tokens"]
-    
-    # Get filtered count information
-    train_filtered_count = train_stats.get("filtered_count", 0)
-    eval_filtered_count = eval_stats.get("filtered_count", 0)
-    total_filtered_count = train_filtered_count + eval_filtered_count
         
     print(f"Successfully processed {format_num(len(all_results))} conversations")
     print(f"\nAlpaca format datasets (multi-turn conversations):")
     print(f"  {format_num(train_stats['conversations_count'])} conversations to {alpaca_train_file}")
     print(f"  {format_num(eval_stats['conversations_count'])} conversations to {alpaca_eval_file}")
-    
-    # Print information about filtered examples if any
-    if total_filtered_count > 0:
-        print(f"\nExcluded examples (assistant output exceeded {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens): {format_num(total_filtered_count)}")
-        print(f"  Training excluded: {format_num(train_filtered_count)}")
-        print(f"  Evaluation excluded: {format_num(eval_filtered_count)}")
-        print("  (These were omitted using the arbitrary output token cutoff to reduce context length during training and save VRAM.)")
+    mode_note = "discarding oversized pairs" if STRICT_TOKEN_LIMIT else "allowing oversized pairs as single chunks"
+    print(f"  Note: Long conversations split at {MAX_CONVERSATION_TOKENS} tokens ({mode_note})")
         
     token_counting_method_info_oneline = f"Tokenizer: {tokenizer_model_name}" if use_actual_tokenizer else "Token Count Method: Estimated (4 chars = 1 token)"
     print(f"\n--- Alpaca Dataset Token Statistics ({token_counting_method_info_oneline}) ---")
@@ -463,14 +602,10 @@ def main():
         f.write(f"- **Evaluation conversations:** {format_num(eval_stats['conversations_count'])}\n")
         f.write(f"- **Total conversations:** {format_num(total_conversations_count)}\n")
         
-        # Add information about filtered examples if any
-        if total_filtered_count > 0:
-            f.write(f"- **Excluded examples (assistant output exceeded {MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens):** {format_num(total_filtered_count)}\n")
-            f.write(f"  - Training excluded: {format_num(train_filtered_count)}\n")
-            f.write(f"  - Evaluation excluded: {format_num(eval_filtered_count)}\n")
-            f.write("\n> Note: Any example whose assistant output is longer than the arbitrary cutoff of ")
-            f.write(f"{MAX_OUTPUT_TOKEN_RESPONSE_CUTOFF} tokens is excluded from the generated dataset ")
-            f.write("to keep file sizes manageable, reduce context length during training, and therefore save VRAM.\n")
+        if STRICT_TOKEN_LIMIT:
+            f.write(f"\n> **Strict Mode:** Conversations are split at {MAX_CONVERSATION_TOKENS} tokens. User-assistant pairs exceeding this limit individually are **discarded** (data loss). This creates a hard limit to prevent OOM.\n")
+        else:
+            f.write(f"\n> **Soft Mode (Default):** Conversations are split at {MAX_CONVERSATION_TOKENS} tokens. If a single user-assistant pair exceeds this limit, it becomes its own chunk (preserves all data). Maximum chunk size may exceed limit.\n")
             
         f.write("\n## Maximum Token Lengths\n")
         f.write(f"- **Longest conversation input (all user turns):** {format_num(max_conversation_input_tokens)} tokens\n")
