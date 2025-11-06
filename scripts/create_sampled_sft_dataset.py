@@ -9,7 +9,6 @@ TRACE_QUALITY_THRESHOLD defines what is the lower bound on evaluation for enteri
 """
 
 from pathlib import Path
-import pandas as pd
 import numpy as np
 import json
 from create_sft_dataset import write_alpaca_json, format_num
@@ -21,22 +20,29 @@ TRACE_QUALITY_THRESHOLD = 2
 def main():
     # --- Configuration ---
     data_dir = Path("data")
-    sft_csv_file = data_dir / "sft_dataset.csv"
-    output_csv_file = data_dir / "sampled_sft_dataset.csv"
+    alpaca_source_dir = data_dir / "alpaca"  # Read from the main alpaca dataset
     generated_dir = Path("generated") # Centralized generated folder
     trace_analysis_file = generated_dir / "trace_analysis.txt"
     alpaca_data_dir = data_dir / "alpaca_sampled"
-    # sft_data_dir = data_dir / "sft_sampled"
     
     # Ensure required directories exist
     data_dir.mkdir(parents=True, exist_ok=True)
     generated_dir.mkdir(parents=True, exist_ok=True)
     alpaca_data_dir.mkdir(parents=True, exist_ok=True)
-    # sft_data_dir.mkdir(parents=True, exist_ok=True)
 
-    fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
-    traces = pd.read_csv(sft_csv_file, names=fieldnames)
+    # Load the full dataset (conversations format)
+    alpaca_train_file = alpaca_source_dir / "among_them_train.json"
+    alpaca_eval_file = alpaca_source_dir / "among_them_eval.json"
+    
+    with open(alpaca_train_file, 'r') as f:
+        train_data = json.load(f)
+    with open(alpaca_eval_file, 'r') as f:
+        eval_data = json.load(f)
+    
+    # Combine all conversations
+    all_conversations = train_data + eval_data
 
+    # Load trace analysis scores
     quality_idx, scores = [], []
     with open(trace_analysis_file, "r") as f:
         lines = f.readlines()
@@ -54,11 +60,31 @@ def main():
 
     quality_idx, scores = np.array(quality_idx), np.array(scores)
 
-    filtered_traces = traces.iloc[quality_idx]
-    filtered_traces.to_csv(output_csv_file, sep=",", header=False, index=False)
+    # Filter conversations based on quality
+    filtered_conversations = [all_conversations[i] for i in quality_idx if i < len(all_conversations)]
+    
+    print(f"Filtered {len(filtered_conversations)} high-quality conversations out of {len(all_conversations)}")
 
-    instruction_tokens = np.array(filtered_traces["instruction_token_count_actual"])
-    output_tokens = np.array(filtered_traces["output_token_count_actual"])
+    # Calculate token counts from conversations (approximate: 4 chars = 1 token)
+    CHARS_PER_TOKEN = 4
+    instruction_tokens_list = []
+    output_tokens_list = []
+    
+    for conv_item in filtered_conversations:
+        conversations = conv_item["conversations"]
+        input_tokens = sum(
+            len(msg["content"]) // CHARS_PER_TOKEN 
+            for msg in conversations if msg["role"] == "user"
+        )
+        output_tokens = sum(
+            len(msg["content"]) // CHARS_PER_TOKEN 
+            for msg in conversations if msg["role"] == "assistant"
+        )
+        instruction_tokens_list.append(input_tokens)
+        output_tokens_list.append(output_tokens)
+    
+    instruction_tokens = np.array(instruction_tokens_list)
+    output_tokens = np.array(output_tokens_list)
     examples_count = len(instruction_tokens)
     
     # Write stats to markdown file
@@ -66,9 +92,9 @@ def main():
         
     with open(stats_md_path, 'w', encoding='utf-8') as f:
         f.write("# Sampled Alpaca Dataset Statistics\n\n")
-        f.write("The script generating this stats hasn't performed any token counting (token counts are taken from the original files).\n\n")
+        f.write("Token counts are approximated (4 characters = 1 token).\n\n")
             
-        f.write(f"- **Total examples:** {examples_count} (out of original {len(traces)} - {round(examples_count / len(traces) * 100, 1)}% preserved)\n")
+        f.write(f"- **Total examples:** {examples_count} (out of original {len(all_conversations)} - {round(examples_count / len(all_conversations) * 100, 1)}% preserved)\n")
 
         f.write("\n## Trace Evaluation Distribution\n")
         f.write("| Dataset | Eval 0 | Eval 1 | Eval 2 | Eval 3 |\n")
@@ -136,20 +162,18 @@ def main():
     print(f"\nAlpaca dataset stats also written to {stats_md_path}")
 
     # Split data into train/valid/test sets
-    all_results = filtered_traces.to_dict('records')
-
     random.seed(42)
-    random.shuffle(all_results)
-    data_size = len(all_results)
+    random.shuffle(filtered_conversations)
+    data_size = len(filtered_conversations)
     train_size = int(data_size * 0.8)
     valid_size = int(data_size * 0.1)
     
-    train_data = all_results[:train_size]
-    valid_data = all_results[train_size:train_size+valid_size]
-    test_data = all_results[train_size+valid_size:]
+    train_data = filtered_conversations[:train_size]
+    valid_data = filtered_conversations[train_size:train_size+valid_size]
+    test_data = filtered_conversations[train_size+valid_size:]
     
     # For Alpaca format, combine validation and test into a single eval set
-    eval_data = all_results[train_size:]
+    eval_data = filtered_conversations[train_size:]
     
     # # Write JSONL files
     # train_file = sft_data_dir / "train_sampled.jsonl"
@@ -169,19 +193,17 @@ def main():
     dataset_info = {
         "among_them_train": {
             "file_name": "among_them_train.json",
+            "formatting": "sharegpt",
             "columns": {
-                "prompt": "instruction",
-                "response": "output"
-            },
-            "formatting": "alpaca"
+                "messages": "conversations"
+            }
         },
         "among_them_eval": {
             "file_name": "among_them_eval.json",
+            "formatting": "sharegpt",
             "columns": {
-                "prompt": "instruction",
-                "response": "output"
-            },
-            "formatting": "alpaca"
+                "messages": "conversations"
+            }
         }
     }
         

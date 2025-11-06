@@ -6,16 +6,16 @@ Requires OPENAI_API_KEY or OPENROUTER_API_KEY environment variable depending on 
 """
 
 # Configuration: Set to True to use OpenRouter, False to use OpenAI
-USE_OPENROUTER = False
+USE_OPENROUTER = True
 
 # from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 import openai
 # from ollama import chat
-import pandas as pd
 import os
 import json
 import sys
 from time import sleep
+from pathlib import Path
 
 # Import centralized configuration
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -46,34 +46,50 @@ def validate_api_key():
 # Validate API key before proceeding
 validate_api_key()
 
-fieldnames = ["json_file_name", "player_name", "player_role", "votes_before", "votes_after", "prompt", "model_cot_and_cleaned_output", "input_tokens", "output_tokens", "instruction_token_count_actual", "output_token_count_actual"]
+# Load conversations from JSON files
+data_dir = Path("data/alpaca")
+train_file = data_dir / "among_them_train.json"
+eval_file = data_dir / "among_them_eval.json"
 
-traces = pd.read_csv("data/sft_dataset.csv", names=fieldnames)
-impostor_traces = traces[traces["player_role"] == "Impostor"]
+with open(train_file, 'r') as f:
+    train_data = json.load(f)
+with open(eval_file, 'r') as f:
+    eval_data = json.load(f)
 
-def get_trace_evaluation(trace):
+# Combine all conversations
+all_conversations = train_data + eval_data
+print(f"Loaded {len(all_conversations)} conversations for evaluation")
+
+def get_trace_evaluation(conversation_item):
+    """Evaluate a multi-turn conversation."""
+    conversations = conversation_item["conversations"]
+    
+    # Format the conversation for evaluation
+    conversation_text = ""
+    for msg in conversations:
+        role = msg["role"].capitalize()
+        content = msg["content"]
+        conversation_text += f"\n{role}: {content}\n"
+    
     prompt = f"""
     <task>
-    You are evaluating a player's reasoning and action taken during a round in the game *Among Them* (similar to *Among Us*).
-    Your job is to check if the player's explanation and response align with the rules and logic of the game.
+    You are evaluating a player's multi-turn reasoning and actions in the game *Among Them* (similar to *Among Us*).
+    Your job is to check if the player's explanations and responses align with the rules and logic of the game across all turns.
 
     If the player's explanation contains a hallucination (i.e., invents game facts not present or contradicts the game's setup/rules) or misinterprets the situation, you must score it as 0.
 
-    Otherwise, evaluate their response from 1 to 3 based on the quality of their reasoning and in-game action:
+    Otherwise, evaluate their overall performance from 1 to 3 based on the quality of their reasoning and in-game actions:
 
     - 0: Player hallucinated or clearly misunderstood the game logic/setup.
-    - 1: Weak or flawed reasoning; action taken was not effective or insightful.
-    - 2: Decent reasoning and a solid, valid in-game action.
-    - 3: Excellent reasoning and a tactically smart or creative move given the situation.
+    - 1: Weak or flawed reasoning; actions taken were not effective or insightful.
+    - 2: Decent reasoning and solid, valid in-game actions.
+    - 3: Excellent reasoning and tactically smart or creative moves given the situation.
 
     </task>
 
     <context>
-    # Game trace for evaluation:
-    ## Player name: {trace["player_name"]}
-    ## Player role: '{trace["player_role"]}'
-    ## Player prompt: '{trace["prompt"]}'
-    ## Player's explanation and response: '{trace["model_cot_and_cleaned_output"]}'
+    # Multi-turn conversation for evaluation:
+    {conversation_text}
     </context>
 
     <important>
@@ -83,9 +99,9 @@ def get_trace_evaluation(trace):
 
     <output_format>
     e.g.:
-    [2, "Anne had reasonable logic and shifted suspicion away with a valid argument."]
+    [2, "Player showed reasonable logic across turns and made solid tactical decisions."]
     e.g.:
-    [0, "Frank claimed to see a vent animation in a room where vents don't exist. This is a hallucination."]
+    [0, "Player claimed to see a vent animation in a room where vents don't exist. This is a hallucination."]
     </output_format>
     """
 
@@ -129,19 +145,31 @@ def get_trace_evaluation(trace):
     # print(response.message["content"])
 
 
-for i in range(len(traces)):
-    trace = traces.iloc[i]
-    print(f"Trace number {i}:")
+# Ensure generated directory exists
+Path("generated").mkdir(exist_ok=True)
+
+# Clear existing analysis file if it exists
+analysis_file = Path("generated/trace_analysis.txt")
+if analysis_file.exists():
+    analysis_file.unlink()
+    print("Cleared existing trace_analysis.txt\n")
+
+for i in range(len(all_conversations)):
+    conversation = all_conversations[i]
+    print(f"Conversation {i+1}/{len(all_conversations)}:")
 
     res, res_list = None, None
     while res is None or res_list is None:
         try:
-            res = get_trace_evaluation(trace)
+            res = get_trace_evaluation(conversation)
             res_list = json.loads(res)
-        except:
-            print("An error occured, repeating in 1s")
+        except Exception as e:
+            print(f"An error occurred: {e}, repeating in 1s")
             sleep(1)
 
     print(res_list, "\n")
     with open("generated/trace_analysis.txt", "a") as f:
         f.write(res + "\n")
+
+print(f"\n✅ Completed evaluation of {len(all_conversations)} conversations")
+print(f"Results saved to: {analysis_file.absolute()}")
