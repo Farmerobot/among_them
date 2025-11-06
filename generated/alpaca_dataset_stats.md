@@ -2,29 +2,29 @@
 
 Tokenizer used for token counts: `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`
 
-- **Training conversations:** 328
-- **Evaluation conversations:** 83
-- **Total conversations:** 411
+- **Training conversations:** 367
+- **Evaluation conversations:** 92
+- **Total conversations:** 459
 
-> **Strict Mode:** Conversations are split at 3000 tokens. User-assistant pairs exceeding this limit individually are **discarded** (data loss). This creates a hard limit to prevent OOM.
+> **Soft Mode (Default):** Conversations are split at 3000 tokens. If a single user-assistant pair exceeds this limit, it becomes its own chunk (preserves all data). Maximum chunk size may exceed limit.
 
 ## Maximum Token Lengths
 - **Longest conversation input (all user turns):** 1,833 tokens
-- **Longest conversation output (all assistant turns):** 2,850 tokens
-- **Longest single turn output:** 2,850 tokens
-- **Longest combined (instruction + output):** 3,000 tokens
+- **Longest conversation output (all assistant turns):** 6,442 tokens
+- **Longest single turn output:** 6,442 tokens
+- **Longest combined (instruction + output):** 6,634 tokens
 
 ## Total Token Counts
-- **Total input tokens (all user turns):** 324,365 tokens
-- **Total output tokens (all assistant turns):** 517,021 tokens
-- **Overall total (all inputs + all outputs):** 841,386 tokens
+- **Total input tokens (all user turns):** 345,171 tokens
+- **Total output tokens (all assistant turns):** 694,314 tokens
+- **Overall total (all inputs + all outputs):** 1,039,485 tokens
 
 ## Token Count Distribution Summary
 | Statistic | Input Tokens | Output Tokens | Total Tokens |
 | :-------- | :----------- | :------------ | :----------- |
-| **Count** | 411 | 411 | 411 |
+| **Count** | 459 | 459 | 459 |
 | **Min** | 39 | 71 | 226 |
-| **Median** | 743 | 1,261 | 2,213 |
-| **Mean** | 789.21 | 1,257.96 | 2,047.17 |
-| **Max** | 1,833 | 2,850 | 3,000 |
-| **Std Dev** | 469.17 | 705.24 | 777.47 |
+| **Median** | 686 | 1,350 | 2,391 |
+| **Mean** | 752.01 | 1,512.67 | 2,264.67 |
+| **Max** | 1,833 | 6,442 | 6,634 |
+| **Std Dev** | 473.44 | 1,047.99 | 1,013.65 |
