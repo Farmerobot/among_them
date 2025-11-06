@@ -1,4 +1,5 @@
 import re
+import os
 from typing import List, Optional, Tuple
 
 from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, MODEL_NAME
@@ -11,6 +12,7 @@ def invoke_llm(
     allowed_actions: Optional[List[str]] = None,
     single_line_only: bool = False,
     max_output_chars: Optional[int] = None,
+    actions: Optional[List[Action]] = None,
 ) -> Tuple[str, Optional[str]]:
     """
     Invoke the LLM with the given conversation history and handle exceptions.
@@ -21,6 +23,7 @@ def invoke_llm(
         allowed_actions: Optional list of allowed actions for validation
         single_line_only: Whether to enforce single-line responses
         max_output_chars: Maximum output characters allowed
+        actions: Optional list of Action objects (required for LOCAL_PROBABILITY backend)
 
     Returns:
         Tuple of (response_text, chain_of_thought)
@@ -28,6 +31,46 @@ def invoke_llm(
     Raises:
         ValueError: If no chain of thought is found in the response
     """
+    # Handle LOCAL_PROBABILITY backend
+    if LLM_BACKEND == LLMBackend.LOCAL_PROBABILITY:
+        if actions is None or len(actions) == 0:
+            raise ValueError("LOCAL_PROBABILITY backend requires 'actions' parameter with Action objects")
+        
+        # Import here to avoid circular dependency
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', '..', 'scripts'))
+        from calculate_action_probabilities import (
+            load_deepseek_model,
+            generate_reasoning_and_calculate_probabilities
+        )
+        
+        # Check for debug mode via environment variable
+        debug = os.getenv("LLM_DEBUG", "false").lower() == "true"
+        
+        # Load model (cached after first call)
+        model, tokenizer = load_deepseek_model(model_name, debug=debug)
+        
+        # Calculate probabilities with word normalization
+        generated_text, token_results, word_results = generate_reasoning_and_calculate_probabilities(
+            model, tokenizer, conversation, actions, debug=debug
+        )
+        
+        # Get best action by word normalization
+        best_action, best_log_prob, best_norm_prob, token_texts, token_probs = word_results[0]
+        
+        # Format response as the action command
+        response_text = best_action.command_perspective
+        
+        # Extract chain of thought from generated text
+        import re
+        cot_match = re.search(r"<think>.*?</think>", generated_text, re.DOTALL)
+        if cot_match:
+            cot = cot_match.group(0)
+        else:
+            cot = "<think>\n" + generated_text + "\n</think>"
+        
+        return response_text, cot
+    
     messages = conversation
 
     raw = "<think>" if LLM_BACKEND == LLMBackend.MLX else ""

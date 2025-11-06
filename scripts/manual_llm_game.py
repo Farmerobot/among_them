@@ -71,6 +71,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                             player.llm_model_name,
                             allowed_actions=allowed_actions_pd,
                             single_line_only=True,
+                            actions=actions_pd,
                         )
                         
                         # Try to parse the response
@@ -135,6 +136,7 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                     allowed_actions=allowed_actions_for_call,
                     single_line_only=single_line_only,
                     max_output_chars=None if single_line_only else 1500,
+                    actions=actions_player_can_take,
                 )
                 
                 # Try to parse the response
@@ -168,7 +170,10 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                     return  # exit the main() function cleanly
             except Exception as e:
                 # Log the error but keep the loop running
+                import traceback
+                stacktrace = traceback.format_exc()
                 print(f"\033[91mError during LLM invocation: {e}\033[0m")
+                print(f"\033[91mStacktrace: {stacktrace}\033[0m")
                 retry_count += 1
                 if retry_count >= max_retries:
                     print(f"\033[91mMax retries reached. Using manual fallback.\033[0m")

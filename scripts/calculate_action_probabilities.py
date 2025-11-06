@@ -18,21 +18,43 @@ from among_them.game_config import GameConfig
 from among_them.models.action import Action
 
 
-def load_deepseek_model():
-    """Load DeepSeek-R1-Distill-Qwen-1.5B model and tokenizer."""
-    model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+# Global model cache - one model per session
+# The issue: torch.compile on MPS fails when called multiple times in same Python process
+# Solution: Load and compile ONCE per session, reuse the compiled model for all turns
+_MODEL_CACHE = {}
+
+
+def load_deepseek_model(model_name: str = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", debug: bool = True):
+    """Load DeepSeek-R1-Distill-Qwen-1.5B model and tokenizer with per-session caching.
+    
+    The model is loaded and compiled once per session (Python process), then reused
+    across all turns. This avoids MPS torch.compile issues with multiple compilation calls.
+    """
+    # Use cached model if available
+    if model_name in _MODEL_CACHE:
+        if debug:
+            print(f"Using cached model: {model_name}")
+        return _MODEL_CACHE[model_name]
+    
     load_start_time = time.time()
     
-    print(f"Loading model: {model_name}")
+    if debug:
+        print(f"Loading model: {model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     
     # Check if MPS is available and use it, otherwise use CPU
     if torch.backends.mps.is_available():
         device = "mps"
-        print("Using MPS device")
+        if debug:
+            print("Using MPS device")
+    elif torch.backends.cuda.is_available():
+        device = "cuda"
+        if debug:
+            print("Using CUDA device")
     else:
         device = "cpu"
-        print("MPS not available, using CPU")
+        if debug:
+            print("CUDA and MPS not available, using CPU")
     
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
@@ -43,20 +65,44 @@ def load_deepseek_model():
     load_end_time = time.time()
     load_time = load_end_time - load_start_time
     
-    print(f"Model loaded in {load_time:.2f}s")
+    if debug:
+        print(f"Model loaded in {load_time:.2f}s")
     
-    compile_start_time = time.time()
-    model.set_attn_implementation("flash_attention_2")
-    # compilation might occur later in the code (when model is called)
-    model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
-    compile_end_time = time.time()
-    compile_time = compile_end_time - compile_start_time
+    # Try to set flash attention (may not be available on all systems)
+    try:
+        model.set_attn_implementation("flash_attention_2")
+        if debug:
+            print("Flash Attention 2 enabled")
+    except Exception as e:
+        if debug:
+            print(f"Flash Attention 2 not available: {e}")
     
-    print(f"Model compiled in {compile_time:.2f}s")
+    # Apply torch.compile only on CUDA where it works reliably
+    # MPS has issues:
+    # - fullgraph=True fails on second StaticCache with "fake tensors" error
+    # - dynamic=True hits recompile limit (8) due to layer_idx changes, effectively disabling it
+    # Result: MPS runs in eager mode for stability
+    if device == "cuda":
+        if debug:
+            print("Compiling model with torch.compile (CUDA, fullgraph)...")
+        compile_start = time.time()
+        model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
+        if debug:
+            print(f"Model compilation setup complete in {time.time() - compile_start:.2f}s")
+            print("(Actual compilation will happen on first forward pass)")
+    else:
+        if debug:
+            print(f"torch.compile disabled on {device} (eager mode)")
+            print("Reason: MPS compilation issues with StaticCache and model architecture")
+            print("Performance: ~1-2 tokens/s on MPS (acceptable for local development)")
     
+    # Cache the model for reuse during this session
+    _MODEL_CACHE[model_name] = (model, tokenizer)
     return model, tokenizer
 
-def stream_print(token_id, tokenizer):
+def stream_print(token_id, tokenizer, debug: bool = True):
+    if not debug:
+        return
     try:
         text = tokenizer.decode([token_id])
     except Exception:
@@ -67,9 +113,9 @@ def stream_print(token_id, tokenizer):
 def generate_reasoning_and_calculate_probabilities(
     model,
     tokenizer,
-    system_prompt: str,
-    user_prompt: str,
-    actions: List[Action]
+    conversation: List[Dict[str, str]],
+    actions: List[Action],
+    debug: bool = True
 ) -> Tuple[str, List[Tuple[Action, float, float]], List[Tuple[Action, float, float]]]:
     """
     Generate reasoning until </think> then efficiently calculate action probabilities
@@ -79,12 +125,12 @@ def generate_reasoning_and_calculate_probabilities(
         return "", [], []
     
     # 1. Prepare base prompt
-    messages = [
-        # {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ]
+    # messages = [
+    #     # {"role": "system", "content": system_prompt},
+    #     {"role": "user", "content": user_prompt}
+    # ]
     tokenizer_start_time = time.time()
-    input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    input_text = tokenizer.apply_chat_template(conversation, tokenize=False, add_generation_prompt=True)
     
     # 2. Generate reasoning until </think> - this creates our KV-cache checkpoint
     inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
@@ -105,7 +151,8 @@ def generate_reasoning_and_calculate_probabilities(
     static_cache_end_time = time.time()
     static_cache_time = static_cache_end_time - static_cache_start_time
 
-    print("\nStreaming reasoning (until </think>)...")
+    if debug:
+        print("\nStreaming reasoning (until </think>)...")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"  # To prevent long warnings :)
 
     first_token_start_time = time.time()
@@ -131,7 +178,7 @@ def generate_reasoning_and_calculate_probabilities(
         reasoning_start_time = time.time()
 
         # 2) Sampled decode until </think> (one-token stop) or step cap
-        max_reason_tokens = 50
+        max_reason_tokens = 1000
         generated_reason_ids = []
         cur_pos = torch.tensor([prompt_len], device=device)
 
@@ -140,7 +187,8 @@ def generate_reasoning_and_calculate_probabilities(
         temperature = float(getattr(gen_cfg, "temperature", 1.0) or 1.0)
         top_p = float(getattr(gen_cfg, "top_p", 1.0) or 1.0)
         top_k = int(getattr(gen_cfg, "top_k", 0) or 0)
-        print(f"Sampling with temp={temperature}, top_p={top_p}, top_k={top_k}")
+        if debug:
+            print(f"Sampling with temp={temperature}, top_p={top_p}, top_k={top_k}. Max reason tokens: {max_reason_tokens}")
 
         for step in range(max_reason_tokens):
             # Take last-step logits [vocab]
@@ -190,7 +238,7 @@ def generate_reasoning_and_calculate_probabilities(
             # but the second one might cause recompile (torch.compile) because single token pass 
             # (Shape/args differ from prefill: input_ids goes from [1, prompt_len] to [1, 1].)
             # Subsequent decode steps (", so I'm ...") reuse the compiled graph, hence smooth
-            stream_print(token_id, tokenizer)
+            stream_print(token_id, tokenizer, True)
 
             # Write token into cache and compute next logits
             with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
@@ -218,7 +266,7 @@ def generate_reasoning_and_calculate_probabilities(
     current_logits = None
     with torch.no_grad():
         for tid in end_think_token_ids + action_prefix_token_ids:
-            stream_print(tid, tokenizer)
+            stream_print(tid, tokenizer, True)
             tok = torch.tensor([[tid]], dtype=torch.long, device=device)
             with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
                 out = model(
@@ -278,7 +326,7 @@ def generate_reasoning_and_calculate_probabilities(
             token_texts.append(tokenizer.decode([token_id]))
             
             # Stream this token
-            stream_print(token_id, tokenizer)
+            stream_print(token_id, tokenizer, True)
             
             # If not the last token, get next logits using cached states
             if i < len(action_token_ids) - 1:
@@ -310,45 +358,81 @@ def generate_reasoning_and_calculate_probabilities(
     action_calc_end_time = time.time()
     action_calc_time = action_calc_end_time - action_calc_start_time
     
-    print(f"\n📊 Total time breakdown:")
-    print(f"   • Tokenizer: {tokenizer_time:.2f}s")
-    print(f"   • Static cache: {static_cache_time:.2f}s")
-    print(f"   • First token: {first_token_time:.2f}s")
-    print(f"   • Reasoning generation: {reasoning_time:.2f}s ({len(generated_reason_ids) / reasoning_time:.2f} tokens/s)")
-    action_prefix_and_action_tokens_per_s = (len(end_think_token_ids) + len(action_prefix_token_ids) + len(action_token_ids)) / (action_calc_time + appending_time)
-    print(f"   • Appending Action: prefix: {appending_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
-    print(f"   • Action probabilities: {action_calc_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
-    print(f"   • Total: {tokenizer_time + static_cache_time + first_token_time + reasoning_time + appending_time + action_calc_time:.2f}s")
-    
-    # Show top token probabilities after Action: prefix
-    print(f"\n🎯 TOP TOKEN PROBABILITIES after Action: prefix:")
-    print("-" * 60)
-    probs_after_think = torch.softmax(last_logits, dim=-1)
-    top_k = 10
-    top_values, top_indices = torch.topk(probs_after_think, top_k)
-    
-    for i in range(top_k):
-        token_id = top_indices[i].item()
-        token_prob = top_values[i].item()
-        try:
-            token_text = tokenizer.decode([token_id])
-            # Handle special characters for display
-            if token_text == '\n':
-                token_display = '<newline>'
-            elif token_text == '\n\n':
-                token_display = '<double_newline>'
-            elif token_text == ' ':
-                token_display = '<space>'
-            elif token_text == '\t':
-                token_display = '<tab>'
-            # elif token_text.strip() == '':
-            #     token_display = '<whitespace>'
-            else:
-                token_display = repr(token_text)
-        except:
-            token_display = f'<token_id_{token_id}>'
+    if debug:
+        print(f"\n📊 Total time breakdown:")
+        print(f"   • Tokenizer: {tokenizer_time:.2f}s")
+        print(f"   • Static cache: {static_cache_time:.2f}s")
+        print(f"   • First token: {first_token_time:.2f}s")
+        print(f"   • Reasoning generation: {reasoning_time:.2f}s ({len(generated_reason_ids) / reasoning_time:.2f} tokens/s)")
+        action_prefix_and_action_tokens_per_s = (len(end_think_token_ids) + len(action_prefix_token_ids) + len(action_token_ids)) / (action_calc_time + appending_time)
+        print(f"   • Appending Action: prefix: {appending_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
+        print(f"   • Action probabilities: {action_calc_time:.2f}s ({action_prefix_and_action_tokens_per_s:.2f} tokens/s)")
+        print(f"   • Total: {tokenizer_time + static_cache_time + first_token_time + reasoning_time + appending_time + action_calc_time:.2f}s")
         
-        print(f"{i+1:2d}. {token_display:<20} {token_prob:.4%} (log: {math.log(token_prob):.4f})")
+        # Show top token probabilities after Action: prefix
+        # print(f"\n🎯 TOP TOKEN PROBABILITIES after Action: prefix:")
+        # print("-" * 60)
+        # probs_after_think = torch.softmax(last_logits, dim=-1)
+        # top_k = 10
+        # top_values, top_indices = torch.topk(probs_after_think, top_k)
+        
+        # for i in range(top_k):
+        #     token_id = top_indices[i].item()
+        #     token_prob = top_values[i].item()
+        #     try:
+        #         token_text = tokenizer.decode([token_id])
+        #         # Handle special characters for display
+        #         if token_text == '\n':
+        #             token_display = '<newline>'
+        #         elif token_text == '\n\n':
+        #             token_display = '<double_newline>'
+        #         elif token_text == ' ':
+        #             token_display = '<space>'
+        #         elif token_text == '\t':
+        #             token_display = '<tab>'
+        #         # elif token_text.strip() == '':
+        #         #     token_display = '<whitespace>'
+        #         else:
+        #             token_display = repr(token_text)
+        #     except:
+        #         token_display = f'<token_id_{token_id}>'
+            
+        #     print(f"{i+1:2d}. {token_display:<20} {token_prob:.4%} (log: {math.log(token_prob):.4f})")
+        
+        # Show detailed action probability breakdown table
+        print(f"\n📊 DETAILED ACTION PROBABILITY BREAKDOWN:")
+        print("=" * 120)
+        print(f"{'Action':<30} {'Tokens':<25} {'Token Probabilities (%)':<35} {'W/O Norm':<12} {'Token Norm':<12} {'Word Norm':<12}")
+        print("=" * 120)
+        
+        wo_norm_sum = sum(math.exp(log_prob) for _, log_prob, _, _, _ in token_results[:10])
+        token_norm_sum = sum(math.exp(prob) for _, _, prob, _, _ in token_results[:10])
+        word_norm_sum = sum(math.exp(prob) for _, _, prob, _, _ in word_results[:10])
+        
+        for action, log_prob, token_norm_prob, token_texts, token_probs in token_results[:10]:
+            # Find corresponding word norm result
+            word_norm_prob = next((w_norm for w_action, _, w_norm, _, _ in word_results if w_action == action), token_norm_prob)
+            
+            action_text = action.command_perspective[:27] + "..." if len(action.command_perspective) > 30 else action.command_perspective
+            
+            # Format tokens as [token1, token2, ...]
+            token_list = "[" + ", ".join([repr(t) for t in token_texts]) + "]"
+            if len(token_list) > 25:
+                token_list = token_list[:22] + "...]"
+            
+            # Format probabilities as [prob1, prob2, ...]
+            prob_list = "[" + ", ".join([f"{p:.3f}" for p in token_probs]) + "]"
+            if len(prob_list) > 35:
+                prob_list = prob_list[:32] + "...]"
+            
+            # Calculate action probability without normalization (geometric mean)
+            action_prob_wo_norm = math.exp(log_prob) * 100 / wo_norm_sum 
+            action_prob_token_norm = math.exp(token_norm_prob) * 100 / token_norm_sum
+            action_prob_word_norm = math.exp(word_norm_prob) * 100 / word_norm_sum
+            
+            print(f"{action_text:<30} {token_list:<25} {prob_list:<35} {action_prob_wo_norm:<11.4f} {action_prob_token_norm:<11.4f} {action_prob_word_norm:<11.4f}")
+        
+        print("=" * 120)
     
     return generated_text, token_results, word_results
 
@@ -402,7 +486,7 @@ def main():
         print("Game is over or no turn context available")
         return
     
-    turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = turn_context
+    turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = turn_context
     
     print(f"   Found {len(actions_player_can_take)} available actions: {[a.command_perspective for a in actions_player_can_take]}")
     
@@ -415,7 +499,7 @@ def main():
     print("\n4. Generating reasoning and calculating action probabilities with BOTH normalizations in ONE forward pass...")
     
     generated_text, token_norm_results, word_norm_results = generate_reasoning_and_calculate_probabilities(
-        model, tokenizer, system_prompt, user_prompt, actions_player_can_take
+        model, tokenizer, conversation, actions_player_can_take
     )
     
     # 6. Output results
