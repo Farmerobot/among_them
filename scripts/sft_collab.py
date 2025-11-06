@@ -1,22 +1,9 @@
-"""
-Fine-tuning script for DeepSeek R1 on Among Them game dataset.
-
-Required imports (add to your Colab notebook before running):
-    import os
-    import shutil
-    from datasets import load_dataset
-    from unsloth import FastLanguageModel, is_bfloat16_supported
-    from unsloth.chat_templates import train_on_responses_only
-    from transformers.trainer_callback import EarlyStoppingCallback
-    from trl import SFTTrainer, SFTConfig
-"""
-
 # Global Configuration
-DEBUG = True  # Set to True to print detailed formatting and masking examples
+DEBUG = False  # Set to True to print detailed formatting and masking examples
 BASE_MODEL_NAME = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
-MAX_SEQ_LENGTH = 16000
-LORA_RANK = 16
-DTYPE = None  # None for auto-detection (fp16/bf16)
+MAX_SEQ_LENGTH = 7000
+LORA_RANK = 8  # Reduced from 16 to save memory (4x fewer parameters)
+DTYPE = None
 LOAD_IN_4BIT = True
 
 # Dataset and output paths for both configurations
@@ -60,7 +47,7 @@ def load_and_prepare_dataset(dataset_dir, cache_dir):
             "train": os.path.join(dataset_dir, "among_them_train.json"),
             "validation": os.path.join(dataset_dir, "among_them_eval.json")
         },
-        keep_in_memory=True,
+        keep_in_memory=False,  # Let datasets library manage caching
         cache_dir=cache_dir,
     )
 
@@ -75,6 +62,7 @@ def prepare_model_and_tokenizer(model_name, max_seq_length, load_in_4bit, dtype)
         load_in_4bit=load_in_4bit,
         dtype=dtype,
         max_seq_length=max_seq_length,
+        gpu_memory_utilization=0.6,  # Reserve 40% for training overhead
     )
 
     # Apply LoRA
@@ -223,6 +211,21 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         batched=False
     )
     
+    # Filter out sequences that are too long to prevent OOM
+    def filter_by_length(example):
+        tokens = tokenizer.encode(example["text"], add_special_tokens=False)
+        return len(tokens) <= max_seq_length
+    
+    original_train_size = len(train_dataset)
+    original_eval_size = len(eval_dataset)
+    
+    train_dataset = train_dataset.filter(filter_by_length)
+    eval_dataset = eval_dataset.filter(filter_by_length)
+    
+    print(f"\nFiltered dataset by length (max_seq_length={max_seq_length}):")
+    print(f"  Train: {original_train_size} → {len(train_dataset)} examples ({original_train_size - len(train_dataset)} removed)")
+    print(f"  Eval: {original_eval_size} → {len(eval_dataset)} examples ({original_eval_size - len(eval_dataset)} removed)")
+    
     # Debug: Print first formatted example to verify format
     if DEBUG:
         print("\n" + "="*60)
@@ -259,8 +262,8 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         output_dir=output_dir,
         dataset_text_field="text",
         max_seq_length=max_seq_length,  # CRITICAL: Must be in SFTConfig for Unsloth
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=2,
         num_train_epochs=10,
         learning_rate=2e-4,
         fp16=not is_bfloat16_supported(),
@@ -280,8 +283,10 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         optim="adamw_8bit",
         seed=42,
         report_to="none",
-        dataset_num_proc=2,  # Control parallelism
-        packing=False,
+        dataset_num_proc=2,
+        packing=True,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
     )
 
     # Setup trainer (following official Unsloth pattern)
@@ -290,6 +295,7 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),  # More efficient padding
         args=training_args,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=10, early_stopping_threshold=0)],
     )
