@@ -198,13 +198,13 @@ def get_observations_at_history_point(
 
     if actions_list:
         observations.append(
-            "\n\nActions you can choose from (return the chosen action text exactly as written, with NO '*' at the beginning). Strict output requirement: Respond with exactly ONE action line and NOTHING else. No explanations, no additional sentences, no future planning, no markdown."
+            "\n\nActions you can choose from:"
         )
         for a in actions_list:
             option_text = a.set_stories().command_perspective.strip()
             observations.append(f"\n* {option_text}")
 
-    observations.append("\n\nGiven the situation, the best action to take is (exactly ONE action line and NOTHING else):")
+    observations.append("\n\nGiven the situation, the best action to take is:")
     
     return " ".join(observations)
 
@@ -359,7 +359,7 @@ def build_conversation_for_player(
         
         # Get assistant message (already stored in history)
         event.action_taken.set_stories()
-        assistant_msg = f"{event.llm_cot}{event.action_taken.command_perspective}"
+        assistant_msg = f"{event.action_taken.command_perspective}"
         
         conversation.append({"role": "user", "content": user_msg})
         conversation.append({"role": "assistant", "content": assistant_msg})
