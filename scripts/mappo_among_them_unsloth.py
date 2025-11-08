@@ -1,0 +1,1512 @@
+#!/usr/bin/env python3
+"""
+MAPPO Self-Play Training for Among Them using Unsloth
+
+Key components:
+1. Self-play trajectory collection (all 5 players use same policy)
+2. Centralized critic with global state view (History.__repr__() + all player thoughts)
+3. PPO with clipped surrogate objective
+4. Value head pre-trained on existing games
+5. Efficient training with Unsloth LoRA adapters
+6. Optimizations: Unsloth's native cache with branching, word normalization
+"""
+
+import os
+import json
+import time
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+import random
+import math
+import re
+from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
+from collections import defaultdict
+from pathlib import Path
+
+# Unsloth imports
+from unsloth import FastLanguageModel, is_bfloat16_supported
+from unsloth.chat_templates import get_chat_template
+import wandb
+
+# Among Them imports
+from among_them.models.player import Player
+from among_them.utils.end_utils import get_end_game_reason
+from among_them.game_engine import GameEngine
+from among_them.game_config import GameConfig
+from among_them.models.action import Action
+from among_them.models.history import History
+from among_them.models.player_role import PlayerRole
+from among_them.models.end_game import EndGameReason
+from among_them.game_jsonencoder import game_object_hook, GameJSONEncoder
+
+
+# ============================================================================
+# MARK: CONFIGURATION
+# ============================================================================
+
+@dataclass
+class MAPPOConfig:
+    """Configuration for MAPPO training"""
+    # Model configuration
+    model_name: str = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    max_seq_length: int = 60000 # 3k reasoning per turn with 11 turns avg per player. 20 turns = 60k
+    max_reasoning_tokens: int = 3000 # arbitrary based on avg on ref-policy
+    load_in_4bit: bool = True
+    lora_rank: int = 16
+    
+    # Game configuration
+    num_players: int = 5
+    num_impostors: int = 1
+    num_tasks: int = 2
+    map_size: int = 0
+    num_task_phase_actions_per_player: int = 8
+    num_discuss_phase_actions_per_player: int = 3
+    impostor_cooldown: int = 1
+    
+    # Training configuration
+    num_policy_iterations: int = 400
+    trajectories_per_iteration: int = 4
+    actor_lr: float = 1e-6
+    critic_lr: float = 3e-6
+    gradient_accumulation_steps: int = 4
+    
+    # PPO-specific
+    ppo_epochs: int = 4
+    clip_epsilon: float = 0.2
+    gamma: float = 1.0
+    gae_lambda: float = 0.95
+    value_loss_coef: float = 0.5
+    entropy_coef: float = 0.01
+    max_grad_norm: float = 1.0
+    kl_penalty_coef: float = 0.1  # KL divergence penalty from reference policy
+    
+    # Value head pretraining
+    pretrain_value_head: bool = True
+    pretrain_epochs: int = 10
+    pretrain_examples: int = 3
+    pretrain_lr: float = 1e-4
+    data_dir: str = "/content/among_them/data" # TODO change them
+    
+    # Output paths
+    output_dir: str = "/content/drive/MyDrive/among_them/outputs/mappo_training"
+    checkpoint_dir: str = "/content/drive/MyDrive/among_them/outputs/mappo_checkpoints"
+    
+    # Logging
+    wandb_project: str = "among-them-mappo"
+    wandb_run_name: str = "mappo-5players"
+    log_every_n_iterations: int = 10
+    save_every_n_iterations: int = 50
+    save_trajectories: bool = True  # Save trajectories to disk for analysis
+    
+    # Debug
+    debug: bool = True
+    seed: int = 42
+
+
+# ============================================================================
+# TRAJECTORY DATA STRUCTURES
+# MARK: DATA STRUCTURES
+# ============================================================================
+
+@dataclass
+class TurnData:
+    """Data for a single turn in a trajectory"""
+    player_name: str
+    player_role: PlayerRole
+    
+    # Local observation (what the actor sees)
+    conversation: List[Dict[str, str]]
+    actions: List[Action]
+    chosen_action_idx: int
+    chosen_action: Action
+    reasoning: str
+    
+    # Policy outputs
+    action_log_prob: float
+    
+    # Global state for critic (centralized)
+    global_state_repr: str
+    
+    # Value estimates (filled during training)
+    value_estimate: Optional[float] = None
+    advantage: Optional[float] = None
+    returns: Optional[float] = None
+
+
+@dataclass
+class Trajectory:
+    """Complete game trajectory with rewards"""
+    turns: List[TurnData]
+    winner_role: PlayerRole
+    end_reason: EndGameReason
+    
+    def get_reward_for_role(self, role: PlayerRole) -> float:
+        """Get reward for a specific role with proper mapping"""
+        # NO_ACTIONS_LEFT: Crewmates win by timeout but small reward to discourage stalling
+        if self.end_reason == EndGameReason.NO_ACTIONS_LEFT:
+            return 0.3 if role == PlayerRole.CREWMATE else -0.3
+        
+        # Normal win conditions
+        if self.winner_role == role:
+            return 1.0
+        else:
+            return -1.0
+    
+    def get_return_for_player(self, player_name: str) -> float:
+        """Calculate return for a player"""
+        player_role = None
+        for turn in self.turns:
+            if turn.player_name == player_name:
+                player_role = turn.player_role
+                break
+        
+        if player_role is None:
+            raise ValueError(f"Player {player_name} not found in trajectory")
+        
+        return self.get_reward_for_role(player_role)
+
+
+# ============================================================================
+# VALUE HEAD (Centralized Critic)
+# MARK: VALUE HEAD
+# ============================================================================
+
+class ValueHead(nn.Module):
+    """Centralized critic that estimates state value from global state"""
+    def __init__(self, hidden_size: int):
+        super().__init__()
+        self.value_proj = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_size // 2, 1)
+        )
+    
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            hidden_states: [batch_size, seq_len, hidden_size] or [batch_size, hidden_size]
+        Returns:
+            value: [batch_size, 1] value estimate
+        """
+        # Cast input to float32 to match float32 weights
+        # This prevents both dtype mismatch errors and NaN from float16 overflow
+        stable_hidden_states = hidden_states.to(torch.float32)
+
+        if stable_hidden_states.dim() == 3:
+            stable_hidden_states = stable_hidden_states[:, -1, :]
+        
+        value = self.value_proj(stable_hidden_states)
+        return value
+
+# ============================================================================
+# SELF-PLAY GAME RUNNER
+# MARK: SELF-PLAY RUNNER
+# ============================================================================
+
+class MAPPOActor:
+    """
+    Actor that collects self-play trajectories using the shared policy model.
+    
+    IMPORTANT: This actor uses the SAME model instance as the trainer.
+    No separate model loading or syncing needed.
+    """
+    
+    def __init__(self, model, tokenizer, value_head, config: MAPPOConfig, trainer=None):
+        self.model = model  # Shared with trainer
+        self.tokenizer = tokenizer
+        self.value_head = value_head
+        self.config = config
+        self.trainer = trainer  # Reference to trainer for iteration tracking
+        
+        self.game_config = GameConfig(
+            num_tasks=config.num_tasks,
+            num_players=config.num_players,
+            num_impostors=config.num_impostors,
+            map_size=config.map_size,
+            num_task_phase_actions_per_player=config.num_task_phase_actions_per_player,
+            num_discuss_phase_actions_per_player=config.num_discuss_phase_actions_per_player,
+            impostor_cooldown=config.impostor_cooldown
+        )
+    
+    def _print_tokens(self, token_ids: List[int], label: str = "Tokens"):
+        """
+        Pretty print tokens with their IDs and decoded text.
+        
+        Args:
+            token_ids: List of token IDs to print
+            label: Label for the token sequence
+        """
+        print(f"\n{'='*60}")
+        print(f"🔤 {label} ({len(token_ids)} tokens)")
+        print(f"{'='*60}")
+        
+        # Print full decoded text
+        full_text = self.tokenizer.decode(token_ids, skip_special_tokens=False)
+        print(f"Full text: {repr(full_text)}")
+        print(f"\nToken breakdown:")
+        
+        # Print individual tokens
+        for i, token_id in enumerate(token_ids):
+            token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+            # Show special characters clearly
+            if token_text == '\n':
+                display = '<newline>'
+            elif token_text == '\t':
+                display = '<tab>'
+            elif token_text == ' ':
+                display = '<space>'
+            elif token_text.strip() == '':
+                display = f'<whitespace:{repr(token_text)}>'
+            else:
+                display = repr(token_text)
+            
+            print(f"  [{i:3d}] ID={token_id:6d} → {display}")
+        
+        print(f"{'='*60}\n")
+    
+    def _generate_action_with_policy(
+        self,
+        conversation: List[Dict[str, str]],
+        actions: List[Action],
+    ) -> Tuple[int, float, str]:
+        """
+        Generate action using Unsloth model with native cache and branching.
+        Uses Unsloth's cache with .clone() for efficient action probability calculation.
+        
+        Returns: (action_idx, log_probability, reasoning)
+        """
+        self.model.eval()
+        device = self.model.device
+        
+        # 1. Apply chat template and tokenize
+        input_text = self.tokenizer.apply_chat_template(
+            conversation,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+        inputs = self.tokenizer(input_text, return_tensors="pt").to(device)
+        
+        # 2. Use Unsloth's native cache (start with None for prefill)
+        past_key_values = None
+        
+        # Get </think> token
+        think_close_token = self.tokenizer.encode("</think>", add_special_tokens=False)[0]
+        
+        # 3. Generate reasoning
+        with torch.no_grad():
+            # Prefill prompt
+            prompt_len = inputs.input_ids.shape[1]
+            cache_position = torch.arange(prompt_len, device=device)
+            
+            # Pass None for prefill, capture Unsloth's cache
+            out = self.model(
+                inputs.input_ids,
+                cache_position=cache_position,
+                past_key_values=past_key_values,
+                use_cache=True,
+            )
+            logits = out.logits
+            past_key_values = out.past_key_values  # Capture Unsloth's cache
+            
+            # Sample tokens until </think>
+            generated_reason_ids = []
+            cur_pos = torch.tensor([prompt_len], device=device)
+            
+            # Get generation config for sampling parameters
+            gen_cfg = getattr(self.model, "generation_config", None)
+            temperature = float(getattr(gen_cfg, "temperature", 1.0) or 1.0)
+            top_p = float(getattr(gen_cfg, "top_p", 1.0) or 1.0)
+            top_k = int(getattr(gen_cfg, "top_k", 0) or 0)
+            
+            if self.config.debug:
+                print("\n💭 Streaming reasoning tokens: ", end="", flush=True)
+            
+            for _ in range(self.config.max_reasoning_tokens):
+                step_logits = logits[:, -1, :].squeeze(0)
+                
+                # Temperature scaling
+                if temperature != 1.0:
+                    step_logits = step_logits / max(temperature, 1e-6)
+                
+                # Top-k filtering
+                if top_k and top_k > 0 and top_k < step_logits.numel():
+                    kth_vals, _ = torch.topk(step_logits, top_k)
+                    min_keep = kth_vals[-1]
+                    step_logits = torch.where(
+                        step_logits < min_keep,
+                        torch.tensor(float('-inf'), device=device, dtype=step_logits.dtype),
+                        step_logits
+                    )
+                
+                # Top-p (nucleus) filtering
+                if top_p and top_p < 1.0:
+                    sorted_logits, sorted_indices = torch.sort(step_logits, descending=True)
+                    sorted_probs = torch.softmax(sorted_logits, dim=-1)
+                    cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+                    sorted_mask = cumulative_probs > top_p
+                    if sorted_mask.any():
+                        sorted_mask[..., 1:] = sorted_mask[..., :-1].clone()
+                        sorted_mask[..., 0] = False
+                    sorted_logits = torch.where(
+                        sorted_mask,
+                        torch.tensor(float('-inf'), device=device, dtype=sorted_logits.dtype),
+                        sorted_logits
+                    )
+                    step_logits = torch.full_like(step_logits, float('-inf'))
+                    step_logits.scatter_(0, sorted_indices, sorted_logits)
+                
+                # Sample
+                probs = torch.softmax(step_logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+                token_id = next_token.item()
+                
+                if token_id == think_close_token:
+                    if self.config.debug:
+                        print("</think>", flush=True)
+                    break
+                generated_reason_ids.append(token_id)
+                
+                # Stream token if debug mode
+                if self.config.debug:
+                    token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                    print(token_text, end="", flush=True)
+                
+                # Continue generation (unpack tuple from fast path)
+                out_tuple = self.model(
+                    next_token[:, None].to(dtype=torch.long),
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    position_ids=cur_pos,
+                )
+                logits, past_key_values = out_tuple[0], out_tuple[1]
+                cur_pos += 1
+            
+            # Print newline after streaming
+            if self.config.debug:
+                print()  # Newline after streaming
+            
+            # 4. Append </think>\n\nAction: prefix
+            end_think_token_ids = self.tokenizer.encode("\n</think>", add_special_tokens=False)
+            action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+            
+            if self.config.debug:
+                print("🎯 Appending prefix: ", end="", flush=True)
+            
+            for tid in end_think_token_ids + action_prefix_token_ids:
+                if self.config.debug:
+                    token_text = self.tokenizer.decode([tid], skip_special_tokens=False)
+                    print(repr(token_text), end=" ", flush=True)
+                tok = torch.tensor([[tid]], dtype=torch.long, device=device)
+                # Unpack tuple from fast path
+                out_tuple = self.model(
+                    tok,
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    position_ids=cur_pos,
+                )
+                current_logits = out_tuple[0][0, -1, :]
+                past_key_values = out_tuple[1]
+                cur_pos += 1
+            
+            if self.config.debug:
+                print()  # Newline after prefix
+            
+            last_logits = current_logits
+            prefix_end_pos = cur_pos.item()
+            
+            # CRITICAL: Save the prefix cache before branching
+            prefix_cache = past_key_values
+            
+            # 5. Calculate action probabilities with WORD NORMALIZATION
+            action_log_probs = []
+            
+            for action in actions:
+                # CRITICAL: Clone the prefix cache for this branch
+                # This prevents subsequent actions from seeing KV state
+                # modified by previous actions
+                # Deep-clone the tuple of (Key, Value) tensor pairs for each layer
+                action_kv_cache = tuple(
+                    (k.clone(), v.clone()) for k, v in prefix_cache
+                )
+                action_text = action.command_perspective
+                action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
+                action_token_ids = action_tokens.input_ids[0].to(device)
+                
+                # Print action header if debug mode
+                if self.config.debug:
+                    print(f"\n  📝 Action: {action_text[:60]}..." if len(action_text) > 60 else f"\n  📝 Action: {action_text}")
+                    print(f"     Streaming tokens: ", end="", flush=True)
+                
+                num_words = len(action_text.split())
+                if len(action_token_ids) == 0:
+                    action_log_probs.append(float('-inf'))
+                    continue
+                
+                # Teacher forcing through action tokens
+                total_log_prob = 0.0
+                current_logits_branch = last_logits  # Start from logits at "Action:"
+                cache_position_act = torch.tensor([prefix_end_pos], device=device)
+                
+                for i, token_id in enumerate(action_token_ids):
+                    probs = torch.softmax(current_logits_branch, dim=-1)
+                    token_prob = probs[token_id].item()
+                    total_log_prob += math.log(max(token_prob, 1e-10))
+                    
+                    # Stream action token if debug mode
+                    if self.config.debug:
+                        token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                        print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
+                    
+                    if i < len(action_token_ids) - 1:
+                        # Unpack tuple from fast path
+                        next_output_tuple = self.model(
+                            token_id.unsqueeze(0).unsqueeze(0),
+                            past_key_values=action_kv_cache,  # Use CLONED cache
+                            use_cache=True,
+                            position_ids=cache_position_act,
+                        )
+                        current_logits_branch = next_output_tuple[0][0, -1, :]
+                        action_kv_cache = next_output_tuple[1]
+                        cache_position_act += 1
+                
+                # WORD NORMALIZATION
+                word_normalized_log_prob = total_log_prob / max(num_words, 1)
+                action_log_probs.append(word_normalized_log_prob)
+                
+                if self.config.debug:
+                    print(f"→ word_norm_log_prob={word_normalized_log_prob:.4f}")
+            
+            # 6. Select action (sample from distribution)
+            action_probs = torch.softmax(torch.tensor(action_log_probs, device=device), dim=-1)
+            chosen_idx = torch.multinomial(action_probs, num_samples=1).item()
+            
+            # Extract reasoning
+            reasoning = self.tokenizer.decode(generated_reason_ids)
+            
+            if self.config.debug:
+                print(f"\n{'='*60}")
+                print(f"🎯 ACTION GENERATION")
+                print(f"{'='*60}")
+                print(f"Generated {len(generated_reason_ids)} reasoning tokens")
+                print(f"Reasoning: {reasoning[:200]}..." if len(reasoning) > 200 else f"Reasoning: {reasoning}")
+                print(f"\nAction probabilities:")
+                for idx, (action, prob) in enumerate(zip(actions, action_probs)):
+                    marker = "👉" if idx == chosen_idx else "  "
+                    print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
+                print(f"\nChosen action log prob: {action_log_probs[chosen_idx]:.4f}")
+                print(f"{'='*60}\n")
+            
+            return chosen_idx, action_log_probs[chosen_idx], reasoning
+    
+    def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str:
+        """
+        Build global state from History.__repr__() + ONLY LAST reasoning per player.
+        
+        OPTIMIZATION: Instead of including all reasoning from all turns,
+        we only keep the most recent reasoning for each player. This reduces
+        token count while preserving critical information.
+        """
+        global_view = "=== Global Game State ===\n\n"
+        
+        # Track last reasoning for each player
+        last_reasoning_per_player = {}
+        
+        # First pass: collect game history and track last reasoning per player
+        for i in range(min(current_turn_index + 1, len(history_items))):
+            hist = history_items[i]
+            
+            # Track last reasoning for this player
+            if hasattr(hist, 'llm_cot') and hist.llm_cot:
+                player_name = hist.action_taken.player_name
+                last_reasoning_per_player[player_name] = hist.llm_cot[:4000]
+            
+            # Add game history (WITHOUT reasoning blocks)
+            global_view += f"<turn_{i}> {repr(hist)} </turn_{i}>\n"
+        
+        # Second pass: append only the LAST reasoning for each player
+        if last_reasoning_per_player:
+            global_view += "\n=== Player Reasoning (Most Recent) ===\n"
+            for player_name, reasoning in last_reasoning_per_player.items():
+                global_view += f"<player_{player_name}_reasoning>{reasoning}</player_{player_name}_reasoning>\n"
+        
+        return global_view
+    
+    def _determine_winner_from_end_reason(self, end_reason: EndGameReason) -> PlayerRole:
+        """Map EndGameReason to winner role"""
+        if end_reason in [EndGameReason.NO_ACTIONS_LEFT, 
+                          EndGameReason.NO_IMPOSTORS_LEFT, 
+                          EndGameReason.ALL_TASKS_DONE]:
+            return PlayerRole.CREWMATE
+        elif end_reason == EndGameReason.TOO_SMALL_NUMBER_OF_CREWMATES_LEFT:
+            return PlayerRole.IMPOSTOR
+        else:
+            raise ValueError(f"Unknown end reason: {end_reason}")
+    
+    def _save_trajectory_to_disk(self, engine: GameEngine, turns_data: List, winner_role: PlayerRole, end_reason: EndGameReason):
+        """Save completed trajectory to disk for later analysis using GameJSONEncoder format"""
+        if not self.config.save_trajectories:
+            return
+            
+        try:
+            import os
+            from datetime import datetime
+            
+            # Create trajectories directory if it doesn't exist
+            traj_dir = os.path.join(os.path.dirname(self.config.output_dir), "trajectories")
+            os.makedirs(traj_dir, exist_ok=True)
+            
+            # Generate filename with timestamp and metadata
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            iteration = getattr(self.trainer, 'iteration', 0) if self.trainer else 0
+            filename = f"traj_{timestamp}_iter{iteration:03d}_{winner_role.name}_{len(turns_data)}turns.json"
+            filepath = os.path.join(traj_dir, filename)
+            
+            # Save using the same format as GameEngine
+            with open(filepath, 'w') as f:
+                json_str = json.dumps(
+                    (engine.history, engine.players, engine.game_config),
+                    indent=2,
+                    cls=GameJSONEncoder
+                )
+                f.write(json_str)
+            
+            if self.config.debug:
+                print(f"💾 Trajectory saved to: {filepath}")
+                
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to save trajectory: {e}")
+    
+    def collect_trajectory(self) -> Optional[Trajectory]:
+        """
+        Run one complete game using self-play and collect trajectory.
+        Returns None if game fails to complete properly.
+        """
+        if self.config.debug:
+            print(f"\n{'#'*80}")
+            print(f"🎮 STARTING NEW GAME")
+            print(f"{'#'*80}\n")
+        
+        engine = GameEngine(self.game_config)
+        turns_data = []
+        
+        player_roles = {p.name: p.role for p in engine.players}
+        
+        if self.config.debug:
+            print(f"Players: {list(player_roles.keys())}")
+            print(f"Roles: {list(player_roles.values())}\n")
+        
+        max_turns = 200
+        turn_count = 0
+        
+        while turn_count < max_turns:
+            turn_context = engine.get_turn_context()
+            if turn_context is None or turn_context[0] is None:
+                break
+            
+            turn_history, actions_player_can_take, conversation, _ = turn_context
+            
+            if not actions_player_can_take:
+                raise ValueError("No actions available for player")
+            
+            current_player_name = turn_history.action_taken.player_name
+            current_player_role = player_roles[current_player_name]
+            
+            if self.config.debug:
+                print(f"\n{'─'*80}")
+                print(f"Turn {turn_count}: {current_player_name} ({current_player_role.name})")
+                print(f"Available actions: {len(actions_player_can_take)}")
+                print(f"Conversation length: {len(str(conversation))} chars")
+                print(f"{'─'*80}")
+            
+            # Generate action using policy
+            try:
+                action_idx, log_prob, reasoning = self._generate_action_with_policy(
+                    conversation,
+                    actions_player_can_take
+                )
+                chosen_action = actions_player_can_take[action_idx]
+                
+                if self.config.debug:
+                    print(f"✅ Action selected: {chosen_action.command_perspective[:80]}")
+            except Exception as e:
+                if self.config.debug:
+                    print(f"❌ Error generating action: {e}")
+                    import traceback
+                    traceback.print_exc()
+                return None
+            
+            # Build global state for critic
+            global_state = self._build_global_state(engine.history, len(engine.history))
+            
+            # Store turn data
+            turn_data = TurnData(
+                player_name=current_player_name,
+                player_role=current_player_role,
+                conversation=conversation.copy(),
+                actions=actions_player_can_take.copy(),
+                chosen_action_idx=action_idx,
+                chosen_action=chosen_action,
+                reasoning=reasoning,
+                action_log_prob=log_prob,
+                global_state_repr=global_state,
+            )
+            turns_data.append(turn_data)
+            
+            # Execute action
+            game_over, end_reason = engine.step(
+                turn_history,
+                chosen_action,
+                llm_response=chosen_action.command_perspective,
+                llm_cot=f"<think>{reasoning}</think>",
+                token_usage={},
+                pre_discussion_votes=None
+            )
+            
+            if game_over and end_reason:
+                winner_role = self._determine_winner_from_end_reason(end_reason)
+                
+                # Save trajectory to disk for later analysis
+                self._save_trajectory_to_disk(engine, turns_data, winner_role, end_reason)
+                
+                if self.config.debug:
+                    print(f"\n{'#'*80}")
+                    print(f"🏁 GAME OVER")
+                    print(f"{'#'*80}")
+                    print(f"Turns: {turn_count + 1}")
+                    print(f"End reason: {end_reason.name}")
+                    print(f"Winner: {winner_role.name}")
+                    print(f"{'#'*80}\n")
+                
+                trajectory = Trajectory(
+                    turns=turns_data,
+                    winner_role=winner_role,
+                    end_reason=end_reason
+                )
+                
+                return trajectory
+            
+            turn_count += 1
+        
+        if self.config.debug:
+            print(f"Game exceeded max turns ({max_turns})")
+        return None
+
+
+# ============================================================================
+# MARK: MAPPO TRAINER
+# ============================================================================
+
+class MAPPOTrainer:
+    """Main trainer implementing MAPPO algorithm"""
+    
+    def __init__(self, config: MAPPOConfig):
+        self.config = config
+        self._set_seeds(config.seed)
+        
+        # Initialize wandb
+        wandb.init(
+            project=config.wandb_project,
+            name=config.wandb_run_name,
+            config=config.__dict__
+        )
+        
+        # Load model with LoRA (SINGLE INSTANCE)
+        print(f"\n{'='*80}")
+        print(f"🔧 INITIALIZING MODEL")
+        print(f"{'='*80}")
+        print(f"Model: {config.model_name}")
+        print(f"Max sequence length: {config.max_seq_length}")
+        print(f"LoRA rank: {config.lora_rank}")
+        print(f"4-bit quantization: {config.load_in_4bit}")
+        print(f"{'='*80}\n")
+        
+        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+            config.model_name,
+            load_in_4bit=config.load_in_4bit,
+            max_seq_length=config.max_seq_length,
+        )
+        print("✅ Base model loaded")
+        
+        self.model = FastLanguageModel.get_peft_model(
+            self.model,
+            r=config.lora_rank,
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                          "gate_proj", "up_proj", "down_proj"],
+            lora_alpha=16,
+            lora_dropout=0.0,
+            bias="none",
+            use_gradient_checkpointing="unsloth",
+            random_state=config.seed,
+        )
+        print("✅ LoRA adapters applied")
+        
+        # Initialize value head in float32 for numerical stability
+        # PyTorch will automatically upcast float16 inputs to float32
+        hidden_size = self.model.config.hidden_size
+        self.value_head = ValueHead(hidden_size).to(device=self.model.device, dtype=torch.float32)
+        print(f"✅ Value head initialized (hidden_size={hidden_size}, dtype=torch.float32)")
+        
+        # Optimizers
+        self.actor_optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=config.actor_lr,
+            weight_decay=0.01
+        )
+        self.critic_optimizer = torch.optim.AdamW(
+            self.value_head.parameters(),
+            lr=config.critic_lr,
+            weight_decay=0.01
+        )
+        print(f"✅ Optimizers initialized (actor_lr={config.actor_lr}, critic_lr={config.critic_lr})")
+        
+        # Initialize actor (shares same model instance and references trainer for iteration tracking)
+        self.actor = MAPPOActor(
+            model=self.model,
+            trainer=self,  # Pass trainer reference for iteration tracking
+            tokenizer=self.tokenizer,
+            value_head=self.value_head,
+            config=config
+        )
+        print("✅ MAPPO Actor initialized")
+        
+        # Create output directories
+        Path(config.output_dir).mkdir(parents=True, exist_ok=True)
+        Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        
+        self.iteration = 0
+        self.training_stats = []
+        
+        # Pretrain value head if enabled
+        if config.pretrain_value_head:
+            self.pretrain_value_head()
+    
+    def _set_seeds(self, seed: int):
+        """Set random seeds for reproducibility"""
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+    
+    def pretrain_value_head(self):
+        """Pre-train value head on existing game trajectories in data/ folder"""
+        print(f"\n{'='*80}")
+        print("PRETRAINING VALUE HEAD ON EXISTING GAMES")
+        print(f"{'='*80}")
+        
+        data_files = list(Path(self.config.data_dir).glob("game_state_*.json"))
+        print(f"Found {len(data_files)} game files")
+        
+        training_data = []
+        
+        for file_path in data_files:
+            try:
+                with open(file_path, 'r') as f:
+                    history_items: List[History]
+                    players: List[Player]
+                    history_items, players, _ = json.load(f, object_hook=game_object_hook)
+                
+                # Determine outcome
+                end_reason = get_end_game_reason(history_items, players)
+                
+                if end_reason is None:
+                    raise ValueError(f"Game {file_path} ended without a clear winner")
+                
+                winner_role = self.actor._determine_winner_from_end_reason(end_reason)
+                
+                # Create training examples from each turn
+                for i, hist in enumerate(history_items):
+                    if hist.action_taken.player_name == "System":
+                        continue
+                    
+                    player_name = hist.action_taken.player_name
+                    player_role = next((p.role for p in players if p.name == player_name), None)
+                    
+                    # Build global state
+                    global_state = self.actor._build_global_state(history_items, i)
+                    
+                    # Reward for this player
+                    if end_reason == EndGameReason.NO_ACTIONS_LEFT:
+                        reward = 0.3 if winner_role == player_role else -0.3
+                    else:
+                        reward = 1.0 if winner_role == player_role else -1.0
+                    
+                    training_data.append((global_state, reward))
+                
+            except Exception as e:
+                if self.config.debug:
+                    print(f"  Error loading {file_path.name}: {e}")
+                continue
+        
+        print(f"Created {len(training_data)} training examples")
+        
+        if len(training_data) == 0:
+            print("No training data available for value head pretraining")
+            return
+        
+        # Analyze token counts before training
+        print("\nAnalyzing token counts...")
+        token_counts = []
+        for global_state, _ in training_data:
+            tokens = self.tokenizer(global_state, return_tensors="pt")
+            num_tokens = tokens.input_ids.shape[1]
+            token_counts.append(num_tokens)
+        
+        print(f"Token count statistics:")
+        print(f"  Min: {min(token_counts)} tokens")
+        print(f"  Max: {max(token_counts)} tokens")
+        print(f"  Mean: {sum(token_counts)/len(token_counts):.1f} tokens")
+        print(f"  Median: {sorted(token_counts)[len(token_counts)//2]} tokens")
+        
+        # Show examples that exceed max_seq_length
+        max_len = self.config.max_seq_length
+        exceeding = [tc for tc in token_counts if tc > max_len]
+        if exceeding:
+            print(f"\n⚠️  WARNING: {len(exceeding)}/{len(token_counts)} examples exceed max_seq_length={max_len}")
+            print(f"  These will be truncated during training")
+        print()
+        
+        # Train value head
+        self.value_head.train()
+        optimizer = torch.optim.Adam(self.value_head.parameters(), lr=self.config.pretrain_lr)
+        
+        # Create sorted list by token count for debugging
+        training_data_with_tokens = [
+            (token_counts[i], training_data[i][0], training_data[i][1]) 
+            for i in range(len(training_data))
+        ]
+        # training_data_with_tokens.sort(key=lambda x: x[0])  # Sort by token count
+        
+        for epoch in range(self.config.pretrain_epochs):
+            total_loss = 0.0
+            random.shuffle(training_data_with_tokens)
+            training_data_with_tokens = training_data_with_tokens[:self.config.pretrain_examples]
+            
+            
+            for idx, (num_tokens, global_state, target_value) in enumerate(training_data_with_tokens):
+                print(f"  Processing example {idx+1}/{len(training_data_with_tokens)}: {num_tokens} tokens")
+                
+                # Tokenize global state
+                inputs = self.tokenizer(
+                    global_state,
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=self.config.max_seq_length
+                ).to(self.model.device)
+                
+                # Get hidden states from model
+                with torch.no_grad():
+                    outputs = self.model(**inputs, output_hidden_states=True)
+                    hidden_states = outputs.hidden_states[-1]
+                
+                # Predict value
+                predicted_value = self.value_head(hidden_states).squeeze(-1)
+                
+                # MSE loss
+                loss = F.mse_loss(
+                    predicted_value, 
+                    torch.tensor([target_value], device=self.model.device, dtype=predicted_value.dtype)
+                )
+                
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                
+                total_loss += loss.item()
+            
+            avg_loss = total_loss / len(training_data_with_tokens)
+            print(f"  Epoch {epoch+1}/{self.config.pretrain_epochs}: Loss = {avg_loss:.4f}")
+            
+            # Log to wandb
+            wandb.log({
+                "pretrain/epoch": epoch + 1,
+                "pretrain/loss": avg_loss,
+            })
+        
+        print("Value head pretraining complete!\n")
+    
+    def _compute_value(self, global_state_repr: str) -> torch.Tensor:
+        """Compute value estimate for a global state"""
+        # Note: Caller controls value_head.train() vs .eval() mode
+        
+        inputs = self.tokenizer(
+            global_state_repr,
+            return_tensors="pt",
+            truncation=True,
+            max_length=self.config.max_seq_length
+        ).to(self.model.device)
+        
+        # Base model always in eval for value computation (no gradients needed)
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model(**inputs, output_hidden_states=True)
+            hidden_states = outputs.hidden_states[-1]
+        
+        # Detach hidden_states from the model's computation graph
+        hidden_states = hidden_states.detach()
+        
+        # Explicitly enable gradients for the value_head pass
+        with torch.enable_grad():
+            value = self.value_head(hidden_states).squeeze(-1)
+        
+        return value
+    
+    def _compute_log_prob(
+        self,
+        conversation: List[Dict[str, str]],
+        actions: List[Action],
+        chosen_action_idx: int,
+        reasoning: str,
+        use_reference_model: bool = False
+    ) -> torch.Tensor:
+        """
+        Re-compute log probability of chosen action under current policy.
+        
+        This version performs a full forward pass and gathers the
+        log probabilities for the chosen action tokens, which is the
+        correct, standard way to compute sequence probability.
+        """
+        # Note: Caller controls self.model.train() vs .eval() mode
+        device = self.model.device
+        
+        # 1. Build conversation context
+        input_text = self.tokenizer.apply_chat_template(
+            conversation,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+        inputs = self.tokenizer(input_text, return_tensors="pt").to(device)
+        
+        # 2. Tokenize reasoning + prefix
+        reasoning_tokens = self.tokenizer.encode(reasoning, add_special_tokens=False)
+        end_think_tokens = self.tokenizer.encode("\n</think>", add_special_tokens=False)
+        action_prefix_tokens = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+        
+        # Get the chosen action tokens
+        chosen_action = actions[chosen_action_idx]
+        action_text = chosen_action.command_perspective
+        action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
+        action_token_ids = action_tokens.input_ids[0].to(device)
+
+        if len(action_token_ids) == 0:
+            raise ValueError("Action text is empty")
+
+        # 3. Concatenate full sequence: 
+        #    conversation + <think>reasoning</think> + Action: + chosen_action
+        
+        # This is the prompt part
+        prompt_ids = torch.cat([
+            inputs.input_ids,
+            torch.tensor([reasoning_tokens + end_think_tokens + action_prefix_tokens], device=device)
+        ], dim=1)
+        
+        # This is the full sequence (prompt + action)
+        full_input_ids = torch.cat([prompt_ids, action_token_ids.unsqueeze(0)], dim=1)
+        prompt_len = prompt_ids.shape[1]
+
+        # 4. Forward pass
+        if use_reference_model:
+            # For ref_log_prob: We need BOTH no_grad AND disable_adapter
+            with torch.no_grad(), self.model.disable_adapter():
+                 outputs = self.model(input_ids=full_input_ids)
+        else:
+            # For current_log_prob: MUST enable grads for policy loss
+            with torch.enable_grad():
+                 outputs = self.model(input_ids=full_input_ids)
+            
+        # [batch_size, seq_len, vocab_size]
+        logits = outputs.logits 
+
+        # 5. Compute log prob of the action tokens
+        
+        # We only care about the logits for the action tokens
+        # Logits at position i are for predicting token i+1
+        # The first action token is at `prompt_len`, predicted by logits at `prompt_len - 1` 
+        # The last action token is at `seq_len - 1`, predicted by logits at `seq_len - 2` 
+        
+        # [batch_size, num_action_tokens, vocab_size]
+        action_logits = logits[:, prompt_len-1:-1, :]
+        
+        # Get log_softmax of logits
+        # [batch_size, num_action_tokens, vocab_size]
+        action_log_probs = F.log_softmax(action_logits, dim=-1)
+
+        # [batch_size, num_action_tokens, 1]
+        action_token_ids_expanded = action_token_ids.unsqueeze(0).unsqueeze(-1)
+        
+        # Use .gather() to pick the log_prob of the chosen tokens
+        # [batch_size, num_action_tokens, 1]
+        chosen_token_log_probs = torch.gather(
+            action_log_probs, 
+            dim=-1, 
+            index=action_token_ids_expanded
+        )
+        
+        # Sum log_probs for the whole action
+        # [batch_size, 1] -> scalar
+        total_log_prob = chosen_token_log_probs.sum(dim=1).squeeze()
+
+        # Word normalization
+        num_words = len(action_text.split())
+        word_normalized_log_prob = total_log_prob / max(num_words, 1)
+        
+        return word_normalized_log_prob
+    
+    def collect_trajectories(self, num_trajectories: int) -> List[Trajectory]:
+        """Collect multiple trajectories using self-play"""
+        trajectories = []
+        attempts = 0
+        max_attempts = num_trajectories * 3
+        
+        print(f"\n{'='*80}")
+        print(f"📊 COLLECTING {num_trajectories} TRAJECTORIES")
+        print(f"{'='*80}\n")
+        
+        while len(trajectories) < num_trajectories and attempts < max_attempts:
+            if self.config.debug:
+                print(f"\n🔄 Attempt {attempts + 1}/{max_attempts}")
+            
+            trajectory = self.actor.collect_trajectory()
+            
+            if trajectory is not None:
+                trajectories.append(trajectory)
+                print(f"\n✅ Collected {len(trajectories)}/{num_trajectories}: "
+                      f"{len(trajectory.turns)} turns, winner: {trajectory.winner_role.name}, "
+                      f"end_reason: {trajectory.end_reason.name}")
+            else:
+                print(f"  Failed trajectory (attempt {attempts + 1})")
+            
+            attempts += 1
+        
+        if len(trajectories) < num_trajectories:
+            print(f"Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories")
+        
+        return trajectories
+    
+    def update_policy_mappo(self, trajectories: List[Trajectory]) -> Dict:
+        """
+        MAPPO update using PPO clipped surrogate objective with GAE.
+        """
+        print(f"\n{'='*80}")
+        print(f"🎓 PPO UPDATE - TRAINING POLICY")
+        print(f"{'='*80}")
+        print(f"Trajectories: {len(trajectories)}")
+        print(f"Computing advantages with GAE...")
+        
+        # Compute returns and advantages for all turns
+        all_turns = []
+        role_wins = defaultdict(int)
+        
+        for traj in trajectories:
+            # Track wins
+            for turn in traj.turns:
+                if traj.get_reward_for_role(turn.player_role) > 0:
+                    role_wins[turn.player_role] += 1
+                    break
+            
+            # Compute GAE advantages
+            returns = []
+            advantages = []
+            
+            # Get rewards - sparse reward only at end
+            final_reward = traj.get_reward_for_role(traj.turns[-1].player_role)
+            
+            # Bootstrap from final state
+            next_value = 0.0
+            gae = 0.0
+            
+            # Backward pass
+            for turn in reversed(traj.turns):
+                # Compute value estimate
+                turn.value_estimate = self._compute_value(turn.global_state_repr).item()
+                
+                # TD error
+                reward = final_reward if turn == traj.turns[-1] else 0.0
+                delta = reward + self.config.gamma * next_value - turn.value_estimate
+                
+                # GAE
+                gae = delta + self.config.gamma * self.config.gae_lambda * gae
+                advantages.insert(0, gae)
+                returns.insert(0, gae + turn.value_estimate)
+                
+                next_value = turn.value_estimate
+            
+            # Store in turns
+            for turn, adv, ret in zip(traj.turns, advantages, returns):
+                turn.advantage = adv
+                turn.returns = ret
+                all_turns.append(turn)
+        
+        # Normalize advantages
+        advantages_tensor = torch.tensor([t.advantage for t in all_turns], device=self.model.device)
+        adv_mean = advantages_tensor.mean().item()
+        adv_std = advantages_tensor.std().item()
+        advantages_tensor = (advantages_tensor - advantages_tensor.mean()) / (advantages_tensor.std() + 1e-8)
+        for i, turn in enumerate(all_turns):
+            turn.advantage = advantages_tensor[i].item()
+        
+        print(f"Processing {len(all_turns)} turns across {len(trajectories)} trajectories")
+        if self.config.debug:
+            print(f"Advantage stats - Mean: {adv_mean:.4f}, Std: {adv_std:.4f}")
+            print(f"Normalized advantage - Min: {advantages_tensor.min().item():.4f}, Max: {advantages_tensor.max().item():.4f}")
+        
+        # PPO epochs
+        stats = {
+            "num_trajectories": len(trajectories),
+            "num_turns": len(all_turns),
+            "avg_trajectory_length": len(all_turns) / max(len(trajectories), 1),
+            "advantage_mean": adv_mean,
+            "advantage_std": adv_std,
+        }
+        
+        for epoch in range(self.config.ppo_epochs):
+            random.shuffle(all_turns)
+            
+            if self.config.debug:
+                print(f"\n{'─'*80}")
+                print(f"📈 PPO Epoch {epoch + 1}/{self.config.ppo_epochs}")
+                print(f"{'─'*80}")
+            
+            total_policy_loss = 0.0
+            total_value_loss = 0.0
+            total_kl_loss = 0.0
+            total_entropy = 0.0
+            num_updates = 0
+            
+            # Track PPO-specific metrics
+            total_ratio = 0.0
+            total_clipped = 0.0
+            total_actor_grad_norm = 0.0
+            total_critic_grad_norm = 0.0
+            
+            # Zero gradients at start of epoch
+            self.actor_optimizer.zero_grad()
+            self.critic_optimizer.zero_grad()
+            
+            for i, turn in enumerate(all_turns):
+                # Explicitly control model state for each computation step
+                # to ensure gradient checkpointing works correctly
+                
+                try:
+                    if self.config.debug and i % 10 == 0:
+                        print(f"  Turn {i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})")
+                    
+                    # Step 1: Get current_log_prob
+                    # Model MUST be in .train() mode for checkpointing to work with .backward()
+                    self.model.train()
+                    current_log_prob = self._compute_log_prob(
+                        turn.conversation,
+                        turn.actions,
+                        turn.chosen_action_idx,
+                        turn.reasoning,
+                        use_reference_model=False
+                    )
+                    
+                    # Step 2: Get ref_log_prob
+                    # Model MUST be in .eval() mode for .disable_adapter() to work
+                    self.model.eval()
+                    ref_log_prob = self._compute_log_prob(
+                        turn.conversation,
+                        turn.actions,
+                        turn.chosen_action_idx,
+                        turn.reasoning,
+                        use_reference_model=True  # Disables LoRA adapters
+                    )
+                    
+                    if self.config.debug and i % 10 == 0:
+                        print(f"    Current log prob: {current_log_prob.item():.4f}, "
+                              f"Ref log prob: {ref_log_prob.item():.4f}, "
+                              f"Old log prob: {turn.action_log_prob:.4f}")
+                
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"❌ Error computing log prob for turn {i}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    continue
+                
+                # Step 3: Get value_pred
+                # Base model set to .eval() inside _compute_value
+                # Value_head must be in .train() mode to learn
+                self.value_head.train()
+                value_pred = self._compute_value(turn.global_state_repr)
+                
+                # Now compute losses
+                
+                # Importance sampling ratio
+                ratio = torch.exp(current_log_prob - turn.action_log_prob)
+                
+                # Track ratio and clipping
+                total_ratio += ratio.item()
+                ratio_clipped = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
+                if ratio_clipped:
+                    total_clipped += 1
+                
+                # Clipped surrogate objective
+                adv = torch.tensor([turn.advantage], device=self.model.device)
+                surr1 = ratio * adv
+                surr2 = torch.clamp(
+                    ratio,
+                    1 - self.config.clip_epsilon,
+                    1 + self.config.clip_epsilon
+                ) * adv
+                policy_loss = -torch.min(surr1, surr2).mean()
+                
+                # KL divergence penalty (prevents policy from deviating too far from reference)
+                kl_div = (current_log_prob - ref_log_prob).mean()
+                kl_loss = self.config.kl_penalty_coef * kl_div
+                
+                # Value loss
+                value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
+                value_loss = F.mse_loss(value_pred, value_target)
+                
+                # Entropy (approximate - would need full action distribution)
+                entropy = 0.01
+                
+                # SEPARATE BACKWARD PASSES to avoid gradient checkpointing conflict
+                
+                # 1. Actor Loss (backprops only to model/LoRA)
+                actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
+                actor_loss = actor_loss / self.config.gradient_accumulation_steps
+                
+                # CRITICAL: Set model to train mode before backward() to ensure
+                # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
+                self.model.train()
+                actor_loss.backward()
+                
+                # 2. Critic Loss (backprops only to value_head)
+                critic_loss = self.config.value_loss_coef * value_loss
+                critic_loss = critic_loss / self.config.gradient_accumulation_steps
+                critic_loss.backward()
+                
+                total_policy_loss += policy_loss.item()
+                total_value_loss += value_loss.item()
+                total_kl_loss += kl_loss.item()
+                total_entropy += entropy
+                num_updates += 1
+                
+                # Optimizer step with gradient accumulation
+                if (i + 1) % self.config.gradient_accumulation_steps == 0 or (i + 1) == len(all_turns):
+                    actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(),
+                        self.config.max_grad_norm
+                    )
+                    critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+                        self.value_head.parameters(),
+                        self.config.max_grad_norm
+                    )
+                    
+                    total_actor_grad_norm += actor_grad_norm.item()
+                    total_critic_grad_norm += critic_grad_norm.item()
+                    
+                    self.actor_optimizer.step()
+                    self.critic_optimizer.step()
+                    self.actor_optimizer.zero_grad()
+                    self.critic_optimizer.zero_grad()
+            
+            print(f"  PPO Epoch {epoch+1}/{self.config.ppo_epochs}: "
+                  f"Policy Loss={total_policy_loss/max(num_updates,1):.4f}, "
+                  f"Value Loss={total_value_loss/max(num_updates,1):.4f}, "
+                  f"KL Loss={total_kl_loss/max(num_updates,1):.4f}")
+        
+        # Compile stats
+        for role in [PlayerRole.CREWMATE, PlayerRole.IMPOSTOR]:
+            wins = role_wins.get(role, 0)
+            stats[f"{role.name}_wins"] = wins
+            stats[f"{role.name}_win_rate"] = wins / max(len(trajectories), 1)
+        
+        # Add averaged losses to stats for wandb logging
+        avg_policy_loss = total_policy_loss / max(num_updates, 1)
+        avg_value_loss = total_value_loss / max(num_updates, 1)
+        avg_kl_loss = total_kl_loss / max(num_updates, 1)
+        num_grad_steps = max(num_updates // self.config.gradient_accumulation_steps, 1)
+        
+        stats["policy_loss"] = avg_policy_loss
+        stats["value_loss"] = avg_value_loss
+        stats["kl_loss"] = avg_kl_loss
+        stats["avg_entropy"] = total_entropy / max(num_updates, 1)
+        stats["avg_ratio"] = total_ratio / max(num_updates, 1)
+        stats["clip_fraction"] = total_clipped / max(num_updates, 1)
+        stats["actor_grad_norm"] = total_actor_grad_norm / num_grad_steps
+        stats["critic_grad_norm"] = total_critic_grad_norm / num_grad_steps
+        
+        return stats
+    
+    def train(self):
+        """Main training loop"""
+        print("=" * 80)
+        print("MAPPO TRAINING FOR AMONG THEM")
+        print("=" * 80)
+        print(f"Model: {self.config.model_name}")
+        print(f"Players: {self.config.num_players}")
+        print(f"Policy iterations: {self.config.num_policy_iterations}")
+        print(f"Trajectories per iteration: {self.config.trajectories_per_iteration}")
+        print("=" * 80)
+        
+        # Calculate step offset for wandb logging
+        # Pretraining uses steps 0 to (pretrain_epochs - 1)
+        # Training iterations start after pretraining
+        wandb_step_offset = self.config.pretrain_epochs if self.config.pretrain_value_head else 0
+        
+        for iteration in range(self.config.num_policy_iterations):
+            self.iteration = iteration
+            iteration_start_time = time.time()
+            
+            print(f"\n{'='*80}")
+            print(f"ITERATION {iteration + 1}/{self.config.num_policy_iterations}")
+            print(f"{'='*80}")
+            
+            # Collect trajectories via self-play
+            trajectories = self.collect_trajectories(self.config.trajectories_per_iteration)
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            if not trajectories:
+                print("Warning: No trajectories collected, skipping iteration")
+                continue
+            
+            # Update policy with MAPPO
+            stats = self.update_policy_mappo(trajectories)
+            
+            # Log statistics
+            iteration_time = time.time() - iteration_start_time
+            stats["iteration"] = iteration + 1
+            stats["iteration_time"] = iteration_time
+            
+            self.training_stats.append(stats)
+            
+            # Print summary
+            print(f"\n{'='*80}")
+            print(f"📊 ITERATION {iteration + 1} SUMMARY")
+            print(f"{'='*80}")
+            print(f"Time: {iteration_time:.2f}s")
+            print(f"Trajectories: {stats['num_trajectories']}")
+            print(f"Total turns: {stats['num_turns']}")
+            print(f"Avg trajectory length: {stats['avg_trajectory_length']:.1f}")
+            print(f"CREWMATE wins: {stats.get('CREWMATE_wins', 0)} ({stats.get('CREWMATE_win_rate', 0)*100:.1f}%)")
+            print(f"IMPOSTOR wins: {stats.get('IMPOSTOR_wins', 0)} ({stats.get('IMPOSTOR_win_rate', 0)*100:.1f}%)")
+            print(f"{'='*80}\n")
+            
+            # Log to wandb with step offset to avoid conflicts with pretraining steps
+            if iteration % self.config.log_every_n_iterations == 0:
+                wandb.log(stats, step=iteration + wandb_step_offset)
+            
+            # Save checkpoint
+            if (iteration + 1) % self.config.save_every_n_iterations == 0:
+                self.save_checkpoint(iteration + 1)
+        
+        # Save final model
+        self.save_final_model()
+        
+        print("\n" + "=" * 80)
+        print("TRAINING COMPLETE")
+        print("=" * 80)
+        
+        wandb.finish()
+    
+    def save_checkpoint(self, iteration: int):
+        """Save model checkpoint"""
+        checkpoint_path = Path(self.config.checkpoint_dir) / f"iteration_{iteration}"
+        checkpoint_path.mkdir(parents=True, exist_ok=True)
+        
+        print(f"\nSaving checkpoint to {checkpoint_path}...")
+        self.model.save_pretrained(str(checkpoint_path))
+        self.tokenizer.save_pretrained(str(checkpoint_path))
+        
+        # Save value head
+        torch.save(self.value_head.state_dict(), checkpoint_path / "value_head.pt")
+        
+        # Save training stats
+        with open(checkpoint_path / "training_stats.json", 'w') as f:
+            json.dump(self.training_stats, f, indent=2, default=str)
+    
+    def save_final_model(self):
+        """Save final trained model"""
+        final_path = Path(self.config.output_dir) / "final_model"
+        final_path.mkdir(parents=True, exist_ok=True)
+        
+        print(f"\nSaving final model to {final_path}...")
+        self.model.save_pretrained(str(final_path))
+        self.tokenizer.save_pretrained(str(final_path))
+        
+        # Save value head
+        torch.save(self.value_head.state_dict(), final_path / "value_head.pt")
+        
+        # Save final stats
+        with open(final_path / "training_stats.json", 'w') as f:
+            json.dump(self.training_stats, f, indent=2, default=str)
+
+
+# ============================================================================
+# MARK: MAIN
+# ============================================================================
+
+def main():
+    """Main entry point"""
+    config = MAPPOConfig(
+        # Testing config
+        # Model configuration
+        model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+        max_seq_length=60000, # 3k reasoning per turn with 11 turns avg per player. 20 turns = 60k
+        max_reasoning_tokens=10, 
+        load_in_4bit=True,
+        lora_rank=16,
+        
+        # Game configuration
+        num_players=5,
+        num_impostors=1,
+        num_tasks=2,
+        map_size=0,
+        num_task_phase_actions_per_player=1,
+        num_discuss_phase_actions_per_player=1,
+        impostor_cooldown=1,
+        
+        # Training configuration
+        num_policy_iterations=3,
+        trajectories_per_iteration=1,
+        actor_lr=1e-6,
+        critic_lr=3e-6,
+        gradient_accumulation_steps=1,
+        
+        # PPO-specific
+        ppo_epochs=2,
+        clip_epsilon=0.2,
+        gamma=1.0,
+        gae_lambda=0.95,
+        value_loss_coef=0.5,
+        entropy_coef=0.01,
+        max_grad_norm=1.0,
+        kl_penalty_coef=0.1,  # KL divergence penalty
+        
+        # Value head pretraining
+        pretrain_value_head=True,
+        pretrain_epochs=3,
+        pretrain_examples=3,
+        pretrain_lr=1e-4,
+        data_dir="/content/among_them/data", # TODO change them
+        
+        # Output paths
+        output_dir="/content/drive/MyDrive/among_them/outputs/mappo_training",
+        checkpoint_dir="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints",
+        
+        # Logging
+        wandb_project="among-them-mappo",
+        wandb_run_name="mappo-5players",
+        log_every_n_iterations=1,
+        save_every_n_iterations=1,
+        
+        # Debug
+        debug=True,
+        seed=42
+    )
+    
+    trainer = MAPPOTrainer(config)
+    trainer.train()
+
+
+if __name__ == "__main__":
+    main()
