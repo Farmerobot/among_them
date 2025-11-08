@@ -1,0 +1,88 @@
+======================================================================
+GAME ANALYSIS SUMMARY
+======================================================================
+
+Total Games Analyzed: 100
+
+--- Game Configuration ---
+  Players:           5
+  Impostors:         1
+  Tasks per player:  2
+  Map size:          0
+  Task actions:      8
+  Discuss actions:   3
+  Impostor cooldown: 1
+
+--- Win Rates ---
+  Crewmates: 18.0%
+  Impostors: 24.0%
+  Draws:     58.0%
+
+--- End Reasons ---
+  No actions left: 58 (58.0%)
+  Too small number of crewmates left: 24 (24.0%)
+  No impostors left: 10 (10.0%)
+  All tasks done: 8 (8.0%)
+
+--- Game Length (turns) ---
+  Mean:   56.6
+  Median: 51.5
+  Range:  28 - 116
+  StdDev: 18.3
+
+--- Kills Per Game ---
+  Mean:   1.67
+  Median: 2.0
+  Range:  0 - 3
+
+--- Task Completion % ---
+  Mean:   38.4%
+  Median: 38.9%
+  Range:  0.0% - 77.8%
+
+--- Ejections (Voting Out Players) ---
+  Total:     277
+  Correct:   57 (impostors)
+  Incorrect: 220 (crewmates)
+  Accuracy:  20.6%
+
+--- Impostor Survival Rate ---
+  Mean:   90.0%
+  Median: 100.0%
+
+--- Reports Per Game ---
+  Mean:   0.73
+  Median: 1.0
+
+--- Discussion Phases Per Game ---
+  Mean:   0.73
+  Median: 1.0
+
+--- Token Usage ---
+  Total Input:    108,640,822
+  Total Output:   16,360,559
+  Total Tokens:   125,001,381
+  Avg Input/Game: 1,086,408
+  Avg Output/Game: 163,606
+
+--- Cost Analysis ---
+  API Models:
+    GPT-4o ($2.50/$10 per 1M tokens):
+      Total:         $435.21
+      Avg Per Game:  $4.3521
+    Qwen3 235B ($0.11/$0.60 per 1M tokens):
+      Total:         $21.77
+      Avg Per Game:  $0.2177
+      Savings vs GPT-4o: $413.44 (95.0%)
+
+  On-Premise Inference:
+    RTX A5000 24GB - DeepSeek R1 1.5B (109 tok/s @ $0.27/h):
+      Total Time:    41.69 hours (2501.6 min)
+      Total Cost:    $11.26
+      Avg Per Game:  $0.1126
+    A100 80GB - Qwen3 8B (68 tok/s @ $1.7/h):
+      Total Time:    66.83 hours (4009.9 min)
+      Total Cost:    $113.61
+      Avg Per Game:  $1.1361
+
+======================================================================

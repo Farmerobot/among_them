@@ -1,0 +1,88 @@
+======================================================================
+GAME ANALYSIS SUMMARY
+======================================================================
+
+Total Games Analyzed: 100
+
+--- Game Configuration ---
+  Players:           5
+  Impostors:         1
+  Tasks per player:  2
+  Map size:          0
+  Task actions:      8
+  Discuss actions:   3
+  Impostor cooldown: 1
+
+--- Win Rates ---
+  Crewmates: 57.0%
+  Impostors: 42.0%
+  Draws:     1.0%
+
+--- End Reasons ---
+  All tasks done: 42 (42.0%)
+  Too small number of crewmates left: 42 (42.0%)
+  No impostors left: 15 (15.0%)
+  No actions left: 1 (1.0%)
+
+--- Game Length (turns) ---
+  Mean:   45.9
+  Median: 45.0
+  Range:  17 - 74
+  StdDev: 13.6
+
+--- Kills Per Game ---
+  Mean:   2.35
+  Median: 2.0
+  Range:  1 - 3
+
+--- Task Completion % ---
+  Mean:   54.6%
+  Median: 55.6%
+  Range:  0.0% - 88.9%
+
+--- Ejections (Voting Out Players) ---
+  Total:     403
+  Correct:   83 (impostors)
+  Incorrect: 320 (crewmates)
+  Accuracy:  20.6%
+
+--- Impostor Survival Rate ---
+  Mean:   85.0%
+  Median: 100.0%
+
+--- Reports Per Game ---
+  Mean:   1.09
+  Median: 1.0
+
+--- Discussion Phases Per Game ---
+  Mean:   1.09
+  Median: 1.0
+
+--- Token Usage ---
+  Total Input:    64,278,282
+  Total Output:   12,530,842
+  Total Tokens:   76,809,124
+  Avg Input/Game: 642,783
+  Avg Output/Game: 125,308
+
+--- Cost Analysis ---
+  API Models:
+    GPT-4o ($2.50/$10 per 1M tokens):
+      Total:         $286.00
+      Avg Per Game:  $2.8600
+    Qwen3 235B ($0.11/$0.60 per 1M tokens):
+      Total:         $14.59
+      Avg Per Game:  $0.1459
+      Savings vs GPT-4o: $271.42 (94.9%)
+
+  On-Premise Inference:
+    RTX A5000 24GB - DeepSeek R1 1.5B (109 tok/s @ $0.27/h):
+      Total Time:    31.93 hours (1916.0 min)
+      Total Cost:    $8.62
+      Avg Per Game:  $0.0862
+    A100 80GB - Qwen3 8B (68 tok/s @ $1.7/h):
+      Total Time:    51.19 hours (3071.3 min)
+      Total Cost:    $87.02
+      Avg Per Game:  $0.8702
+
+======================================================================

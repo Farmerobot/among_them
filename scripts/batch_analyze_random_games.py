@@ -536,7 +536,7 @@ def print_summary(summary: Dict[str, Any]):
 
 def main():
     parser = argparse.ArgumentParser(description="Run and analyze random games in-memory")
-    parser.add_argument("--num-games", type=int, default=50, help="Total number of games to run")
+    parser.add_argument("--num-games", type=int, default=100, help="Total number of games to run")
     parser.add_argument("--num-players", type=int, default=5, help="Number of players")
     parser.add_argument("--num-impostors", type=int, default=1, help="Number of impostors")
     parser.add_argument("--num-tasks", type=int, default=2, help="Number of tasks per player")
