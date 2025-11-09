@@ -135,6 +135,11 @@ class TurnData:
     # Global state for critic (centralized)
     global_state_repr: str
     
+    # Token statistics
+    input_tokens: int = 0
+    output_tokens: int = 0
+    generation_time: float = 0.0  # Time to generate this turn in seconds
+    
     # Value estimates (filled during training)
     value_estimate: Optional[float] = None
     advantage: Optional[float] = None
@@ -147,6 +152,9 @@ class Trajectory:
     turns: List[TurnData]
     winner_role: PlayerRole
     end_reason: EndGameReason
+    collection_time: float = 0.0  # Time to collect trajectory in seconds
+    total_input_tokens: int = 0  # Total input tokens across all turns
+    total_output_tokens: int = 0  # Total output tokens across all turns
     
     def get_reward_for_role(self, role: PlayerRole) -> float:
         """Get reward for a specific role with proper mapping"""
@@ -240,7 +248,7 @@ class MAPPOActor:
         self,
         conversation: List[Dict[str, str]],
         actions: List[Action],
-    ) -> Tuple[int, List[float], str]:
+    ) -> Tuple[int, List[float], str, int, int]:
         """
         HYBRID GENERATIVE PPO:
         1. Generates reasoning with per-token log probs.
@@ -248,7 +256,7 @@ class MAPPOActor:
         3. If discrete actions, ranks them (using word-norm for selection).
         4. Returns FULL per-token log_probs for (reasoning + action).
         
-        Returns: (action_idx, generation_log_probs, reasoning)
+        Returns: (action_idx, generation_log_probs, reasoning, input_tokens, output_tokens)
         """
         self.model.eval()
         device = self.model.device
@@ -260,6 +268,7 @@ class MAPPOActor:
             add_generation_prompt=True
         )
         inputs = self.tokenizer(input_text, return_tensors="pt").to(device)
+        input_token_count = inputs.input_ids.shape[1]
         
         # 2. Use Unsloth's native cache (start with None for prefill)
         past_key_values = None
@@ -556,6 +565,7 @@ class MAPPOActor:
             
             # Combine all log_probs for PPO update
             full_generation_log_probs = reasoning_log_probs + prefix_log_probs + chosen_per_token_log_probs
+            output_token_count = len(full_generation_log_probs)
             
             # Extract reasoning text
             reasoning = self.tokenizer.decode(generated_reason_ids)
@@ -572,9 +582,10 @@ class MAPPOActor:
                         marker = "👉" if idx == chosen_idx else "  "
                         print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
                 print(f"\nTotal generation tokens: {len(full_generation_log_probs)}")
+                print(f"Input tokens: {input_token_count}, Output tokens: {output_token_count}")
                 print(f"{'='*60}\n")
             
-            return chosen_idx, full_generation_log_probs, reasoning
+            return chosen_idx, full_generation_log_probs, reasoning, input_token_count, output_token_count
     
     def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str:
         """
@@ -660,6 +671,8 @@ class MAPPOActor:
         Run one complete game using self-play and collect trajectory.
         Returns None if game fails to complete properly.
         """
+        start_time = time.time()
+        
         if self.config.debug:
             print(f"\n{'#'*80}")
             print(f"🎮 STARTING NEW GAME")
@@ -699,14 +712,17 @@ class MAPPOActor:
             
             # Generate action using policy
             try:
-                action_idx, log_prob, reasoning = self._generate_action_with_policy(
+                turn_gen_start = time.time()
+                action_idx, log_prob, reasoning, input_tokens, output_tokens = self._generate_action_with_policy(
                     conversation,
                     actions_player_can_take
                 )
+                turn_gen_time = time.time() - turn_gen_start
                 chosen_action = actions_player_can_take[action_idx]
                 
                 if self.config.debug:
                     print(f"✅ Action selected: {chosen_action.command_perspective}")
+                    print(f"⏱️  Generation time: {turn_gen_time:.3f}s")
             except Exception as e:
                 if self.config.debug:
                     print(f"❌ Error generating action: {e}")
@@ -728,6 +744,9 @@ class MAPPOActor:
                 reasoning=reasoning,
                 generation_log_probs=log_prob,  # Now a List[float]
                 global_state_repr=global_state,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                generation_time=turn_gen_time,
             )
             turns_data.append(turn_data)
             
@@ -747,6 +766,11 @@ class MAPPOActor:
                 # Save trajectory to disk for later analysis
                 self._save_trajectory_to_disk(engine, turns_data, winner_role, end_reason)
                 
+                # Calculate statistics
+                collection_time = time.time() - start_time
+                total_input_tokens = sum(turn.input_tokens for turn in turns_data)
+                total_output_tokens = sum(turn.output_tokens for turn in turns_data)
+                
                 if self.config.debug:
                     print(f"\n{'#'*80}")
                     print(f"🏁 GAME OVER")
@@ -754,12 +778,17 @@ class MAPPOActor:
                     print(f"Turns: {turn_count + 1}")
                     print(f"End reason: {end_reason.name}")
                     print(f"Winner: {winner_role.name}")
+                    print(f"Collection time: {collection_time:.2f}s")
+                    print(f"Input tokens: {total_input_tokens}, Output tokens: {total_output_tokens}")
                     print(f"{'#'*80}\n")
                 
                 trajectory = Trajectory(
                     turns=turns_data,
                     winner_role=winner_role,
-                    end_reason=end_reason
+                    end_reason=end_reason,
+                    collection_time=collection_time,
+                    total_input_tokens=total_input_tokens,
+                    total_output_tokens=total_output_tokens,
                 )
                 
                 return trajectory
@@ -1128,8 +1157,14 @@ class MAPPOTrainer:
         # Squeeze to shape [G]
         return chosen_token_log_probs.squeeze()
     
-    def collect_trajectories(self, num_trajectories: int) -> List[Trajectory]:
-        """Collect multiple trajectories using self-play"""
+    def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
+        """Collect multiple trajectories using self-play
+        
+        Returns:
+            trajectories: List of collected trajectories
+            collection_stats: Dictionary of collection statistics
+        """
+        collection_start_time = time.time()
         trajectories = []
         attempts = 0
         max_attempts = num_trajectories * 3
@@ -1148,21 +1183,50 @@ class MAPPOTrainer:
                 trajectories.append(trajectory)
                 print(f"\n✅ Collected {len(trajectories)}/{num_trajectories}: "
                       f"{len(trajectory.turns)} turns, winner: {trajectory.winner_role.name}, "
-                      f"end_reason: {trajectory.end_reason.name}")
+                      f"end_reason: {trajectory.end_reason.name}, "
+                      f"time: {trajectory.collection_time:.2f}s, "
+                      f"tokens: {trajectory.total_input_tokens}in/{trajectory.total_output_tokens}out")
             else:
                 print(f"  Failed trajectory (attempt {attempts + 1})")
             
             attempts += 1
         
+        collection_total_time = time.time() - collection_start_time
+        
         if len(trajectories) < num_trajectories:
             print(f"Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories")
         
-        return trajectories
+        # Aggregate statistics
+        total_input_tokens = sum(t.total_input_tokens for t in trajectories)
+        total_output_tokens = sum(t.total_output_tokens for t in trajectories)
+        avg_collection_time = sum(t.collection_time for t in trajectories) / max(len(trajectories), 1)
+        
+        collection_stats = {
+            "collection/total_time": collection_total_time,
+            "collection/avg_time_per_trajectory": avg_collection_time,
+            "collection/total_input_tokens": total_input_tokens,
+            "collection/total_output_tokens": total_output_tokens,
+            "collection/avg_input_tokens_per_trajectory": total_input_tokens / max(len(trajectories), 1),
+            "collection/avg_output_tokens_per_trajectory": total_output_tokens / max(len(trajectories), 1),
+        }
+        
+        print(f"\n{'='*80}")
+        print(f"📊 COLLECTION SUMMARY")
+        print(f"{'='*80}")
+        print(f"Total time: {collection_total_time:.2f}s")
+        print(f"Avg time per trajectory: {avg_collection_time:.2f}s")
+        print(f"Total input tokens: {total_input_tokens}")
+        print(f"Total output tokens: {total_output_tokens}")
+        print(f"{'='*80}\n")
+        
+        return trajectories, collection_stats
     
     def update_policy_mappo(self, trajectories: List[Trajectory]) -> Dict:
         """
         MAPPO update using PPO clipped surrogate objective with GAE.
         """
+        update_start_time = time.time()
+        
         print(f"\n{'='*80}")
         print(f"🎓 PPO UPDATE - TRAINING POLICY")
         print(f"{'='*80}")
@@ -1172,6 +1236,9 @@ class MAPPOTrainer:
         # Compute returns and advantages for all turns
         all_turns = []
         role_wins = defaultdict(int)
+        
+        # Track tokens processed during training
+        total_training_tokens = 0
         
         for traj in trajectories:
             # Track wins
@@ -1301,6 +1368,9 @@ class MAPPOTrainer:
                     current_log_prob = current_log_prob[:T]
                     ref_log_prob = ref_log_prob[:T]
                     
+                    # Track tokens (2 forward passes per turn: current + reference)
+                    total_training_tokens += 2 * (turn.input_tokens + turn.output_tokens)
+                    
                     if self.config.debug and i % 10 == 0:
                         print(f"    Current log prob: {current_log_prob.sum().item():.4f}, "
                               f"Ref log prob: {ref_log_prob.sum().item():.4f}, "
@@ -1400,6 +1470,9 @@ class MAPPOTrainer:
                   f"Value Loss={total_value_loss/max(num_updates,1):.4f}, "
                   f"KL Loss={total_kl_loss/max(num_updates,1):.4f}")
         
+        # Calculate update time
+        update_time = time.time() - update_start_time
+        
         # Compile stats
         for role in [PlayerRole.CREWMATE, PlayerRole.IMPOSTOR]:
             wins = role_wins.get(role, 0)
@@ -1420,6 +1493,16 @@ class MAPPOTrainer:
         stats["clip_fraction"] = total_clipped / max(num_updates, 1)
         stats["actor_grad_norm"] = total_actor_grad_norm / num_grad_steps
         stats["critic_grad_norm"] = total_critic_grad_norm / num_grad_steps
+        
+        # Add timing and token statistics
+        stats["training/update_time"] = update_time
+        stats["training/total_tokens_processed"] = total_training_tokens
+        stats["training/tokens_per_second"] = total_training_tokens / update_time if update_time > 0 else 0
+        
+        print(f"\n{'='*80}")
+        print(f"⏱️  UPDATE TIME: {update_time:.2f}s")
+        print(f"🔢 TOKENS PROCESSED: {total_training_tokens:,} ({total_training_tokens/update_time:.0f} tokens/sec)")
+        print(f"{'='*80}\n")
         
         return stats
     
@@ -1448,7 +1531,7 @@ class MAPPOTrainer:
             print(f"{'='*80}")
             
             # Collect trajectories via self-play
-            trajectories = self.collect_trajectories(self.config.trajectories_per_iteration)
+            trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -1459,6 +1542,9 @@ class MAPPOTrainer:
             
             # Update policy with MAPPO
             stats = self.update_policy_mappo(trajectories)
+            
+            # Merge collection stats with training stats
+            stats.update(collection_stats)
             
             # Log statistics
             iteration_time = time.time() - iteration_start_time
@@ -1481,6 +1567,64 @@ class MAPPOTrainer:
             
             # Log to wandb with step offset to avoid conflicts with pretraining steps
             if iteration % self.config.log_every_n_iterations == 0:
+                # Compute turn-level statistics across all trajectories
+                all_turn_input_tokens = [turn.input_tokens for traj in trajectories for turn in traj.turns]
+                all_turn_output_tokens = [turn.output_tokens for traj in trajectories for turn in traj.turns]
+                all_turn_total_tokens = [turn.input_tokens + turn.output_tokens for traj in trajectories for turn in traj.turns]
+                all_turn_gen_times = [turn.generation_time for traj in trajectories for turn in traj.turns]
+                all_turn_tok_per_sec = [
+                    (turn.input_tokens + turn.output_tokens) / turn.generation_time 
+                    if turn.generation_time > 0 else 0 
+                    for traj in trajectories for turn in traj.turns
+                ]
+                
+                # Compute trajectory-level statistics
+                all_traj_collection_times = [traj.collection_time for traj in trajectories]
+                all_traj_input_tokens = [traj.total_input_tokens for traj in trajectories]
+                all_traj_output_tokens = [traj.total_output_tokens for traj in trajectories]
+                all_traj_total_tokens = [traj.total_input_tokens + traj.total_output_tokens for traj in trajectories]
+                all_traj_tok_per_sec = [
+                    (traj.total_input_tokens + traj.total_output_tokens) / traj.collection_time
+                    if traj.collection_time > 0 else 0
+                    for traj in trajectories
+                ]
+                
+                # Add granular statistics to stats dict
+                stats.update({
+                    # Turn-level stats
+                    "turn/input_tokens_mean": np.mean(all_turn_input_tokens),
+                    "turn/input_tokens_std": np.std(all_turn_input_tokens),
+                    "turn/input_tokens_min": np.min(all_turn_input_tokens),
+                    "turn/input_tokens_max": np.max(all_turn_input_tokens),
+                    "turn/output_tokens_mean": np.mean(all_turn_output_tokens),
+                    "turn/output_tokens_std": np.std(all_turn_output_tokens),
+                    "turn/output_tokens_min": np.min(all_turn_output_tokens),
+                    "turn/output_tokens_max": np.max(all_turn_output_tokens),
+                    "turn/total_tokens_mean": np.mean(all_turn_total_tokens),
+                    "turn/total_tokens_std": np.std(all_turn_total_tokens),
+                    "turn/generation_time_mean": np.mean(all_turn_gen_times),
+                    "turn/generation_time_std": np.std(all_turn_gen_times),
+                    "turn/generation_time_min": np.min(all_turn_gen_times),
+                    "turn/generation_time_max": np.max(all_turn_gen_times),
+                    "turn/tokens_per_second_mean": np.mean(all_turn_tok_per_sec),
+                    "turn/tokens_per_second_std": np.std(all_turn_tok_per_sec),
+                    
+                    # Trajectory-level stats
+                    "trajectory/collection_time_mean": np.mean(all_traj_collection_times),
+                    "trajectory/collection_time_std": np.std(all_traj_collection_times),
+                    "trajectory/collection_time_min": np.min(all_traj_collection_times),
+                    "trajectory/collection_time_max": np.max(all_traj_collection_times),
+                    "trajectory/input_tokens_mean": np.mean(all_traj_input_tokens),
+                    "trajectory/input_tokens_std": np.std(all_traj_input_tokens),
+                    "trajectory/output_tokens_mean": np.mean(all_traj_output_tokens),
+                    "trajectory/output_tokens_std": np.std(all_traj_output_tokens),
+                    "trajectory/total_tokens_mean": np.mean(all_traj_total_tokens),
+                    "trajectory/total_tokens_std": np.std(all_traj_total_tokens),
+                    "trajectory/tokens_per_second_mean": np.mean(all_traj_tok_per_sec),
+                    "trajectory/tokens_per_second_std": np.std(all_traj_tok_per_sec),
+                })
+                
+                # Log all stats
                 wandb.log(stats, step=iteration + wandb_step_offset)
             
             # Save checkpoint
