@@ -131,6 +131,57 @@ class History:
         seen_part = f' seen by: {COLORS["underline"]}{spectators}{RESET}' if spectators else ""
 
         return f"{alive_players_str}{phase_str}{target_part}{location_str} {actor}{cooldown_part}{next_part}{seen_part}"
+    
+    def to_text(self) -> str:
+        """
+        Return a plain-text representation suitable for value head input.
+        No ANSI codes, icons, or special formatting - just semantic information.
+        
+        Format: [A:2,B:3] [PHASE n] actor ACTION target @LOCATION cd=n next: A,B seen: C,D
+        """
+        # Alive players with task counts
+        alive_players_str = ""
+        if self.alive_player_names and self.tasks_left_to_do is not None:
+            player_task_info = []
+            for player_name in self.alive_player_names:
+                if player_name in self.tasks_left_to_do:
+                    task_count = len(self.tasks_left_to_do[player_name])
+                    first_letter = player_name[0] if player_name else "?"
+                    player_task_info.append(f"{first_letter}:{task_count}")
+                else:
+                    first_letter = player_name[0] if player_name else "?"
+                    player_task_info.append(f"{first_letter}:0")
+            alive_players_str = f'[{",".join(player_task_info)}] '
+        
+        # Phase segment
+        phase_str = f"[{self.phase.name} {self.actions_until_phase_ends}]"
+        
+        # Actor and action
+        self.action_taken.set_stories()
+        actor_text = self.action_taken.global_perspective
+        
+        # Action type text
+        action_type_text = self.action_taken.type.name
+        
+        # Target if applicable
+        if (self.action_taken.type == ActionType.KILL or self.action_taken.type == ActionType.REPORT) and self.action_taken.target_player_name:
+            target_part = f" {action_type_text} {self.action_taken.target_player_name}"
+        else:
+            target_part = f" {action_type_text}"
+        
+        # Location
+        location_str = f" @{self.location.name}"
+        
+        # Impostor cooldown (only show if non-zero)
+        cooldown_part = f" cd={self.impostor_cooldown}" if self.impostor_cooldown else ""
+        
+        # Next players and spectators who saw the action
+        players_next = ", ".join(self.player_names_to_play_next)
+        spectators = ", ".join(self.spectators_who_saw)
+        next_part = f" next: {players_next}" if players_next else ""
+        seen_part = f" seen by: {spectators}" if spectators else ""
+        
+        return f"{alive_players_str}{phase_str} {actor_text}{target_part}{location_str}{cooldown_part}{next_part}{seen_part}"
 
     def copy(self, **kwargs): # Added copy method
         data = self.__dict__.copy()

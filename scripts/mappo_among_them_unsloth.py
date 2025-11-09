@@ -4,7 +4,7 @@ MAPPO Self-Play Training for Among Them using Unsloth
 
 Key components:
 1. Self-play trajectory collection (all 5 players use same policy)
-2. Centralized critic with global state view (History.__repr__() + all player thoughts)
+2. Centralized critic with global state view (History.to_text() + all player thoughts)
 3. PPO with clipped surrogate objective
 4. Value head pre-trained on existing games
 5. Efficient training with Unsloth LoRA adapters
@@ -93,6 +93,10 @@ class MAPPOConfig:
     # Output paths
     output_dir: str = "/content/drive/MyDrive/among_them/outputs/mappo_training"
     checkpoint_dir: str = "/content/drive/MyDrive/among_them/outputs/mappo_checkpoints"
+    
+    # Checkpoint loading
+    load_model: Optional[str] = None  # Iteration number (e.g., "50"), "final", or path to checkpoint dir
+    load_head: Optional[str] = None   # Iteration number (e.g., "50"), "final", or path to value_head.pt file
     
     # Logging
     wandb_project: str = "among-them-mappo"
@@ -231,42 +235,6 @@ class MAPPOActor:
             impostor_cooldown=config.impostor_cooldown
         )
     
-    def _print_tokens(self, token_ids: List[int], label: str = "Tokens"):
-        """
-        Pretty print tokens with their IDs and decoded text.
-        
-        Args:
-            token_ids: List of token IDs to print
-            label: Label for the token sequence
-        """
-        print(f"\n{'='*60}")
-        print(f"🔤 {label} ({len(token_ids)} tokens)")
-        print(f"{'='*60}")
-        
-        # Print full decoded text
-        full_text = self.tokenizer.decode(token_ids, skip_special_tokens=False)
-        print(f"Full text: {repr(full_text)}")
-        print(f"\nToken breakdown:")
-        
-        # Print individual tokens
-        for i, token_id in enumerate(token_ids):
-            token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
-            # Show special characters clearly
-            if token_text == '\n':
-                display = '<newline>'
-            elif token_text == '\t':
-                display = '<tab>'
-            elif token_text == ' ':
-                display = '<space>'
-            elif token_text.strip() == '':
-                display = f'<whitespace:{repr(token_text)}>'
-            else:
-                display = repr(token_text)
-            
-            print(f"  [{i:3d}] ID={token_id:6d} → {display}")
-        
-        print(f"{'='*60}\n")
-    
     def _generate_action_with_policy(
         self,
         conversation: List[Dict[str, str]],
@@ -321,8 +289,8 @@ class MAPPOActor:
             top_p = float(getattr(gen_cfg, "top_p", 1.0) or 1.0)
             top_k = int(getattr(gen_cfg, "top_k", 0) or 0)
             
-            if self.config.debug:
-                print("\n💭 Streaming reasoning tokens: ", end="", flush=True)
+            # if self.config.debug:
+            #     print("\n💭 Streaming reasoning tokens: ", end="", flush=True)
             
             for _ in range(self.config.max_reasoning_tokens):
                 step_logits = logits[:, -1, :].squeeze(0)
@@ -364,15 +332,15 @@ class MAPPOActor:
                 token_id = next_token.item()
                 
                 if token_id == think_close_token:
-                    if self.config.debug:
-                        print("</think>", flush=True)
+                    # if self.config.debug:
+                    #     print("</think>", flush=True)
                     break
                 generated_reason_ids.append(token_id)
                 
                 # Stream token if debug mode
-                if self.config.debug:
-                    token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
-                    print(token_text, end="", flush=True)
+                # if self.config.debug:
+                #     token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                #     print(token_text, end="", flush=True)
                 
                 # Continue generation (unpack tuple from fast path)
                 out_tuple = self.model(
@@ -392,13 +360,13 @@ class MAPPOActor:
             end_think_token_ids = self.tokenizer.encode("\n</think>", add_special_tokens=False)
             action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
             
-            if self.config.debug:
-                print("🎯 Appending prefix: ", end="", flush=True)
+            # if self.config.debug:
+            #     print("🎯 Appending prefix: ", end="", flush=True)
             
             for tid in end_think_token_ids + action_prefix_token_ids:
-                if self.config.debug:
-                    token_text = self.tokenizer.decode([tid], skip_special_tokens=False)
-                    print(repr(token_text), end=" ", flush=True)
+                # if self.config.debug:
+                #     token_text = self.tokenizer.decode([tid], skip_special_tokens=False)
+                #     print(repr(token_text), end=" ", flush=True)
                 tok = torch.tensor([[tid]], dtype=torch.long, device=device)
                 # Unpack tuple from fast path
                 out_tuple = self.model(
@@ -411,8 +379,8 @@ class MAPPOActor:
                 past_key_values = out_tuple[1]
                 cur_pos += 1
             
-            if self.config.debug:
-                print()  # Newline after prefix
+            # if self.config.debug:
+            #     print()  # Newline after prefix
             
             last_logits = current_logits
             prefix_end_pos = cur_pos.item()
@@ -436,9 +404,9 @@ class MAPPOActor:
                 action_token_ids = action_tokens.input_ids[0].to(device)
                 
                 # Print action header if debug mode
-                if self.config.debug:
-                    print(f"\n  📝 Action: {action_text[:60]}..." if len(action_text) > 60 else f"\n  📝 Action: {action_text}")
-                    print(f"     Streaming tokens: ", end="", flush=True)
+                # if self.config.debug:
+                #     print(f"\n  📝 Action: {action_text[:60]}..." if len(action_text) > 60 else f"\n  📝 Action: {action_text}")
+                #     print(f"     Streaming tokens: ", end="", flush=True)
                 
                 num_words = len(action_text.split())
                 if len(action_token_ids) == 0:
@@ -456,9 +424,9 @@ class MAPPOActor:
                     total_log_prob += math.log(max(token_prob, 1e-10))
                     
                     # Stream action token if debug mode
-                    if self.config.debug:
-                        token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
-                        print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
+                    # if self.config.debug:
+                    #     token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                    #     print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
                     
                     if i < len(action_token_ids) - 1:
                         # Unpack tuple from fast path
@@ -476,8 +444,8 @@ class MAPPOActor:
                 word_normalized_log_prob = total_log_prob / max(num_words, 1)
                 action_log_probs.append(word_normalized_log_prob)
                 
-                if self.config.debug:
-                    print(f"→ word_norm_log_prob={word_normalized_log_prob:.4f}")
+                # if self.config.debug:
+                #     print(f"→ word_norm_log_prob={word_normalized_log_prob:.4f}")
             
             # 6. Select action (sample from distribution)
             action_probs = torch.softmax(torch.tensor(action_log_probs, device=device), dim=-1)
@@ -503,7 +471,7 @@ class MAPPOActor:
     
     def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str:
         """
-        Build global state from History.__repr__() + ONLY LAST reasoning per player.
+        Build global state from History.to_text() + ONLY LAST reasoning per player.
         
         OPTIMIZATION: Instead of including all reasoning from all turns,
         we only keep the most recent reasoning for each player. This reduces
@@ -521,10 +489,11 @@ class MAPPOActor:
             # Track last reasoning for this player
             if hasattr(hist, 'llm_cot') and hist.llm_cot:
                 player_name = hist.action_taken.player_name
-                last_reasoning_per_player[player_name] = hist.llm_cot[:4000]
+                last_reasoning_per_player[player_name] = hist.llm_cot[:3500]
             
             # Add game history (WITHOUT reasoning blocks)
-            global_view += f"<turn_{i}> {repr(hist)} </turn_{i}>\n"
+            # Use to_text() for clean, ANSI-free representation for value head
+            global_view += f"<turn_{i}> {hist.to_text()} </turn_{i}>\n"
         
         # Second pass: append only the LAST reasoning for each player
         if last_reasoning_per_player:
@@ -730,24 +699,32 @@ class MAPPOTrainer:
         )
         print("✅ Base model loaded")
         
-        self.model = FastLanguageModel.get_peft_model(
-            self.model,
-            r=config.lora_rank,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                          "gate_proj", "up_proj", "down_proj"],
-            lora_alpha=16,
-            lora_dropout=0.0,
-            bias="none",
-            use_gradient_checkpointing="unsloth",
-            random_state=config.seed,
-        )
-        print("✅ LoRA adapters applied")
+        # Load checkpoint or apply fresh LoRA adapters
+        if config.load_model:
+            self._load_model_checkpoint(config.load_model)
+        else:
+            self.model = FastLanguageModel.get_peft_model(
+                self.model,
+                r=config.lora_rank,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                              "gate_proj", "up_proj", "down_proj"],
+                lora_alpha=16,
+                lora_dropout=0.0,
+                bias="none",
+                use_gradient_checkpointing="unsloth",
+                random_state=config.seed,
+            )
+            print("✅ LoRA adapters applied")
         
         # Initialize value head in float32 for numerical stability
         # PyTorch will automatically upcast float16 inputs to float32
         hidden_size = self.model.config.hidden_size
         self.value_head = ValueHead(hidden_size).to(device=self.model.device, dtype=torch.float32)
         print(f"✅ Value head initialized (hidden_size={hidden_size}, dtype=torch.float32)")
+        
+        # Load value head checkpoint if specified
+        if config.load_head:
+            self._load_value_head_checkpoint(config.load_head)
         
         # Optimizers
         self.actor_optimizer = torch.optim.AdamW(
@@ -779,8 +756,8 @@ class MAPPOTrainer:
         self.iteration = 0
         self.training_stats = []
         
-        # Pretrain value head if enabled
-        if config.pretrain_value_head:
+        # Pretrain value head if enabled (skip if loading checkpoint)
+        if config.pretrain_value_head and not config.load_head:
             self.pretrain_value_head()
     
     def _set_seeds(self, seed: int):
@@ -925,6 +902,13 @@ class MAPPOTrainer:
                 "pretrain/epoch": epoch + 1,
                 "pretrain/loss": avg_loss,
             })
+            
+            # Save value head after each epoch
+            pretrain_checkpoint_dir = Path(self.config.checkpoint_dir) / "pretrain"
+            pretrain_checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_path = pretrain_checkpoint_dir / f"value_head_epoch_{epoch+1}.pt"
+            torch.save(self.value_head.state_dict(), checkpoint_path)
+            print(f"  💾 Saved value head to: {checkpoint_path}")
         
         print("Value head pretraining complete!\n")
     
@@ -1439,6 +1423,69 @@ class MAPPOTrainer:
         # Save final stats
         with open(final_path / "training_stats.json", 'w') as f:
             json.dump(self.training_stats, f, indent=2, default=str)
+    
+    def _load_model_checkpoint(self, checkpoint_id: str):
+        """Load model from checkpoint
+        
+        Args:
+            checkpoint_id: Either iteration number (e.g., "50"), "final", or direct file path
+        """
+        # Check if it's a direct path
+        if "/" in checkpoint_id or "\\" in checkpoint_id:
+            checkpoint_path = Path(checkpoint_id)
+        elif checkpoint_id == "final":
+            checkpoint_path = Path(self.config.output_dir) / "final_model"
+        else:
+            checkpoint_path = Path(self.config.checkpoint_dir) / f"iteration_{checkpoint_id}"
+        
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+        
+        print(f"\n{'='*60}")
+        print(f"📥 Loading model from: {checkpoint_path}")
+        print(f"{'='*60}")
+        
+        # Load LoRA adapters onto base model
+        # This should be called BEFORE get_peft_model() is applied
+        from peft import PeftModel
+        self.model = PeftModel.from_pretrained(
+            self.model, 
+            str(checkpoint_path),
+            is_trainable=True
+        )
+        print("✅ Model LoRA adapters loaded")
+    
+    def _load_value_head_checkpoint(self, checkpoint_id: str):
+        """Load value head from checkpoint
+        
+        Args:
+            checkpoint_id: Either iteration number (e.g., "50"), "final", or direct file path to .pt file
+        """
+        # Check if it's a direct path to a .pt file
+        if checkpoint_id.endswith(".pt"):
+            value_head_path = Path(checkpoint_id)
+        elif "/" in checkpoint_id or "\\" in checkpoint_id:
+            # It's a directory path
+            checkpoint_path = Path(checkpoint_id)
+            value_head_path = checkpoint_path / "value_head.pt"
+        elif checkpoint_id == "final":
+            checkpoint_path = Path(self.config.output_dir) / "final_model"
+            value_head_path = checkpoint_path / "value_head.pt"
+        else:
+            checkpoint_path = Path(self.config.checkpoint_dir) / f"iteration_{checkpoint_id}"
+            value_head_path = checkpoint_path / "value_head.pt"
+        
+        if not value_head_path.exists():
+            raise FileNotFoundError(f"Value head checkpoint not found: {value_head_path}")
+        
+        print(f"\n{'='*60}")
+        print(f"📥 Loading value head from: {value_head_path}")
+        print(f"{'='*60}")
+        
+        # Load value head state dict
+        state_dict = torch.load(value_head_path, map_location=self.model.device)
+        self.value_head.load_state_dict(state_dict)
+        print("✅ Value head loaded")
 
 
 # ============================================================================
@@ -1452,7 +1499,7 @@ def main():
         # Model configuration
         model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
         max_seq_length=60000, # 3k reasoning per turn with 11 turns avg per player. 20 turns = 60k
-        max_reasoning_tokens=10, 
+        max_reasoning_tokens=1000, 
         load_in_4bit=True,
         lora_rank=16,
         
@@ -1461,19 +1508,19 @@ def main():
         num_impostors=1,
         num_tasks=2,
         map_size=0,
-        num_task_phase_actions_per_player=1,
-        num_discuss_phase_actions_per_player=1,
+        num_task_phase_actions_per_player=8,
+        num_discuss_phase_actions_per_player=2,
         impostor_cooldown=1,
         
         # Training configuration
-        num_policy_iterations=3,
-        trajectories_per_iteration=1,
+        num_policy_iterations=200,
+        trajectories_per_iteration=8,
         actor_lr=1e-6,
         critic_lr=3e-6,
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=4,
         
         # PPO-specific
-        ppo_epochs=2,
+        ppo_epochs=4,
         clip_epsilon=0.2,
         gamma=1.0,
         gae_lambda=0.95,
@@ -1484,8 +1531,8 @@ def main():
         
         # Value head pretraining
         pretrain_value_head=True,
-        pretrain_epochs=3,
-        pretrain_examples=3,
+        pretrain_epochs=10,
+        pretrain_examples=100,
         pretrain_lr=1e-4,
         data_dir="/content/among_them/data", # TODO change them
         
@@ -1493,11 +1540,20 @@ def main():
         output_dir="/content/drive/MyDrive/among_them/outputs/mappo_training",
         checkpoint_dir="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints",
         
+        # Checkpoint loading (optional - uncomment to resume training)
+        # load_model="50",                                                                     # Load model from iteration 50
+        # load_model="final",                                                                   # Load final saved model 
+        load_model="/content/drive/MyDrive/among_them/sft_sampled",  # Direct path to checkpoint dir
+        # load_head="50",                                                                      # Load value head from iteration 50
+        # load_head="final",                                                                   # Load final saved value head
+        # load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_5.pt",  # Direct path to .pt file
+        
         # Logging
         wandb_project="among-them-mappo",
         wandb_run_name="mappo-5players",
         log_every_n_iterations=1,
         save_every_n_iterations=1,
+        save_trajectories=True,
         
         # Debug
         debug=True,
