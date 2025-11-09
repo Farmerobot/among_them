@@ -966,12 +966,22 @@ class MAPPOTrainer:
         self.config = config
         self._set_seeds(config.seed)
         
-        # Initialize wandb
-        wandb.init(
-            project=config.wandb_project,
-            name=config.wandb_run_name,
-            config=config.__dict__
-        )
+        # Initialize wandb (with resume support if needed)
+        if config.resume_from:
+            # Resume existing run if resuming from checkpoint
+            wandb.init(
+                project=config.wandb_project,
+                name=config.wandb_run_name,
+                config=config.__dict__,
+                resume="allow",  # Resume if run with same name exists
+                id=f"{config.wandb_run_name}_{config.seed}"  # Use consistent run ID
+            )
+        else:
+            wandb.init(
+                project=config.wandb_project,
+                name=config.wandb_run_name,
+                config=config.__dict__
+            )
         
         # Load model with LoRA (SINGLE INSTANCE)
         print(f"\n{'='*80}")
@@ -1046,10 +1056,16 @@ class MAPPOTrainer:
         
         self.iteration = 0
         self.training_stats = []
+        self.start_iteration = 0  # Track where to start training loop
         
-        # Pretrain value head if enabled (skip if loading checkpoint)
-        if config.pretrain_value_head and not config.load_head:
-            self.pretrain_value_head()
+        # Handle resume if specified
+        if config.resume_from:
+            self.start_iteration = self.load_checkpoint_for_resume(config.resume_from)
+            self.iteration = self.start_iteration
+        else:
+            # Pretrain value head if enabled (skip if loading checkpoint or resuming)
+            if config.pretrain_value_head and not config.load_head:
+                self.pretrain_value_head()
     
     def _set_seeds(self, seed: int):
         """Set random seeds for reproducibility"""
@@ -1800,6 +1816,8 @@ class MAPPOTrainer:
         print(f"Players: {self.config.num_players}")
         print(f"Policy iterations: {self.config.num_policy_iterations}")
         print(f"Trajectories per iteration: {self.config.trajectories_per_iteration}")
+        if self.start_iteration > 0:
+            print(f"▶️  Resuming from iteration: {self.start_iteration + 1}")
         print("=" * 80)
         
         # Calculate step offset for wandb logging
@@ -1807,7 +1825,7 @@ class MAPPOTrainer:
         # Training iterations start after pretraining
         wandb_step_offset = self.config.pretrain_epochs if self.config.pretrain_value_head else 0
         
-        for iteration in range(self.config.num_policy_iterations):
+        for iteration in range(self.start_iteration, self.config.num_policy_iterations):
             self.iteration = iteration
             iteration_start_time = time.time()
             
@@ -1926,7 +1944,7 @@ class MAPPOTrainer:
         wandb.finish()
     
     def save_checkpoint(self, iteration: int):
-        """Save model checkpoint"""
+        """Save model checkpoint with full training state for resume"""
         checkpoint_path = Path(self.config.checkpoint_dir) / f"iteration_{iteration}"
         checkpoint_path.mkdir(parents=True, exist_ok=True)
         
@@ -1937,9 +1955,93 @@ class MAPPOTrainer:
         # Save value head
         torch.save(self.value_head.state_dict(), checkpoint_path / "value_head.pt")
         
-        # Save training stats
+        # Save optimizer states and iteration number for resume
+        training_state = {
+            'iteration': iteration,
+            'optimizer_actor_state': self.actor_optimizer.state_dict(),
+            'optimizer_critic_state': self.critic_optimizer.state_dict(),
+            'training_stats': self.training_stats,
+        }
+        torch.save(training_state, checkpoint_path / "training_state.pt")
+        
+        # Save training stats as JSON for readability
         with open(checkpoint_path / "training_stats.json", 'w') as f:
             json.dump(self.training_stats, f, indent=2, default=str)
+        
+        print(f"✅ Checkpoint saved (iteration {iteration})")
+    
+    def load_checkpoint_for_resume(self, checkpoint_id: str) -> int:
+        """Load checkpoint and restore full training state for resume
+        
+        Args:
+            checkpoint_id: Iteration number (e.g., "50") or "latest"
+            
+        Returns:
+            Starting iteration number (checkpoint_iteration + 1)
+        """
+        checkpoint_dir = Path(self.config.checkpoint_dir)
+        
+        # Find the checkpoint path
+        if checkpoint_id == "latest":
+            # Find the latest checkpoint
+            checkpoints = sorted(checkpoint_dir.glob("iteration_*"))
+            if not checkpoints:
+                raise FileNotFoundError(f"No checkpoints found in {checkpoint_dir}")
+            checkpoint_path = checkpoints[-1]
+            print(f"📥 Found latest checkpoint: {checkpoint_path.name}")
+        else:
+            checkpoint_path = checkpoint_dir / f"iteration_{checkpoint_id}"
+        
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+        
+        print(f"\n{'='*80}")
+        print(f"📥 RESUMING TRAINING FROM CHECKPOINT")
+        print(f"{'='*80}")
+        print(f"Checkpoint: {checkpoint_path}")
+        
+        # Load model (LoRA adapters)
+        print("Loading model LoRA adapters...")
+        from peft import PeftModel
+        self.model = PeftModel.from_pretrained(
+            self.model,
+            str(checkpoint_path),
+            is_trainable=True
+        )
+        print("✅ Model loaded")
+        
+        # Load value head
+        print("Loading value head...")
+        value_head_path = checkpoint_path / "value_head.pt"
+        state_dict = torch.load(value_head_path, map_location=self.model.device, weights_only=True)
+        self.value_head.load_state_dict(state_dict)
+        print("✅ Value head loaded")
+        
+        # Load training state (optimizers, iteration, stats)
+        print("Loading training state...")
+        training_state_path = checkpoint_path / "training_state.pt"
+        if training_state_path.exists():
+            training_state = torch.load(training_state_path, map_location=self.model.device, weights_only=False)
+            
+            # Restore optimizer states
+            self.actor_optimizer.load_state_dict(training_state['optimizer_actor_state'])
+            self.critic_optimizer.load_state_dict(training_state['optimizer_critic_state'])
+            
+            # Restore training stats
+            self.training_stats = training_state['training_stats']
+            
+            # Get saved iteration
+            saved_iteration = training_state['iteration']
+            
+            print(f"✅ Training state loaded (was at iteration {saved_iteration})")
+            print(f"{'='*80}\n")
+            
+            # Return next iteration to start from
+            return saved_iteration + 1
+        else:
+            print("⚠️  Warning: training_state.pt not found, only model weights loaded")
+            print(f"{'='*80}\n")
+            return 0
     
     def save_final_model(self):
         """Save final trained model"""
@@ -2032,7 +2134,7 @@ def main():
         # Model configuration
         model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
         max_seq_length=60000, # 3k reasoning per turn with 11 turns avg per player. 20 turns = 60k
-        max_reasoning_tokens=1000, 
+        max_reasoning_tokens=700, 
         load_in_4bit=True,
         lora_rank=16,
         
@@ -2047,14 +2149,14 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=8,
+        trajectories_per_iteration=4,
         actor_lr=1e-6,
         critic_lr=3e-6,
-        gradient_accumulation_steps=4,
-        max_parallel_workers=8,  # Requires loky: pip install loky
+        gradient_accumulation_steps=2,
+        max_parallel_workers=1,  # Requires loky: pip install loky
         
         # PPO-specific
-        ppo_epochs=4,
+        ppo_epochs=2,
         clip_epsilon=0.2,
         gamma=1.0,
         gae_lambda=0.95,
@@ -2074,13 +2176,18 @@ def main():
         output_dir="/content/drive/MyDrive/among_them/outputs/mappo_training",
         checkpoint_dir="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints",
         
-        # Checkpoint loading (optional - uncomment to resume training)
+        # Checkpoint loading (for transfer learning - starts training from iteration 0)
         # load_model="50",                                                                     # Load model from iteration 50
         # load_model="final",                                                                   # Load final saved model 
         load_model="/content/drive/MyDrive/among_them/sft_sampled",  # Direct path to checkpoint dir
         # load_head="50",                                                                      # Load value head from iteration 50
         # load_head="final",                                                                   # Load final saved value head
         load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt",  # Direct path to .pt file
+        
+        # Resume training (restores full state: weights + optimizers + iteration)
+        # resume_from="50",                                                                    # Resume from iteration 50
+        # resume_from="latest",                                                                # Resume from latest checkpoint
+        resume_from=None,                                                                      # No resume (fresh training)
         
         # Logging
         wandb_project="among-them-mappo",
