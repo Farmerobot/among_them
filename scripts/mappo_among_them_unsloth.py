@@ -36,7 +36,7 @@ from among_them.models.player import Player
 from among_them.utils.end_utils import get_end_game_reason
 from among_them.game_engine import GameEngine
 from among_them.game_config import GameConfig
-from among_them.models.action import Action
+from among_them.models.action import Action, ActionType
 from among_them.models.history import History
 from among_them.models.player_role import PlayerRole
 from among_them.models.end_game import EndGameReason
@@ -128,8 +128,9 @@ class TurnData:
     chosen_action: Action
     reasoning: str
     
-    # Policy outputs
-    action_log_prob: float
+    # Policy outputs - GENERATIVE PPO
+    # Stores raw per-token log-probs for entire generation (reasoning + action)
+    generation_log_probs: List[float]
     
     # Global state for critic (centralized)
     global_state_repr: str
@@ -239,12 +240,15 @@ class MAPPOActor:
         self,
         conversation: List[Dict[str, str]],
         actions: List[Action],
-    ) -> Tuple[int, float, str]:
+    ) -> Tuple[int, List[float], str]:
         """
-        Generate action using Unsloth model with native cache and branching.
-        Uses Unsloth's cache with .clone() for efficient action probability calculation.
+        HYBRID GENERATIVE PPO:
+        1. Generates reasoning with per-token log probs.
+        2. If "None" action (SPEAK), generates response freely (generative).
+        3. If discrete actions, ranks them (using word-norm for selection).
+        4. Returns FULL per-token log_probs for (reasoning + action).
         
-        Returns: (action_idx, log_probability, reasoning)
+        Returns: (action_idx, generation_log_probs, reasoning)
         """
         self.model.eval()
         device = self.model.device
@@ -279,8 +283,9 @@ class MAPPOActor:
             logits = out.logits
             past_key_values = out.past_key_values  # Capture Unsloth's cache
             
-            # Sample tokens until </think>
+            # Sample tokens until </think> AND store log probs
             generated_reason_ids = []
+            reasoning_log_probs = []  # Store reasoning log_probs
             cur_pos = torch.tensor([prompt_len], device=device)
             
             # Get generation config for sampling parameters
@@ -326,7 +331,8 @@ class MAPPOActor:
                     step_logits = torch.full_like(step_logits, float('-inf'))
                     step_logits.scatter_(0, sorted_indices, sorted_logits)
                 
-                # Sample
+                # Sample and get log prob
+                step_log_probs = F.log_softmax(step_logits, dim=-1)
                 probs = torch.softmax(step_logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
                 token_id = next_token.item()
@@ -335,7 +341,9 @@ class MAPPOActor:
                     # if self.config.debug:
                     #     print("</think>", flush=True)
                     break
+                
                 generated_reason_ids.append(token_id)
+                reasoning_log_probs.append(step_log_probs[token_id].item())  # Save log_prob
                 
                 # Stream token if debug mode
                 # if self.config.debug:
@@ -356,19 +364,25 @@ class MAPPOActor:
             if self.config.debug:
                 print()  # Newline after streaming
             
-            # 4. Append </think>\n\nAction: prefix
+            # 4. CHECK: Generative (SPEAK) or Discrete (ranking) turn?
+            is_generative_turn = actions[0].type == ActionType.SPEAK
+            
+            # 5. Append </think>\n\nAction: [Speak:] prefix AND store log probs
             end_think_token_ids = self.tokenizer.encode("\n</think>", add_special_tokens=False)
-            action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+            if is_generative_turn:
+                action_prefix_token_ids = self.tokenizer.encode("\n\nAction: Speak:", add_special_tokens=False)
+            else:
+                action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
             
             # if self.config.debug:
             #     print("🎯 Appending prefix: ", end="", flush=True)
-            
-            for tid in end_think_token_ids + action_prefix_token_ids:
+            prefix_ids = end_think_token_ids + action_prefix_token_ids
+            prefix_log_probs = []  # Store log_probs for prefix
+            for tid in prefix_ids:
                 # if self.config.debug:
                 #     token_text = self.tokenizer.decode([tid], skip_special_tokens=False)
                 #     print(repr(token_text), end=" ", flush=True)
                 tok = torch.tensor([[tid]], dtype=torch.long, device=device)
-                # Unpack tuple from fast path
                 out_tuple = self.model(
                     tok,
                     past_key_values=past_key_values,
@@ -376,6 +390,11 @@ class MAPPOActor:
                     position_ids=cur_pos,
                 )
                 current_logits = out_tuple[0][0, -1, :]
+                
+                # Get log_prob for this forced token
+                step_log_probs = F.log_softmax(current_logits, dim=-1)
+                prefix_log_probs.append(step_log_probs[tid].item())
+                
                 past_key_values = out_tuple[1]
                 cur_pos += 1
             
@@ -388,70 +407,157 @@ class MAPPOActor:
             # CRITICAL: Save the prefix cache before branching
             prefix_cache = past_key_values
             
-            # 5. Calculate action probabilities with WORD NORMALIZATION
-            action_log_probs = []
-            
-            for action in actions:
-                # CRITICAL: Clone the prefix cache for this branch
-                # This prevents subsequent actions from seeing KV state
-                # modified by previous actions
-                # Deep-clone the tuple of (Key, Value) tensor pairs for each layer
-                action_kv_cache = tuple(
-                    (k.clone(), v.clone()) for k, v in prefix_cache
-                )
-                action_text = action.command_perspective
-                action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
-                action_token_ids = action_tokens.input_ids[0].to(device)
+            if is_generative_turn:
+                # --- PATH A: GENERATIVE PPO (Speak Freely) ---
+                if self.config.debug:
+                    print("🗣️ [Generative Turn] Speaking freely...")
                 
-                # Print action header if debug mode
-                # if self.config.debug:
-                #     print(f"\n  📝 Action: {action_text[:60]}..." if len(action_text) > 60 else f"\n  📝 Action: {action_text}")
-                #     print(f"     Streaming tokens: ", end="", flush=True)
-                
-                num_words = len(action_text.split())
-                if len(action_token_ids) == 0:
-                    action_log_probs.append(float('-inf'))
-                    continue
-                
-                # Teacher forcing through action tokens
-                total_log_prob = 0.0
-                current_logits_branch = last_logits  # Start from logits at "Action:"
+                generated_action_ids = []
+                action_log_probs_list = []
+                current_logits_branch = last_logits
+                action_kv_cache = prefix_cache
                 cache_position_act = torch.tensor([prefix_end_pos], device=device)
                 
-                for i, token_id in enumerate(action_token_ids):
-                    probs = torch.softmax(current_logits_branch, dim=-1)
-                    token_prob = probs[token_id].item()
-                    total_log_prob += math.log(max(token_prob, 1e-10))
+                # Generate up to 100 tokens for speech
+                for _ in range(100):
+                    step_logits = current_logits_branch
                     
-                    # Stream action token if debug mode
-                    # if self.config.debug:
-                    #     token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
-                    #     print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
+                    # Apply sampling (temp, top_k, top_p)
+                    if temperature != 1.0:
+                        step_logits = step_logits / max(temperature, 1e-6)
                     
-                    if i < len(action_token_ids) - 1:
-                        # Unpack tuple from fast path
-                        next_output_tuple = self.model(
-                            token_id.unsqueeze(0).unsqueeze(0),
-                            past_key_values=action_kv_cache,  # Use CLONED cache
-                            use_cache=True,
-                            position_ids=cache_position_act,
+                    if top_k and top_k > 0 and top_k < step_logits.numel():
+                        kth_vals, _ = torch.topk(step_logits, top_k)
+                        min_keep = kth_vals[-1]
+                        step_logits = torch.where(
+                            step_logits < min_keep,
+                            torch.tensor(float('-inf'), device=device, dtype=step_logits.dtype),
+                            step_logits
                         )
-                        current_logits_branch = next_output_tuple[0][0, -1, :]
-                        action_kv_cache = next_output_tuple[1]
-                        cache_position_act += 1
+                    
+                    if top_p and top_p < 1.0:
+                        sorted_logits, sorted_indices = torch.sort(step_logits, descending=True)
+                        sorted_probs = torch.softmax(sorted_logits, dim=-1)
+                        cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+                        sorted_mask = cumulative_probs > top_p
+                        if sorted_mask.any():
+                            sorted_mask[..., 1:] = sorted_mask[..., :-1].clone()
+                            sorted_mask[..., 0] = False
+                        sorted_logits = torch.where(
+                            sorted_mask,
+                            torch.tensor(float('-inf'), device=device, dtype=sorted_logits.dtype),
+                            sorted_logits
+                        )
+                        step_logits = torch.full_like(step_logits, float('-inf'))
+                        step_logits.scatter_(0, sorted_indices, sorted_logits)
+                    
+                    # Sample and get log prob
+                    step_log_probs = F.log_softmax(step_logits, dim=-1)
+                    probs = torch.softmax(step_logits, dim=-1)
+                    next_token = torch.multinomial(probs, num_samples=1)
+                    token_id = next_token.item()
+                    
+                    if token_id == self.tokenizer.eos_token_id:
+                        break
+                    
+                    generated_action_ids.append(token_id)
+                    action_log_probs_list.append(step_log_probs[token_id].item())
+                    
+                    next_output_tuple = self.model(
+                        next_token[:, None].to(dtype=torch.long),
+                        past_key_values=action_kv_cache,
+                        use_cache=True,
+                        position_ids=cache_position_act,
+                    )
+                    current_logits_branch = next_output_tuple[0][0, -1, :]
+                    action_kv_cache = next_output_tuple[1]
+                    cache_position_act += 1
                 
-                # WORD NORMALIZATION
-                word_normalized_log_prob = total_log_prob / max(num_words, 1)
-                action_log_probs.append(word_normalized_log_prob)
+                generated_action_text = self.tokenizer.decode(generated_action_ids, skip_special_tokens=True)
                 
-                # if self.config.debug:
-                #     print(f"→ word_norm_log_prob={word_normalized_log_prob:.4f}")
+                # Update the action object
+                actions[0].command_perspective = generated_action_text
+                chosen_idx = 0
+                chosen_per_token_log_probs = action_log_probs_list
             
-            # 6. Select action (sample from distribution)
-            action_probs = torch.softmax(torch.tensor(action_log_probs, device=device), dim=-1)
-            chosen_idx = torch.multinomial(action_probs, num_samples=1).item()
+            else:
+                # --- PATH B: DISCRETE PPO (Ranking Actions) ---
+                if self.config.debug:
+                    print(f"📋 [Discrete Turn] Ranking {len(actions)} actions...")
+                
+                selection_scores = []
+                all_per_token_log_probs = []
+                
+                for action in actions:
+                    # CRITICAL: Clone the prefix cache for this branch
+                    # This prevents subsequent actions from seeing KV state
+                    # modified by previous actions
+                    # Deep-clone the tuple of (Key, Value) tensor pairs for each layer
+                    action_kv_cache = tuple(
+                        (k.clone(), v.clone()) for k, v in prefix_cache
+                    )
+                    action_text = action.command_perspective
+                    action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
+                    action_token_ids = action_tokens.input_ids[0].to(device)
+                
+                    # Print action header if debug mode
+                    # if self.config.debug:
+                    #     print(f"\n  📝 Action: {action_text[:60]}..." if len(action_text) > 60 else f"\n  📝 Action: {action_text}")
+                    #     print(f"     Streaming tokens: ", end="", flush=True)
+                    
+                    num_words = len(action_text.split())
+                    if len(action_token_ids) == 0:
+                        selection_scores.append(float('-inf'))
+                        all_per_token_log_probs.append([])
+                        continue
+                    
+                    # Teacher forcing through action tokens
+                    raw_token_log_probs = []
+                    total_log_prob = 0.0
+                    current_logits_branch = last_logits
+                    cache_position_act = torch.tensor([prefix_end_pos], device=device)
+                    
+                    for i, token_id in enumerate(action_token_ids):
+                        probs = torch.softmax(current_logits_branch, dim=-1)
+                        token_prob = probs[token_id].item()
+                        log_prob = math.log(max(token_prob, 1e-10))
+                        
+                        # Stream action token if debug mode
+                        # if self.config.debug:
+                        #     token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                        #     print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
+                        raw_token_log_probs.append(log_prob)
+                        total_log_prob += log_prob
+                        
+                        if i < len(action_token_ids) - 1:
+                            next_output_tuple = self.model(
+                                token_id.unsqueeze(0).unsqueeze(0),
+                                past_key_values=action_kv_cache,
+                                use_cache=True,
+                                position_ids=cache_position_act,
+                            )
+                            current_logits_branch = next_output_tuple[0][0, -1, :]
+                            action_kv_cache = next_output_tuple[1]
+                            cache_position_act += 1
+                    
+                    # 1. Calculate SELECTION score (word-normalized)
+                    word_normalized_log_prob = total_log_prob / max(num_words, 1)
+                    selection_scores.append(word_normalized_log_prob)
+                    
+                    # if self.config.debug:
+                    #     print(f"→ word_norm_log_prob={word_normalized_log_prob:.4f}")
+                    # 2. Store the TRAINING signal (raw per-token log probs)
+                    all_per_token_log_probs.append(raw_token_log_probs)
+                
+                # Select action using word-normalized scores
+                action_probs = torch.softmax(torch.tensor(selection_scores, device=device), dim=-1)
+                chosen_idx = torch.multinomial(action_probs, num_samples=1).item()
+                chosen_per_token_log_probs = all_per_token_log_probs[chosen_idx]
             
-            # Extract reasoning
+            # Combine all log_probs for PPO update
+            full_generation_log_probs = reasoning_log_probs + prefix_log_probs + chosen_per_token_log_probs
+            
+            # Extract reasoning text
             reasoning = self.tokenizer.decode(generated_reason_ids)
             
             if self.config.debug:
@@ -460,14 +566,15 @@ class MAPPOActor:
                 print(f"{'='*60}")
                 print(f"Generated {len(generated_reason_ids)} reasoning tokens")
                 print(f"Reasoning: {reasoning[:200]}..." if len(reasoning) > 200 else f"Reasoning: {reasoning}")
-                print(f"\nAction probabilities:")
-                for idx, (action, prob) in enumerate(zip(actions, action_probs)):
-                    marker = "👉" if idx == chosen_idx else "  "
-                    print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
-                print(f"\nChosen action log prob: {action_log_probs[chosen_idx]:.4f}")
+                if not is_generative_turn:
+                    print(f"\nAction probabilities:")
+                    for idx, (action, prob) in enumerate(zip(actions, action_probs)):
+                        marker = "👉" if idx == chosen_idx else "  "
+                        print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
+                print(f"\nTotal generation tokens: {len(full_generation_log_probs)}")
                 print(f"{'='*60}\n")
             
-            return chosen_idx, action_log_probs[chosen_idx], reasoning
+            return chosen_idx, full_generation_log_probs, reasoning
     
     def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str:
         """
@@ -599,7 +706,7 @@ class MAPPOActor:
                 chosen_action = actions_player_can_take[action_idx]
                 
                 if self.config.debug:
-                    print(f"✅ Action selected: {chosen_action.command_perspective[:80]}")
+                    print(f"✅ Action selected: {chosen_action.command_perspective}")
             except Exception as e:
                 if self.config.debug:
                     print(f"❌ Error generating action: {e}")
@@ -619,7 +726,7 @@ class MAPPOActor:
                 chosen_action_idx=action_idx,
                 chosen_action=chosen_action,
                 reasoning=reasoning,
-                action_log_prob=log_prob,
+                generation_log_probs=log_prob,  # Now a List[float]
                 global_state_repr=global_state,
             )
             turns_data.append(turn_data)
@@ -947,97 +1054,79 @@ class MAPPOTrainer:
         use_reference_model: bool = False
     ) -> torch.Tensor:
         """
-        Re-compute log probability of chosen action under current policy.
+        GENERATIVE PPO: Re-computes RAW per-token log-probs for the
+        ENTIRE generated sequence (reasoning + prefix + action).
         
-        This version performs a full forward pass and gathers the
-        log probabilities for the chosen action tokens, which is the
-        correct, standard way to compute sequence probability.
+        Returns:
+            Tensor of shape [T] where T = num_generated_tokens
         """
-        # Note: Caller controls self.model.train() vs .eval() mode
         device = self.model.device
         
-        # 1. Build conversation context
+        # 1. Build CONTEXT
         input_text = self.tokenizer.apply_chat_template(
-            conversation,
-            tokenize=False,
-            add_generation_prompt=True
+            conversation, tokenize=False, add_generation_prompt=True
         )
         inputs = self.tokenizer(input_text, return_tensors="pt").to(device)
-        
-        # 2. Tokenize reasoning + prefix
+        context_ids = inputs.input_ids
+        context_len = context_ids.shape[1]
+
+        # 2. Build GENERATED sequence
         reasoning_tokens = self.tokenizer.encode(reasoning, add_special_tokens=False)
         end_think_tokens = self.tokenizer.encode("\n</think>", add_special_tokens=False)
-        action_prefix_tokens = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
         
-        # Get the chosen action tokens
         chosen_action = actions[chosen_action_idx]
+        is_generative_turn = chosen_action.type == ActionType.SPEAK
+        
+        if is_generative_turn:
+            action_prefix_tokens = self.tokenizer.encode("\n\nAction: Speak:", add_special_tokens=False)
+        else:
+            action_prefix_tokens = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+        
         action_text = chosen_action.command_perspective
-        action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
-        action_token_ids = action_tokens.input_ids[0].to(device)
+        action_tokens = self.tokenizer.encode(action_text, add_special_tokens=False)
 
-        if len(action_token_ids) == 0:
-            raise ValueError("Action text is empty")
+        # This is all the tokens that were "generated"
+        generated_ids_list = reasoning_tokens + end_think_tokens + action_prefix_tokens + action_tokens
+        generated_ids = torch.tensor([generated_ids_list], device=device)
 
-        # 3. Concatenate full sequence: 
-        #    conversation + <think>reasoning</think> + Action: + chosen_action
+        # 3. Concatenate
+        full_input_ids = torch.cat([context_ids, generated_ids], dim=1)
         
-        # This is the prompt part
-        prompt_ids = torch.cat([
-            inputs.input_ids,
-            torch.tensor([reasoning_tokens + end_think_tokens + action_prefix_tokens], device=device)
-        ], dim=1)
-        
-        # This is the full sequence (prompt + action)
-        full_input_ids = torch.cat([prompt_ids, action_token_ids.unsqueeze(0)], dim=1)
-        prompt_len = prompt_ids.shape[1]
-
         # 4. Forward pass
         if use_reference_model:
-            # For ref_log_prob: We need BOTH no_grad AND disable_adapter
             with torch.no_grad(), self.model.disable_adapter():
                  outputs = self.model(input_ids=full_input_ids)
         else:
-            # For current_log_prob: MUST enable grads for policy loss
             with torch.enable_grad():
                  outputs = self.model(input_ids=full_input_ids)
             
-        # [batch_size, seq_len, vocab_size]
+        # [1, C+G, V]
         logits = outputs.logits 
 
-        # 5. Compute log prob of the action tokens
+        # 5. Get log_probs for the GENERATED tokens
         
-        # We only care about the logits for the action tokens
-        # Logits at position i are for predicting token i+1
-        # The first action token is at `prompt_len`, predicted by logits at `prompt_len - 1` 
-        # The last action token is at `seq_len - 1`, predicted by logits at `seq_len - 2` 
+        # We need the logits that *predicted* the generated tokens.
+        # These start from `context_len - 1` and go to the end.
+        # [1, G, V] (G = number of generated tokens)
+        generated_logits = logits[:, context_len-1:-1, :]
         
-        # [batch_size, num_action_tokens, vocab_size]
-        action_logits = logits[:, prompt_len-1:-1, :]
-        
-        # Get log_softmax of logits
-        # [batch_size, num_action_tokens, vocab_size]
-        action_log_probs = F.log_softmax(action_logits, dim=-1)
+        # [1, G, V]
+        generated_log_probs = F.log_softmax(generated_logits, dim=-1)
 
-        # [batch_size, num_action_tokens, 1]
-        action_token_ids_expanded = action_token_ids.unsqueeze(0).unsqueeze(-1)
+        # [1, G, 1]
+        generated_ids_expanded = generated_ids.unsqueeze(-1)
         
-        # Use .gather() to pick the log_prob of the chosen tokens
-        # [batch_size, num_action_tokens, 1]
+        # Gather the log_probs for the tokens that were actually chosen
+        # [1, G, 1]
         chosen_token_log_probs = torch.gather(
-            action_log_probs, 
+            generated_log_probs, 
             dim=-1, 
-            index=action_token_ids_expanded
+            index=generated_ids_expanded
         )
         
-        # Sum log_probs for the whole action
-        # [batch_size, 1] -> scalar
-        total_log_prob = chosen_token_log_probs.sum(dim=1).squeeze()
-
-        # Word normalization
-        num_words = len(action_text.split())
-        word_normalized_log_prob = total_log_prob / max(num_words, 1)
-        
-        return word_normalized_log_prob
+        # Return the TENSOR of all per-token log-probs
+        # Squeeze to shape [G]
+        return chosen_token_log_probs.squeeze()
     
     def collect_trajectories(self, num_trajectories: int) -> List[Trajectory]:
         """Collect multiple trajectories using self-play"""
@@ -1173,6 +1262,7 @@ class MAPPOTrainer:
             for i, turn in enumerate(all_turns):
                 # Explicitly control model state for each computation step
                 # to ensure gradient checkpointing works correctly
+                device = self.model.device
                 
                 try:
                     if self.config.debug and i % 10 == 0:
@@ -1200,10 +1290,22 @@ class MAPPOTrainer:
                         use_reference_model=True  # Disables LoRA adapters
                     )
                     
+                    # Convert old log probs from list to tensor
+                    old_log_prob_tensor = torch.tensor(
+                        turn.generation_log_probs, device=device, dtype=current_log_prob.dtype
+                    )
+                    
+                    # Ensure lengths match (in case of rare truncation)
+                    T = min(old_log_prob_tensor.shape[0], current_log_prob.shape[0])
+                    old_log_prob_tensor = old_log_prob_tensor[:T]
+                    current_log_prob = current_log_prob[:T]
+                    ref_log_prob = ref_log_prob[:T]
+                    
                     if self.config.debug and i % 10 == 0:
-                        print(f"    Current log prob: {current_log_prob.item():.4f}, "
-                              f"Ref log prob: {ref_log_prob.item():.4f}, "
-                              f"Old log prob: {turn.action_log_prob:.4f}")
+                        print(f"    Current log prob: {current_log_prob.sum().item():.4f}, "
+                              f"Ref log prob: {ref_log_prob.sum().item():.4f}, "
+                              f"Old log prob: {old_log_prob_tensor.sum().item():.4f}, "
+                              f"Tokens: {T}")
                 
                 except Exception as e:
                     if self.config.debug:
@@ -1220,16 +1322,17 @@ class MAPPOTrainer:
                 
                 # Now compute losses
                 
-                # Importance sampling ratio
-                ratio = torch.exp(current_log_prob - turn.action_log_prob)
+                # PER-TOKEN Importance sampling ratio
+                # ratio is shape [T]
+                ratio = torch.exp(current_log_prob - old_log_prob_tensor)
                 
-                # Track ratio and clipping
-                total_ratio += ratio.item()
-                ratio_clipped = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
-                if ratio_clipped:
-                    total_clipped += 1
+                # Track ratio and clipping (use mean for tracking)
+                total_ratio += ratio.mean().item()
+                ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
+                total_clipped += ratio_clipped_mask.float().mean().item()
                 
-                # Clipped surrogate objective
+                # PER-TOKEN Clipped surrogate objective
+                # adv is a scalar, but broadcast to shape [T]
                 adv = torch.tensor([turn.advantage], device=self.model.device)
                 surr1 = ratio * adv
                 surr2 = torch.clamp(
@@ -1237,11 +1340,12 @@ class MAPPOTrainer:
                     1 - self.config.clip_epsilon,
                     1 + self.config.clip_epsilon
                 ) * adv
+                # Average per-token losses
                 policy_loss = -torch.min(surr1, surr2).mean()
                 
-                # KL divergence penalty (prevents policy from deviating too far from reference)
-                kl_div = (current_log_prob - ref_log_prob).mean()
-                kl_loss = self.config.kl_penalty_coef * kl_div
+                # PER-TOKEN KL divergence penalty
+                kl_div_per_token = (current_log_prob - ref_log_prob)
+                kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
                 
                 # Value loss
                 value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
@@ -1546,7 +1650,7 @@ def main():
         load_model="/content/drive/MyDrive/among_them/sft_sampled",  # Direct path to checkpoint dir
         # load_head="50",                                                                      # Load value head from iteration 50
         # load_head="final",                                                                   # Load final saved value head
-        # load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_5.pt",  # Direct path to .pt file
+        load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt",  # Direct path to .pt file
         
         # Logging
         wandb_project="among-them-mappo",
