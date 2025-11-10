@@ -291,12 +291,28 @@ class MAPPOActor:
         # Get </think> token
         think_close_token = self.tokenizer.encode("</think>", add_special_tokens=False)[0]
         
+        # TIMING: Initialize timing dictionary
+        timing = {
+            "prefill": 0.0,
+            "reasoning_loop": 0.0,
+            "reasoning_tokens": 0,
+            "prefix_append": 0.0,
+            "kv_clone_total": 0.0,
+            "kv_clone_count": 0,
+            "action_generation": 0.0,
+            "action_tokens_processed": 0,
+            "model_forward_time": 0.0,
+            "python_overhead": 0.0,
+        }
+        
         # 3. Generate reasoning
         with torch.no_grad():
             # Prefill prompt
             prompt_len = inputs.input_ids.shape[1]
             cache_position = torch.arange(prompt_len, device=device)
             
+            # TIMING: Prefill
+            t_prefill_start = time.time()
             # Pass None for prefill, capture Unsloth's cache
             out = self.model(
                 inputs.input_ids,
@@ -306,6 +322,7 @@ class MAPPOActor:
             )
             logits = out.logits
             past_key_values = out.past_key_values  # Capture Unsloth's cache
+            timing["prefill"] = time.time() - t_prefill_start
             
             # Sample tokens until </think> AND store log probs
             generated_reason_ids = []
@@ -321,7 +338,10 @@ class MAPPOActor:
             # if self.config.debug:
             #     print("\n💭 Streaming reasoning tokens: ", end="", flush=True)
             
+            # TIMING: Reasoning loop
+            t_reasoning_start = time.time()
             for _ in range(self.config.max_reasoning_tokens):
+                t_token_start = time.time()
                 step_logits = logits[:, -1, :].squeeze(0)
                 
                 # Temperature scaling
@@ -375,6 +395,7 @@ class MAPPOActor:
                 #     print(token_text, end="", flush=True)
                 
                 # Continue generation (unpack tuple from fast path)
+                t_model_start = time.time()
                 out_tuple = self.model(
                     next_token[:, None].to(dtype=torch.long),
                     past_key_values=past_key_values,
@@ -382,7 +403,15 @@ class MAPPOActor:
                     position_ids=cur_pos,
                 )
                 logits, past_key_values = out_tuple[0], out_tuple[1]
+                timing["model_forward_time"] += time.time() - t_model_start
+                
+                # TIMING: Track python overhead (everything except model forward)
+                timing["python_overhead"] += time.time() - t_token_start - (time.time() - t_model_start)
                 cur_pos += 1
+            
+            # TIMING: End reasoning loop
+            timing["reasoning_loop"] = time.time() - t_reasoning_start
+            timing["reasoning_tokens"] = len(generated_reason_ids)
             
             # Print newline after streaming
             if self.config.debug:
@@ -394,12 +423,15 @@ class MAPPOActor:
             # 5. Append </think>\n\nAction: [Speak:] prefix AND store log probs
             end_think_token_ids = self.tokenizer.encode("\n</think>", add_special_tokens=False)
             if is_generative_turn:
-                action_prefix_token_ids = self.tokenizer.encode("\n\nAction: Speak:", add_special_tokens=False)
+                action_prefix_token_ids = self.tokenizer.encode("\n\nTell:", add_special_tokens=False)
             else:
                 action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
             
             # if self.config.debug:
             #     print("🎯 Appending prefix: ", end="", flush=True)
+            
+            # TIMING: Prefix append
+            t_prefix_start = time.time()
             prefix_ids = end_think_token_ids + action_prefix_token_ids
             prefix_log_probs = []  # Store log_probs for prefix
             for tid in prefix_ids:
@@ -424,6 +456,8 @@ class MAPPOActor:
             
             # if self.config.debug:
             #     print()  # Newline after prefix
+            
+            timing["prefix_append"] = time.time() - t_prefix_start
             
             last_logits = current_logits
             prefix_end_pos = cur_pos.item()
@@ -517,9 +551,15 @@ class MAPPOActor:
                     # This prevents subsequent actions from seeing KV state
                     # modified by previous actions
                     # Deep-clone the tuple of (Key, Value) tensor pairs for each layer
+                    
+                    # TIMING: KV cache cloning
+                    t_clone_start = time.time()
                     action_kv_cache = tuple(
                         (k.clone(), v.clone()) for k, v in prefix_cache
                     )
+                    clone_time = time.time() - t_clone_start
+                    timing["kv_clone_total"] += clone_time
+                    timing["kv_clone_count"] += 1
                     action_text = action.command_perspective
                     action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
                     action_token_ids = action_tokens.input_ids[0].to(device)
@@ -541,7 +581,10 @@ class MAPPOActor:
                     current_logits_branch = last_logits
                     cache_position_act = torch.tensor([prefix_end_pos], device=device)
                     
+                    # TIMING: Action token processing
+                    t_action_start = time.time()
                     for i, token_id in enumerate(action_token_ids):
+                        t_action_token_start = time.time()
                         probs = torch.softmax(current_logits_branch, dim=-1)
                         token_prob = probs[token_id].item()
                         log_prob = math.log(max(token_prob, 1e-10))
@@ -554,6 +597,7 @@ class MAPPOActor:
                         total_log_prob += log_prob
                         
                         if i < len(action_token_ids) - 1:
+                            t_action_model_start = time.time()
                             next_output_tuple = self.model(
                                 token_id.unsqueeze(0).unsqueeze(0),
                                 past_key_values=action_kv_cache,
@@ -562,7 +606,14 @@ class MAPPOActor:
                             )
                             current_logits_branch = next_output_tuple[0][0, -1, :]
                             action_kv_cache = next_output_tuple[1]
+                            timing["model_forward_time"] += time.time() - t_action_model_start
+                            timing["python_overhead"] += time.time() - t_action_token_start - (time.time() - t_action_model_start)
                             cache_position_act += 1
+                        
+                        timing["action_tokens_processed"] += 1
+                    
+                    # TIMING: End action processing
+                    timing["action_generation"] += time.time() - t_action_start
                     
                     # 1. Calculate SELECTION score (word-normalized)
                     word_normalized_log_prob = total_log_prob / max(num_words, 1)
@@ -598,6 +649,31 @@ class MAPPOActor:
                         print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
                 print(f"\nTotal generation tokens: {len(full_generation_log_probs)}")
                 print(f"Input tokens: {input_token_count}, Output tokens: {output_token_count}")
+                
+                # TIMING: Print detailed timing breakdown
+                total_time = timing["prefill"] + timing["reasoning_loop"] + timing["prefix_append"] + timing["kv_clone_total"] + timing["action_generation"]
+                print(f"\n{'─'*60}")
+                print(f"⏱️  TIMING BREAKDOWN")
+                print(f"{'─'*60}")
+                print(f"Prefill:              {timing['prefill']*1000:8.2f}ms")
+                print(f"Reasoning loop:       {timing['reasoning_loop']*1000:8.2f}ms ({timing['reasoning_tokens']} tokens)")
+                if timing['reasoning_tokens'] > 0:
+                    print(f"  ├─ ms/token:        {timing['reasoning_loop']*1000/timing['reasoning_tokens']:8.2f}ms")
+                    print(f"  ├─ tok/s:           {timing['reasoning_tokens']/max(timing['reasoning_loop'],1e-6):8.1f}")
+                print(f"Prefix append:        {timing['prefix_append']*1000:8.2f}ms")
+                if not is_generative_turn:
+                    print(f"KV cache cloning:     {timing['kv_clone_total']*1000:8.2f}ms ({timing['kv_clone_count']} clones)")
+                    if timing['kv_clone_count'] > 0:
+                        print(f"  ├─ ms/clone:        {timing['kv_clone_total']*1000/timing['kv_clone_count']:8.2f}ms")
+                    print(f"Action generation:    {timing['action_generation']*1000:8.2f}ms ({timing['action_tokens_processed']} tokens)")
+                    if timing['action_tokens_processed'] > 0:
+                        print(f"  ├─ ms/token:        {timing['action_generation']*1000/timing['action_tokens_processed']:8.2f}ms")
+                print(f"{'─'*60}")
+                print(f"Model forward time:   {timing['model_forward_time']*1000:8.2f}ms")
+                print(f"Python overhead:      {timing['python_overhead']*1000:8.2f}ms")
+                print(f"Total time:           {total_time*1000:8.2f}ms")
+                if output_token_count > 0:
+                    print(f"Overall tok/s:        {output_token_count/max(total_time,1e-6):8.1f}")
                 print(f"{'='*60}\n")
             
             return chosen_idx, full_generation_log_probs, reasoning, input_token_count, output_token_count
@@ -874,20 +950,11 @@ def run_game_worker(
             model_name,
             load_in_4bit=config.load_in_4bit,
             max_seq_length=config.max_seq_length,
+            attn_implementation="flash_attention_2",
         )
         log_progress("Model loaded")
         
-        # 3. Apply chat template
-        print(f"[Worker {worker_id}] Applying chat template: {config.chat_template}")
-        sys.stdout.flush()
-        tokenizer = get_chat_template(
-            tokenizer,
-            chat_template=config.chat_template,
-        )
-        print(f"[Worker {worker_id}] Chat template applied")
-        sys.stdout.flush()
-        
-        # 4. Load LoRA adapters (policy)
+        # 3. Load LoRA adapters (policy)
         log_progress("Loading LoRA adapters...")
         from peft import PeftModel
         model = PeftModel.from_pretrained(
@@ -896,6 +963,14 @@ def run_game_worker(
             is_trainable=False  # Not training in workers, just collecting
         )
         log_progress("LoRA adapters loaded")
+        
+        # 4. Compile model for optimized inference
+        # log_progress("Compiling model...")
+        # try:
+        #     model = torch.compile(model, mode="reduce-overhead")
+        #     log_progress("Model compiled")
+        # except Exception as e:
+        #     log_progress(f"torch.compile failed: {e}")
         
         # 5. Load value head (critic)
         log_progress("Loading value head...")
@@ -997,6 +1072,7 @@ class MAPPOTrainer:
             config.model_name,
             load_in_4bit=config.load_in_4bit,
             max_seq_length=config.max_seq_length,
+            attn_implementation="flash_attention_2",
         )
         print("✅ Base model loaded")
         
@@ -1016,6 +1092,14 @@ class MAPPOTrainer:
                 random_state=config.seed,
             )
             print("✅ LoRA adapters applied")
+        
+        # Compile model for optimized inference
+        # print("Compiling model with torch.compile()...")
+        # try:
+        #     self.model = torch.compile(self.model, mode="reduce-overhead")
+        #     print("✅ Model compiled successfully")
+        # except Exception as e:
+        #     print(f"⚠️  torch.compile() failed (will continue without): {e}")
         
         # Initialize value head in float32 for numerical stability
         # PyTorch will automatically upcast float16 inputs to float32
@@ -1278,7 +1362,7 @@ class MAPPOTrainer:
         is_generative_turn = chosen_action.type == ActionType.SPEAK
         
         if is_generative_turn:
-            action_prefix_tokens = self.tokenizer.encode("\n\nAction: Speak:", add_special_tokens=False)
+            action_prefix_tokens = self.tokenizer.encode("\n\nTell:", add_special_tokens=False)
         else:
             action_prefix_tokens = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
         
