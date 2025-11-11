@@ -11,9 +11,13 @@ Key components:
 6. Optimizations: Unsloth's native cache with branching, word normalization
 """
 
-# Prevent tokenizer deadlocks in multiprocessing
+# Environment setup BEFORE importing torch
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# Uncomment for debugging CUDA errors - forces synchronous execution
+# os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+# Help PyTorch reuse memory blocks more efficiently
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import json
 import time
@@ -585,14 +589,15 @@ class MAPPOActor:
                     t_action_start = time.time()
                     for i, token_id in enumerate(action_token_ids):
                         t_action_token_start = time.time()
-                        probs = torch.softmax(current_logits_branch, dim=-1)
-                        token_prob = probs[token_id].item()
-                        log_prob = math.log(max(token_prob, 1e-10))
+                        
+                        # Calculate log_probs directly for numerical stability
+                        step_log_probs = F.log_softmax(current_logits_branch, dim=-1)
+                        log_prob = step_log_probs[token_id].item()
                         
                         # Stream action token if debug mode
                         # if self.config.debug:
                         #     token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
-                        #     print(f"{token_text}(p={token_prob:.3f}) ", end="", flush=True)
+                        #     print(f"{token_text}(log_p={log_prob:.3f}) ", end="", flush=True)
                         raw_token_log_probs.append(log_prob)
                         total_log_prob += log_prob
                         
@@ -1381,8 +1386,9 @@ class MAPPOTrainer:
             with torch.no_grad(), self.model.disable_adapter():
                  outputs = self.model(input_ids=full_input_ids)
         else:
-            with torch.enable_grad():
-                 outputs = self.model(input_ids=full_input_ids)
+            # Respect the gradient context set by the caller
+            # (torch.no_grad() for pre-computation, or model.train() for updates)
+            outputs = self.model(input_ids=full_input_ids)
             
         # [1, C+G, V]
         logits = outputs.logits 
@@ -1678,6 +1684,49 @@ class MAPPOTrainer:
             print(f"Advantage stats - Mean: {adv_mean:.4f}, Std: {adv_std:.4f}")
             print(f"Normalized advantage - Min: {advantages_tensor.min().item():.4f}, Max: {advantages_tensor.max().item():.4f}")
         
+        # ====================================================================
+        # START STABILITY FIX: Pre-compute old_log_probs for consistency
+        # ====================================================================
+        print(f"Pre-computing log_probs for {len(all_turns)} turns...")
+        print("Emptying CUDA cache before pre-computation...")
+        torch.cuda.empty_cache()
+        
+        # Use .eval() to match the policy state during rollout
+        self.model.eval() 
+        with torch.no_grad():
+            for i, turn in enumerate(all_turns):
+                try:
+                    # 1. Compute and store old_log_prob (current policy)
+                    old_log_prob_tensor = self._compute_log_prob(
+                        turn.conversation,
+                        turn.actions,
+                        turn.chosen_action_idx,
+                        turn.reasoning,
+                        use_reference_model=False  # Use the current policy
+                    )
+                    turn.precomputed_old_log_probs = old_log_prob_tensor.detach()
+                    
+                    # 2. Compute and store ref_log_prob (base model)
+                    ref_log_prob_tensor = self._compute_log_prob(
+                        turn.conversation,
+                        turn.actions,
+                        turn.chosen_action_idx,
+                        turn.reasoning,
+                        use_reference_model=True  # Base model without LoRA
+                    )
+                    turn.precomputed_ref_log_probs = ref_log_prob_tensor.detach()
+                    del old_log_prob_tensor, ref_log_prob_tensor
+                except Exception as e:
+                    if self.config.debug:
+                        print(f"  ❌ Error pre-computing log prob for turn {i}: {e}")
+                    turn.precomputed_old_log_probs = None
+                    turn.precomputed_ref_log_probs = None
+        print("Pre-computation complete.")
+        torch.cuda.empty_cache()
+        # ====================================================================
+        # END STABILITY FIX
+        # ====================================================================
+        
         # PPO epochs
         stats = {
             "num_trajectories": len(trajectories),
@@ -1687,12 +1736,16 @@ class MAPPOTrainer:
             "advantage_std": adv_std,
         }
         
+        # Define minibatch size for efficient gradient checkpointing
+        minibatch_size = 16  # Process 4 turns at a time for optimal memory/speed trade-off
+        
         for epoch in range(self.config.ppo_epochs):
             random.shuffle(all_turns)
             
             if self.config.debug:
                 print(f"\n{'─'*80}")
                 print(f"📈 PPO Epoch {epoch + 1}/{self.config.ppo_epochs}")
+                print(f"   Minibatch size: {minibatch_size}, Total turns: {len(all_turns)}")
                 print(f"{'─'*80}")
             
             total_policy_loss = 0.0
@@ -1707,153 +1760,171 @@ class MAPPOTrainer:
             total_actor_grad_norm = 0.0
             total_critic_grad_norm = 0.0
             
-            # Zero gradients at start of epoch
-            self.actor_optimizer.zero_grad()
-            self.critic_optimizer.zero_grad()
-            
-            for i, turn in enumerate(all_turns):
-                # Explicitly control model state for each computation step
-                # to ensure gradient checkpointing works correctly
-                device = self.model.device
+            # Process turns in minibatches
+            for minibatch_idx in range(0, len(all_turns), minibatch_size):
+                minibatch = all_turns[minibatch_idx : minibatch_idx + minibatch_size]
                 
-                try:
-                    if self.config.debug and i % 10 == 0:
-                        print(f"  Turn {i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})")
+                # Zero gradients for this minibatch
+                self.actor_optimizer.zero_grad()
+                self.critic_optimizer.zero_grad()
+                
+                if self.config.debug:
+                    print(f"  Minibatch {minibatch_idx//minibatch_size + 1}/{math.ceil(len(all_turns)/minibatch_size)} "
+                          f"(Turns {minibatch_idx} to {minibatch_idx + len(minibatch) - 1})")
+                
+                # Accumulate gradients within the minibatch
+                for i, turn in enumerate(minibatch):
+                    # Explicitly control model state for each computation step
+                    # to ensure gradient checkpointing works correctly
+                    device = self.model.device
                     
-                    # Step 1: Get current_log_prob
-                    # Model MUST be in .train() mode for checkpointing to work with .backward()
+                    try:
+                        if self.config.debug and i % 10 == 0:
+                            print(f"    Turn {minibatch_idx + i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})")
+                        
+                        # Step 1: Get current_log_prob (only forward pass that needs gradients)
+                        # Model MUST be in .train() mode for checkpointing to work with .backward()
+                        self.model.train()
+                        current_log_prob = self._compute_log_prob(
+                            turn.conversation,
+                            turn.actions,
+                            turn.chosen_action_idx,
+                            turn.reasoning,
+                            use_reference_model=False
+                        )
+                        
+                        # Step 2: Use pre-computed ref_log_prob and old_log_prob
+                        ref_log_prob = turn.precomputed_ref_log_probs
+                        old_log_prob_tensor = turn.precomputed_old_log_probs
+                        
+                        if old_log_prob_tensor is None or ref_log_prob is None:
+                            if self.config.debug:
+                                print(f"      ⚠️ Skipping turn {i} (failed pre-computation)")
+                            continue
+                        
+                        # Ensure lengths match (in case of rare truncation)
+                        T = min(old_log_prob_tensor.shape[0], current_log_prob.shape[0])
+                        old_log_prob_tensor = old_log_prob_tensor[:T]
+                        current_log_prob = current_log_prob[:T]
+                        ref_log_prob = ref_log_prob[:T]
+                        
+                        # Track tokens (only 1 forward pass per turn now: current)
+                        total_training_tokens += turn.input_tokens + turn.output_tokens
+                        
+                        if self.config.debug and i % 10 == 0:
+                            print(f"      Current log prob: {current_log_prob.sum().item():.4f}, "
+                                  f"Ref log prob: {ref_log_prob.sum().item():.4f}, "
+                                  f"Old log prob: {old_log_prob_tensor.sum().item():.4f}, "
+                                  f"Tokens: {T}")
+                    
+                    except Exception as e:
+                        if self.config.debug:
+                            print(f"      ❌ Error computing log prob for turn {i}: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        continue
+                    
+                    # Step 3: Get value_pred
+                    # Base model set to .eval() inside _compute_value
+                    # Value_head must be in .train() mode to learn
+                    self.value_head.train()
+                    value_pred = self._compute_value(turn.global_state_repr)
+                    
+                    # Now compute losses
+                    
+                    # PER-TOKEN Importance sampling ratio
+                    # ratio is shape [T]
+                    ratio = torch.exp(current_log_prob - old_log_prob_tensor)
+                    
+                    # Track ratio and clipping (use mean for tracking)
+                    total_ratio += ratio.mean().item()
+                    ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
+                    total_clipped += ratio_clipped_mask.float().mean().item()
+                    
+                    # PER-TOKEN Clipped surrogate objective
+                    # adv is a scalar, but broadcast to shape [T]
+                    adv = torch.tensor([turn.advantage], device=self.model.device)
+                    surr1 = ratio * adv
+                    surr2 = torch.clamp(
+                        ratio,
+                        1 - self.config.clip_epsilon,
+                        1 + self.config.clip_epsilon
+                    ) * adv
+                    # Average per-token losses
+                    policy_loss = -torch.min(surr1, surr2).mean()
+                    
+                    # PER-TOKEN KL divergence penalty
+                    kl_div_per_token = (current_log_prob - ref_log_prob)
+                    kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
+                    
+                    # Value loss
+                    value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
+                    value_loss = F.mse_loss(value_pred, value_target)
+                    
+                    # Entropy (approximate - would need full action distribution)
+                    entropy = 0.01
+                    
+                    # SEPARATE BACKWARD PASSES to avoid gradient checkpointing conflict
+                    
+                    # 1. Actor Loss (backprops only to model/LoRA)
+                    actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
+                    actor_loss = actor_loss / len(minibatch)  # Average over minibatch
+                    
+                    # 2. Critic Loss (backprops only to value_head)
+                    critic_loss = self.config.value_loss_coef * value_loss
+                    critic_loss = critic_loss / len(minibatch)  # Average over minibatch
+                    
+                    # NaN/Inf check - skip this turn if loss is invalid
+                    if torch.isnan(actor_loss) or torch.isnan(critic_loss) or torch.isinf(actor_loss) or torch.isinf(critic_loss):
+                        if self.config.debug:
+                            print(f"      ⚠️ Skipping update for turn {i} due to NaN/Inf loss.")
+                            print(f"         Policy Loss: {policy_loss.item()}, KL Loss: {kl_loss.item()}, Value Loss: {value_loss.item()}")
+                        continue  # Skip this turn, do not backpropagate
+                    
+                    # Explicitly delete intermediate tensors to free VRAM *before* backward()
+                    try:
+                        del current_log_prob, value_pred, ratio
+                        del surr1, surr2, kl_div_per_token, adv, value_target
+                    except NameError:
+                        pass  # In case a tensor wasn't created
+                    
+                    # CRITICAL: Set model to train mode before backward() to ensure
+                    # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
                     self.model.train()
-                    current_log_prob = self._compute_log_prob(
-                        turn.conversation,
-                        turn.actions,
-                        turn.chosen_action_idx,
-                        turn.reasoning,
-                        use_reference_model=False
-                    )
+                    actor_loss.backward()
                     
-                    # Step 2: Get ref_log_prob
-                    # Model MUST be in .eval() mode for .disable_adapter() to work
-                    self.model.eval()
-                    ref_log_prob = self._compute_log_prob(
-                        turn.conversation,
-                        turn.actions,
-                        turn.chosen_action_idx,
-                        turn.reasoning,
-                        use_reference_model=True  # Disables LoRA adapters
-                    )
+                    critic_loss.backward()
                     
-                    # Convert old log probs from list to tensor
-                    old_log_prob_tensor = torch.tensor(
-                        turn.generation_log_probs, device=device, dtype=current_log_prob.dtype
-                    )
-                    
-                    # Ensure lengths match (in case of rare truncation)
-                    T = min(old_log_prob_tensor.shape[0], current_log_prob.shape[0])
-                    old_log_prob_tensor = old_log_prob_tensor[:T]
-                    current_log_prob = current_log_prob[:T]
-                    ref_log_prob = ref_log_prob[:T]
-                    
-                    # Track tokens (2 forward passes per turn: current + reference)
-                    total_training_tokens += 2 * (turn.input_tokens + turn.output_tokens)
-                    
-                    if self.config.debug and i % 10 == 0:
-                        print(f"    Current log prob: {current_log_prob.sum().item():.4f}, "
-                              f"Ref log prob: {ref_log_prob.sum().item():.4f}, "
-                              f"Old log prob: {old_log_prob_tensor.sum().item():.4f}, "
-                              f"Tokens: {T}")
+                    total_policy_loss += policy_loss.item()
+                    total_value_loss += value_loss.item()
+                    total_kl_loss += kl_loss.item()
+                    total_entropy += entropy
+                    num_updates += 1
                 
-                except Exception as e:
-                    if self.config.debug:
-                        print(f"❌ Error computing log prob for turn {i}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                    continue
+                # End of minibatch: clip gradients and step optimizers
+                actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(),
+                    self.config.max_grad_norm
+                )
+                critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.value_head.parameters(),
+                    self.config.max_grad_norm
+                )
                 
-                # Step 3: Get value_pred
-                # Base model set to .eval() inside _compute_value
-                # Value_head must be in .train() mode to learn
-                self.value_head.train()
-                value_pred = self._compute_value(turn.global_state_repr)
+                total_actor_grad_norm += actor_grad_norm.item()
+                total_critic_grad_norm += critic_grad_norm.item()
                 
-                # Now compute losses
-                
-                # PER-TOKEN Importance sampling ratio
-                # ratio is shape [T]
-                ratio = torch.exp(current_log_prob - old_log_prob_tensor)
-                
-                # Track ratio and clipping (use mean for tracking)
-                total_ratio += ratio.mean().item()
-                ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
-                total_clipped += ratio_clipped_mask.float().mean().item()
-                
-                # PER-TOKEN Clipped surrogate objective
-                # adv is a scalar, but broadcast to shape [T]
-                adv = torch.tensor([turn.advantage], device=self.model.device)
-                surr1 = ratio * adv
-                surr2 = torch.clamp(
-                    ratio,
-                    1 - self.config.clip_epsilon,
-                    1 + self.config.clip_epsilon
-                ) * adv
-                # Average per-token losses
-                policy_loss = -torch.min(surr1, surr2).mean()
-                
-                # PER-TOKEN KL divergence penalty
-                kl_div_per_token = (current_log_prob - ref_log_prob)
-                kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
-                
-                # Value loss
-                value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
-                value_loss = F.mse_loss(value_pred, value_target)
-                
-                # Entropy (approximate - would need full action distribution)
-                entropy = 0.01
-                
-                # SEPARATE BACKWARD PASSES to avoid gradient checkpointing conflict
-                
-                # 1. Actor Loss (backprops only to model/LoRA)
-                actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
-                actor_loss = actor_loss / self.config.gradient_accumulation_steps
-                
-                # CRITICAL: Set model to train mode before backward() to ensure
-                # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
-                self.model.train()
-                actor_loss.backward()
-                
-                # 2. Critic Loss (backprops only to value_head)
-                critic_loss = self.config.value_loss_coef * value_loss
-                critic_loss = critic_loss / self.config.gradient_accumulation_steps
-                critic_loss.backward()
-                
-                total_policy_loss += policy_loss.item()
-                total_value_loss += value_loss.item()
-                total_kl_loss += kl_loss.item()
-                total_entropy += entropy
-                num_updates += 1
-                
-                # Optimizer step with gradient accumulation
-                if (i + 1) % self.config.gradient_accumulation_steps == 0 or (i + 1) == len(all_turns):
-                    actor_grad_norm = torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(),
-                        self.config.max_grad_norm
-                    )
-                    critic_grad_norm = torch.nn.utils.clip_grad_norm_(
-                        self.value_head.parameters(),
-                        self.config.max_grad_norm
-                    )
-                    
-                    total_actor_grad_norm += actor_grad_norm.item()
-                    total_critic_grad_norm += critic_grad_norm.item()
-                    
-                    self.actor_optimizer.step()
-                    self.critic_optimizer.step()
-                    self.actor_optimizer.zero_grad()
-                    self.critic_optimizer.zero_grad()
+                self.actor_optimizer.step()
+                self.critic_optimizer.step()
             
             print(f"  PPO Epoch {epoch+1}/{self.config.ppo_epochs}: "
                   f"Policy Loss={total_policy_loss/max(num_updates,1):.4f}, "
                   f"Value Loss={total_value_loss/max(num_updates,1):.4f}, "
                   f"KL Loss={total_kl_loss/max(num_updates,1):.4f}")
+            
+            # Clear cache between epochs to fight fragmentation
+            print(f"  Epoch {epoch+1} complete. Emptying CUDA cache...")
+            torch.cuda.empty_cache()
         
         # Calculate update time
         update_time = time.time() - update_start_time
@@ -1868,7 +1939,7 @@ class MAPPOTrainer:
         avg_policy_loss = total_policy_loss / max(num_updates, 1)
         avg_value_loss = total_value_loss / max(num_updates, 1)
         avg_kl_loss = total_kl_loss / max(num_updates, 1)
-        num_grad_steps = max(num_updates // self.config.gradient_accumulation_steps, 1)
+        num_grad_steps = max(math.ceil(len(all_turns) / minibatch_size) * self.config.ppo_epochs, 1)
         
         stats["policy_loss"] = avg_policy_loss
         stats["value_loss"] = avg_value_loss
@@ -2233,14 +2304,14 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=4,
+        trajectories_per_iteration=8,
         actor_lr=1e-6,
         critic_lr=3e-6,
-        gradient_accumulation_steps=2,
+        gradient_accumulation_steps=1,
         max_parallel_workers=1,  # Requires loky: pip install loky
         
         # PPO-specific
-        ppo_epochs=2,
+        ppo_epochs=4,
         clip_epsilon=0.2,
         gamma=1.0,
         gae_lambda=0.95,
@@ -2286,7 +2357,26 @@ def main():
     )
     
     trainer = MAPPOTrainer(config)
-    trainer.train()
+    
+    # Catch all errors and save stacktrace to file
+    try:
+        trainer.train()
+    except Exception as e:
+        error_file = "/content/drive/MyDrive/among_them/outputs/error_log.txt"
+        with open(error_file, "w") as f:
+            f.write(f"{'='*80}\n")
+            f.write(f"TRAINING ERROR - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"{'='*80}\n\n")
+            f.write(f"Error: {str(e)}\n\n")
+            f.write("Full Traceback:\n")
+            import traceback
+            f.write(traceback.format_exc())
+        
+        print(f"\n{'='*80}")
+        print(f"❌ TRAINING CRASHED - Stacktrace saved to {error_file}")
+        print(f"{'='*80}")
+        print(traceback.format_exc())
+        raise  # Re-raise to ensure Colab shows the error
 
 
 if __name__ == "__main__":
