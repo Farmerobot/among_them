@@ -127,6 +127,7 @@ class MAPPOConfig:
     # Debug
     debug: bool = True
     seed: int = 42
+    load_trajectories_from_disk: Optional[int] = None  # Load last N trajectories from disk (debug only)
 
 
 # ============================================================================
@@ -1477,6 +1478,162 @@ class MAPPOTrainer:
         
         return trajectories, collection_stats
     
+    def _load_recent_trajectories_from_disk(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
+        """Load the most recent N trajectories from disk and reconstruct TurnData for PPO update.
+        
+        This is a DEBUG feature to resume from saved trajectories without re-collection.
+        """
+        print(f"\n{'='*80}")
+        print(f"🔄 LOADING {num_trajectories} TRAJECTORIES FROM DISK (DEBUG MODE)")
+        print(f"{'='*80}\n")
+        
+        traj_dir = Path(self.config.output_dir).parent / "trajectories"
+        if not traj_dir.exists():
+            raise FileNotFoundError(f"Trajectory directory not found: {traj_dir}")
+        
+        # Find all trajectory files sorted by modification time (most recent first)
+        traj_files = sorted(traj_dir.glob("traj_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        
+        if len(traj_files) < num_trajectories:
+            raise ValueError(f"Only found {len(traj_files)} trajectories, need {num_trajectories}")
+        
+        # Load the most recent N trajectories
+        recent_files = traj_files[:num_trajectories]
+        print(f"Found {len(traj_files)} total trajectories, loading {num_trajectories} most recent:\n")
+        for i, f in enumerate(recent_files, 1):
+            print(f"  {i}. {f.name}")
+        print()
+        
+        trajectories = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        
+        for traj_file in recent_files:
+            print(f"Loading {traj_file.name}...")
+            
+            try:
+                # Load saved game using GameJSONEncoder format
+                with open(traj_file, 'r') as f:
+                    history_items: List[History]
+                    players: List[Player]
+                    game_config: GameConfig
+                    history_items, players, game_config = json.load(f, object_hook=game_object_hook)
+                
+                # Determine outcome
+                end_reason = get_end_game_reason(history_items, players)
+                if end_reason is None:
+                    raise ValueError(f"Game {traj_file.name} ended without a clear winner")
+                
+                winner_role = self.actor._determine_winner_from_end_reason(end_reason)
+                player_roles = {p.name: p.role for p in players}
+                
+                # Reconstruct TurnData for each turn by replaying the game
+                # Use GameEngine to get proper conversation context at each turn
+                turns_data = []
+                
+                print(f"  Reconstructing {len(history_items)} turns...")
+                
+                # Create a fresh engine to replay the game
+                replay_engine = GameEngine(game_config)
+                replay_engine.players = players
+                replay_engine.history = []
+                
+                for turn_idx, hist in enumerate(history_items):
+                    if hist.action_taken.player_name == "System":
+                        # Add system action to replay engine and continue
+                        replay_engine.history.append(hist)
+                        continue
+                    
+                    player_name = hist.action_taken.player_name
+                    player_role = player_roles[player_name]
+                    
+                    # Get proper conversation context from GameEngine
+                    turn_context = replay_engine.get_turn_context(player_name)
+                    if turn_context is None or turn_context[0] is None:
+                        print(f"    ⚠️ Warning: Could not get turn context for turn {turn_idx}, skipping")
+                        replay_engine.history.append(hist)
+                        continue
+                    
+                    _, actions_available, conversation, _ = turn_context
+                    
+                    # Extract reasoning from llm_cot if available
+                    reasoning = hist.llm_cot if hasattr(hist, 'llm_cot') and hist.llm_cot else ""
+                    
+                    # Build global state
+                    global_state = self.actor._build_global_state(replay_engine.history, len(replay_engine.history))
+                    
+                    # Find which action index was chosen (match by command_perspective)
+                    chosen_action_idx = 0
+                    for i, action in enumerate(actions_available):
+                        if action.command_perspective == hist.action_taken.set_stories().command_perspective:
+                            chosen_action_idx = i
+                            break
+                    
+                    # Create TurnData with proper conversation context
+                    turn_data = TurnData(
+                        player_name=player_name,
+                        player_role=player_role,
+                        conversation=conversation,  # Proper conversation from GameEngine
+                        actions=actions_available,  # All available actions at this turn
+                        chosen_action_idx=chosen_action_idx,
+                        chosen_action=hist.action_taken,
+                        reasoning=reasoning,
+                        generation_log_probs=[],  # Will be computed during PPO update
+                        global_state_repr=global_state,
+                        input_tokens=0,  # Unknown from saved data
+                        output_tokens=len(reasoning.split()),  # Rough estimate
+                        generation_time=0.0
+                    )
+                    
+                    turns_data.append(turn_data)
+                    total_output_tokens += turn_data.output_tokens
+                    
+                    # Apply the action to replay engine for next turn
+                    replay_engine.history.append(hist)
+                
+                # Create Trajectory object
+                trajectory = Trajectory(
+                    turns=turns_data,
+                    winner_role=winner_role,
+                    end_reason=end_reason,
+                    collection_time=0.0,  # Not applicable for loaded trajectories
+                    total_input_tokens=0,
+                    total_output_tokens=total_output_tokens
+                )
+                
+                trajectories.append(trajectory)
+                print(f"  ✅ Loaded: {len(turns_data)} turns, winner: {winner_role.name}, end_reason: {end_reason.name}\n")
+                
+            except Exception as e:
+                print(f"  ❌ Error loading {traj_file.name}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        if len(trajectories) < num_trajectories:
+            raise ValueError(f"Only successfully loaded {len(trajectories)}/{num_trajectories} trajectories")
+        
+        # Create collection stats
+        collection_stats = {
+            "collection/total_time": 0.0,  # Not applicable
+            "collection/avg_time_per_trajectory": 0.0,
+            "collection/total_input_tokens": total_input_tokens,
+            "collection/total_output_tokens": total_output_tokens,
+            "collection/avg_input_tokens_per_trajectory": total_input_tokens / max(len(trajectories), 1),
+            "collection/avg_output_tokens_per_trajectory": total_output_tokens / max(len(trajectories), 1),
+            "collection/loaded_from_disk": True,
+        }
+        
+        print(f"{'='*80}")
+        print(f"📊 LOADED {len(trajectories)} TRAJECTORIES FROM DISK")
+        print(f"{'='*80}")
+        print(f"Total turns: {sum(len(t.turns) for t in trajectories)}")
+        print(f"Total output tokens: {total_output_tokens}")
+        print(f"⚠️  WARNING: Log probs will be recomputed during PPO update")
+        print(f"{'='*80}\n")
+        
+        return trajectories, collection_stats
+    
     def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
         """Collect multiple trajectories (parallel if max_parallel_workers > 1, else sequential)
         
@@ -1988,8 +2145,16 @@ class MAPPOTrainer:
             print(f"ITERATION {iteration + 1}/{self.config.num_policy_iterations}")
             print(f"{'='*80}")
             
-            # Collect trajectories via self-play
-            trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
+            # Collect trajectories via self-play OR load from disk (debug)
+            if self.config.load_trajectories_from_disk:
+                print(f"\n⚠️  DEBUG MODE: Loading trajectories from disk instead of collecting\n")
+                trajectories, collection_stats = self._load_recent_trajectories_from_disk(
+                    self.config.load_trajectories_from_disk
+                )
+                # Only load once, then disable for subsequent iterations
+                self.config.load_trajectories_from_disk = None
+            else:
+                trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -2353,7 +2518,8 @@ def main():
         
         # Debug
         debug=True,
-        seed=42
+        seed=42,
+        load_trajectories_from_disk=8,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
     trainer = MAPPOTrainer(config)
