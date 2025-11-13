@@ -1043,6 +1043,24 @@ def run_game_worker(
 class MAPPOTrainer:
     """Main trainer implementing MAPPO algorithm"""
     
+    def _print_vram_summary(self, context: str):
+        """Helper to print a VRAM summary for debugging."""
+        if not self.config.debug or not torch.cuda.is_available():
+            return
+        
+        allocated = torch.cuda.memory_allocated() / (1024**3)
+        reserved = torch.cuda.memory_reserved() / (1024**3)
+        max_allocated = torch.cuda.max_memory_allocated() / (1024**3)
+        
+        print(f"\n{'='*20} VRAM @ {context} {'='*20}")
+        print(f"  Allocated:        {allocated:5.2f} GB")
+        print(f"  Reserved (Cache): {reserved:5.2f} GB")
+        print(f"  Max Allocated:    {max_allocated:5.2f} GB")
+        print(f"{'='*50}\n")
+        
+        # Reset max for the next step
+        torch.cuda.reset_peak_memory_stats()
+    
     def __init__(self, config: MAPPOConfig):
         self.config = config
         self._set_seeds(config.seed)
@@ -1779,6 +1797,7 @@ class MAPPOTrainer:
         print(f"🎓 PPO UPDATE - TRAINING POLICY")
         print(f"{'='*80}")
         print(f"Trajectories: {len(trajectories)}")
+        self._print_vram_summary("Start of PPO update")
         print(f"Computing advantages with GAE...")
         
         # Compute returns and advantages for all turns
@@ -1788,7 +1807,14 @@ class MAPPOTrainer:
         # Track tokens processed during training
         total_training_tokens = 0
         
-        for traj in trajectories:
+        # GAE timing
+        gae_start_time = time.time()
+        total_gae_turns = 0
+        total_value_time = 0.0
+        
+        for traj_idx, traj in enumerate(trajectories):
+            traj_start_time = time.time()
+            
             # Track wins
             for turn in traj.turns:
                 if traj.get_reward_for_role(turn.player_role) > 0:
@@ -1807,9 +1833,19 @@ class MAPPOTrainer:
             gae = 0.0
             
             # Backward pass
-            for turn in reversed(traj.turns):
+            for turn_idx, turn in enumerate(reversed(traj.turns)):
                 # Compute value estimate
+                value_start = time.time()
                 turn.value_estimate = self._compute_value(turn.global_state_repr).item()
+                value_time = time.time() - value_start
+                total_value_time += value_time
+                total_gae_turns += 1
+                
+                # Print progress every 10 turns
+                if total_gae_turns % 10 == 0:
+                    elapsed = time.time() - gae_start_time
+                    avg_per_turn = elapsed / total_gae_turns
+                    print(f"  GAE Progress: {total_gae_turns} turns, {elapsed:.1f}s elapsed, {avg_per_turn*1000:.1f}ms/turn")
                 
                 # TD error
                 reward = final_reward if turn == traj.turns[-1] else 0.0
@@ -1827,6 +1863,10 @@ class MAPPOTrainer:
                 turn.advantage = adv
                 turn.returns = ret
                 all_turns.append(turn)
+            
+            traj_time = time.time() - traj_start_time
+            if self.config.debug:
+                print(f"  Trajectory {traj_idx+1}/{len(trajectories)}: {len(traj.turns)} turns, {traj_time:.2f}s ({traj_time/len(traj.turns)*1000:.1f}ms/turn)")
         
         # Normalize advantages
         advantages_tensor = torch.tensor([t.advantage for t in all_turns], device=self.model.device)
@@ -1836,24 +1876,45 @@ class MAPPOTrainer:
         for i, turn in enumerate(all_turns):
             turn.advantage = advantages_tensor[i].item()
         
+        gae_total_time = time.time() - gae_start_time
+        avg_gae_per_turn = gae_total_time / max(total_gae_turns, 1)
+        avg_gae_per_traj = gae_total_time / max(len(trajectories), 1)
+        avg_value_time = total_value_time / max(total_gae_turns, 1)
+        
         print(f"Processing {len(all_turns)} turns across {len(trajectories)} trajectories")
         if self.config.debug:
             print(f"Advantage stats - Mean: {adv_mean:.4f}, Std: {adv_std:.4f}")
             print(f"Normalized advantage - Min: {advantages_tensor.min().item():.4f}, Max: {advantages_tensor.max().item():.4f}")
+        print(f"\nGAE Timing:")
+        print(f"  Total time: {gae_total_time:.2f}s")
+        print(f"  Avg per trajectory: {avg_gae_per_traj:.2f}s")
+        print(f"  Avg per turn: {avg_gae_per_turn*1000:.1f}ms")
+        print(f"  Avg value computation: {avg_value_time*1000:.1f}ms/turn")
+        self._print_vram_summary("After GAE/Value computation")
         
         # ====================================================================
         # START STABILITY FIX: Pre-compute old_log_probs for consistency
         # ====================================================================
-        print(f"Pre-computing log_probs for {len(all_turns)} turns...")
+        print(f"\nPre-computing log_probs for {len(all_turns)} turns...")
         print("Emptying CUDA cache before pre-computation...")
         torch.cuda.empty_cache()
+        self._print_vram_summary("Before LogProb Pre-computation")
         
         # Use .eval() to match the policy state during rollout
-        self.model.eval() 
+        self.model.eval()
+        
+        # Timing for log prob pre-computation
+        precomp_start_time = time.time()
+        total_old_logprob_time = 0.0
+        total_ref_logprob_time = 0.0
+        successful_turns = 0
+        
         with torch.no_grad():
             for i, turn in enumerate(all_turns):
+                turn_start = time.time()
                 try:
                     # 1. Compute and store old_log_prob (current policy)
+                    old_start = time.time()
                     old_log_prob_tensor = self._compute_log_prob(
                         turn.conversation,
                         turn.actions,
@@ -1861,9 +1922,14 @@ class MAPPOTrainer:
                         turn.reasoning,
                         use_reference_model=False  # Use the current policy
                     )
-                    turn.precomputed_old_log_probs = old_log_prob_tensor.detach()
+                    old_time = time.time() - old_start
+                    total_old_logprob_time += old_time
+                    
+                    # CRITICAL: Store on CPU to free VRAM
+                    turn.precomputed_old_log_probs = old_log_prob_tensor.detach().cpu()
                     
                     # 2. Compute and store ref_log_prob (base model)
+                    ref_start = time.time()
                     ref_log_prob_tensor = self._compute_log_prob(
                         turn.conversation,
                         turn.actions,
@@ -1871,15 +1937,44 @@ class MAPPOTrainer:
                         turn.reasoning,
                         use_reference_model=True  # Base model without LoRA
                     )
-                    turn.precomputed_ref_log_probs = ref_log_prob_tensor.detach()
+                    ref_time = time.time() - ref_start
+                    total_ref_logprob_time += ref_time
+                    
+                    # CRITICAL: Store on CPU to free VRAM
+                    turn.precomputed_ref_log_probs = ref_log_prob_tensor.detach().cpu()
                     del old_log_prob_tensor, ref_log_prob_tensor
+                    
+                    successful_turns += 1
+                    turn_time = time.time() - turn_start
+                    
+                    # Print progress every 10 turns
+                    if (i + 1) % 10 == 0:
+                        elapsed = time.time() - precomp_start_time
+                        avg_per_turn = elapsed / (i + 1)
+                        print(f"  Precompute Progress: {i+1}/{len(all_turns)} turns, "
+                              f"{elapsed:.1f}s elapsed, {avg_per_turn*1000:.1f}ms/turn "
+                              f"(old: {old_time*1000:.1f}ms, ref: {ref_time*1000:.1f}ms)")
+                    
                 except Exception as e:
                     if self.config.debug:
                         print(f"  ❌ Error pre-computing log prob for turn {i}: {e}")
                     turn.precomputed_old_log_probs = None
                     turn.precomputed_ref_log_probs = None
-        print("Pre-computation complete.")
+        
+        precomp_total_time = time.time() - precomp_start_time
+        avg_precomp_per_turn = precomp_total_time / max(successful_turns, 1)
+        avg_old_time = total_old_logprob_time / max(successful_turns, 1)
+        avg_ref_time = total_ref_logprob_time / max(successful_turns, 1)
+        
+        print(f"\nPre-computation complete: {successful_turns}/{len(all_turns)} successful")
+        print(f"Precompute Timing:")
+        print(f"  Total time: {precomp_total_time:.2f}s")
+        print(f"  Avg per turn: {avg_precomp_per_turn*1000:.1f}ms")
+        print(f"  Avg old_log_prob: {avg_old_time*1000:.1f}ms/turn")
+        print(f"  Avg ref_log_prob: {avg_ref_time*1000:.1f}ms/turn")
+        
         torch.cuda.empty_cache()
+        self._print_vram_summary("After LogProb Pre-computation")
         # ====================================================================
         # END STABILITY FIX
         # ====================================================================
@@ -1897,7 +1992,9 @@ class MAPPOTrainer:
         minibatch_size = 16  # Process 4 turns at a time for optimal memory/speed trade-off
         
         for epoch in range(self.config.ppo_epochs):
+            epoch_start_time = time.time()
             random.shuffle(all_turns)
+            self._print_vram_summary(f"Start of Epoch {epoch + 1}")
             
             if self.config.debug:
                 print(f"\n{'─'*80}")
@@ -1917,31 +2014,40 @@ class MAPPOTrainer:
             total_actor_grad_norm = 0.0
             total_critic_grad_norm = 0.0
             
+            # Track timing for this epoch
+            epoch_logprob_time = 0.0
+            epoch_value_time = 0.0
+            epoch_backward_time = 0.0
+            epoch_optimizer_time = 0.0
+            epoch_turns_processed = 0
+            
             # Process turns in minibatches
             for minibatch_idx in range(0, len(all_turns), minibatch_size):
+                minibatch_start_time = time.time()
                 minibatch = all_turns[minibatch_idx : minibatch_idx + minibatch_size]
                 
                 # Zero gradients for this minibatch
                 self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
                 
-                if self.config.debug:
-                    print(f"  Minibatch {minibatch_idx//minibatch_size + 1}/{math.ceil(len(all_turns)/minibatch_size)} "
-                          f"(Turns {minibatch_idx} to {minibatch_idx + len(minibatch) - 1})")
+                minibatch_num = minibatch_idx // minibatch_size + 1
+                total_minibatches = math.ceil(len(all_turns) / minibatch_size)
                 
                 # Accumulate gradients within the minibatch
+                minibatch_logprob_time = 0.0
+                minibatch_value_time = 0.0
+                minibatch_backward_time = 0.0
+                
                 for i, turn in enumerate(minibatch):
                     # Explicitly control model state for each computation step
                     # to ensure gradient checkpointing works correctly
                     device = self.model.device
                     
                     try:
-                        if self.config.debug and i % 10 == 0:
-                            print(f"    Turn {minibatch_idx + i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})")
-                        
                         # Step 1: Get current_log_prob (only forward pass that needs gradients)
                         # Model MUST be in .train() mode for checkpointing to work with .backward()
                         self.model.train()
+                        logprob_start = time.time()
                         current_log_prob = self._compute_log_prob(
                             turn.conversation,
                             turn.actions,
@@ -1949,10 +2055,13 @@ class MAPPOTrainer:
                             turn.reasoning,
                             use_reference_model=False
                         )
+                        logprob_time = time.time() - logprob_start
+                        minibatch_logprob_time += logprob_time
                         
                         # Step 2: Use pre-computed ref_log_prob and old_log_prob
-                        ref_log_prob = turn.precomputed_ref_log_probs
-                        old_log_prob_tensor = turn.precomputed_old_log_probs
+                        # Move from CPU back to GPU for computation
+                        ref_log_prob = turn.precomputed_ref_log_probs.to(device)
+                        old_log_prob_tensor = turn.precomputed_old_log_probs.to(device)
                         
                         if old_log_prob_tensor is None or ref_log_prob is None:
                             if self.config.debug:
@@ -1968,11 +2077,7 @@ class MAPPOTrainer:
                         # Track tokens (only 1 forward pass per turn now: current)
                         total_training_tokens += turn.input_tokens + turn.output_tokens
                         
-                        if self.config.debug and i % 10 == 0:
-                            print(f"      Current log prob: {current_log_prob.sum().item():.4f}, "
-                                  f"Ref log prob: {ref_log_prob.sum().item():.4f}, "
-                                  f"Old log prob: {old_log_prob_tensor.sum().item():.4f}, "
-                                  f"Tokens: {T}")
+                        epoch_turns_processed += 1
                     
                     except Exception as e:
                         if self.config.debug:
@@ -1985,7 +2090,10 @@ class MAPPOTrainer:
                     # Base model set to .eval() inside _compute_value
                     # Value_head must be in .train() mode to learn
                     self.value_head.train()
+                    value_start = time.time()
                     value_pred = self._compute_value(turn.global_state_repr)
+                    value_time = time.time() - value_start
+                    minibatch_value_time += value_time
                     
                     # Now compute losses
                     
@@ -2048,9 +2156,11 @@ class MAPPOTrainer:
                     # CRITICAL: Set model to train mode before backward() to ensure
                     # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
                     self.model.train()
+                    backward_start = time.time()
                     actor_loss.backward()
-                    
                     critic_loss.backward()
+                    backward_time = time.time() - backward_start
+                    minibatch_backward_time += backward_time
                     
                     total_policy_loss += policy_loss.item()
                     total_value_loss += value_loss.item()
@@ -2059,6 +2169,7 @@ class MAPPOTrainer:
                     num_updates += 1
                 
                 # End of minibatch: clip gradients and step optimizers
+                optimizer_start = time.time()
                 actor_grad_norm = torch.nn.utils.clip_grad_norm_(
                     self.model.parameters(),
                     self.config.max_grad_norm
@@ -2073,11 +2184,40 @@ class MAPPOTrainer:
                 
                 self.actor_optimizer.step()
                 self.critic_optimizer.step()
+                optimizer_time = time.time() - optimizer_start
+                
+                # Track epoch-level timing
+                epoch_logprob_time += minibatch_logprob_time
+                epoch_value_time += minibatch_value_time
+                epoch_backward_time += minibatch_backward_time
+                epoch_optimizer_time += optimizer_time
+                
+                minibatch_total_time = time.time() - minibatch_start_time
+                
+                # Print progress every minibatch (or every 3 minibatches if too verbose)
+                if minibatch_num % 3 == 0 or minibatch_num == total_minibatches:
+                    avg_turn_time = minibatch_total_time / max(len(minibatch), 1)
+                    print(f"  Minibatch {minibatch_num}/{total_minibatches}: "
+                          f"{minibatch_total_time:.2f}s total, {avg_turn_time*1000:.1f}ms/turn "
+                          f"(logprob: {minibatch_logprob_time*1000:.0f}ms, "
+                          f"value: {minibatch_value_time*1000:.0f}ms, "
+                          f"backward: {minibatch_backward_time*1000:.0f}ms, "
+                          f"opt: {optimizer_time*1000:.0f}ms)")
+                
+                self._print_vram_summary(f"Epoch {epoch+1} - End of Minibatch {minibatch_num}")
             
-            print(f"  PPO Epoch {epoch+1}/{self.config.ppo_epochs}: "
-                  f"Policy Loss={total_policy_loss/max(num_updates,1):.4f}, "
-                  f"Value Loss={total_value_loss/max(num_updates,1):.4f}, "
-                  f"KL Loss={total_kl_loss/max(num_updates,1):.4f}")
+            epoch_total_time = time.time() - epoch_start_time
+            avg_epoch_turn_time = epoch_total_time / max(epoch_turns_processed, 1)
+            
+            print(f"\n  PPO Epoch {epoch+1}/{self.config.ppo_epochs} Summary:")
+            print(f"    Losses: Policy={total_policy_loss/max(num_updates,1):.4f}, "
+                  f"Value={total_value_loss/max(num_updates,1):.4f}, "
+                  f"KL={total_kl_loss/max(num_updates,1):.4f}")
+            print(f"    Timing: {epoch_total_time:.2f}s total, {avg_epoch_turn_time*1000:.1f}ms/turn")
+            print(f"      Breakdown: logprob={epoch_logprob_time:.2f}s, "
+                  f"value={epoch_value_time:.2f}s, "
+                  f"backward={epoch_backward_time:.2f}s, "
+                  f"optimizer={epoch_optimizer_time:.2f}s")
             
             # Clear cache between epochs to fight fragmentation
             print(f"  Epoch {epoch+1} complete. Emptying CUDA cache...")
@@ -2144,6 +2284,7 @@ class MAPPOTrainer:
             print(f"\n{'='*80}")
             print(f"ITERATION {iteration + 1}/{self.config.num_policy_iterations}")
             print(f"{'='*80}")
+            self._print_vram_summary("Start of iteration")
             
             # Collect trajectories via self-play OR load from disk (debug)
             if self.config.load_trajectories_from_disk:
@@ -2156,8 +2297,10 @@ class MAPPOTrainer:
             else:
                 trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
 
+            self._print_vram_summary("After trajectory collection")
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+            self._print_vram_summary("After collection cache empty")
             
             if not trajectories:
                 print("Warning: No trajectories collected, skipping iteration")
@@ -2165,6 +2308,7 @@ class MAPPOTrainer:
             
             # Update policy with MAPPO
             stats = self.update_policy_mappo(trajectories)
+            self._print_vram_summary("After PPO update")
             
             # Merge collection stats with training stats
             stats.update(collection_stats)
