@@ -13,6 +13,7 @@ Key components:
 
 # Environment setup BEFORE importing torch
 import os
+from types import FunctionType
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # Uncomment for debugging CUDA errors - forces synchronous execution
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -253,6 +254,7 @@ class MAPPOActor:
         self.value_head = value_head
         self.config = config
         self.trainer = trainer  # Reference to trainer for iteration tracking
+        self.progress_callback: FunctionType = lambda x: None  # Optional callback for turn-by-turn progress updates
         
         self.game_config = GameConfig(
             num_tasks=config.num_tasks,
@@ -264,7 +266,7 @@ class MAPPOActor:
             impostor_cooldown=config.impostor_cooldown
         )
     
-    def _generate_action_with_policy(
+    def _generate_action_with_policy( # MARK: .    GENERATE
         self,
         conversation: List[Dict[str, str]],
         actions: List[Action],
@@ -384,7 +386,7 @@ class MAPPOActor:
                 step_log_probs = F.log_softmax(step_logits, dim=-1)
                 probs = torch.softmax(step_logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
-                token_id = next_token.item()
+                token_id = int(next_token.item())
                 
                 if token_id == think_close_token:
                     # if self.config.debug:
@@ -518,7 +520,7 @@ class MAPPOActor:
                     step_log_probs = F.log_softmax(step_logits, dim=-1)
                     probs = torch.softmax(step_logits, dim=-1)
                     next_token = torch.multinomial(probs, num_samples=1)
-                    token_id = next_token.item()
+                    token_id = int(next_token.item())
                     
                     if token_id == self.tokenizer.eos_token_id:
                         break
@@ -632,7 +634,7 @@ class MAPPOActor:
                 
                 # Select action using word-normalized scores
                 action_probs = torch.softmax(torch.tensor(selection_scores, device=device), dim=-1)
-                chosen_idx = torch.multinomial(action_probs, num_samples=1).item()
+                chosen_idx = int(torch.multinomial(action_probs, num_samples=1).item())
                 chosen_per_token_log_probs = all_per_token_log_probs[chosen_idx]
             
             # Combine all log_probs for PPO update
@@ -644,12 +646,12 @@ class MAPPOActor:
             
             if self.config.debug:
                 print(f"\n{'='*60}")
-                print(f"🎯 ACTION GENERATION")
+                print("🎯 ACTION GENERATION")
                 print(f"{'='*60}")
                 print(f"Generated {len(generated_reason_ids)} reasoning tokens")
                 print(f"Reasoning: {reasoning[:200]}..." if len(reasoning) > 200 else f"Reasoning: {reasoning}")
                 if not is_generative_turn:
-                    print(f"\nAction probabilities:")
+                    print("\nAction probabilities:")
                     for idx, (action, prob) in enumerate(zip(actions, action_probs)):
                         marker = "👉" if idx == chosen_idx else "  "
                         print(f"{marker} [{idx}] {action.command_perspective[:60]}: {prob.item():.4f}")
@@ -659,7 +661,7 @@ class MAPPOActor:
                 # TIMING: Print detailed timing breakdown
                 total_time = timing["prefill"] + timing["reasoning_loop"] + timing["prefix_append"] + timing["kv_clone_total"] + timing["action_generation"]
                 print(f"\n{'─'*60}")
-                print(f"⏱️  TIMING BREAKDOWN")
+                print("⏱️  TIMING BREAKDOWN")
                 print(f"{'─'*60}")
                 print(f"Prefill:              {timing['prefill']*1000:8.2f}ms")
                 print(f"Reasoning loop:       {timing['reasoning_loop']*1000:8.2f}ms ({timing['reasoning_tokens']} tokens)")
@@ -684,7 +686,7 @@ class MAPPOActor:
             
             return chosen_idx, full_generation_log_probs, reasoning, input_token_count, output_token_count
     
-    def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str:
+    def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str: # MARK: .      GLOBAL
         """
         Build global state from History.to_text() + ONLY LAST reasoning per player.
         
@@ -763,7 +765,7 @@ class MAPPOActor:
         except Exception as e:
             print(f"⚠️  Warning: Failed to save trajectory: {e}")
     
-    def collect_trajectory(self) -> Optional[Trajectory]:
+    def collect_trajectory(self) -> Optional[Trajectory]: # MARK: .      COLLECT
         """
         Run one complete game using self-play and collect trajectory.
         Returns None if game fails to complete properly.
@@ -772,7 +774,7 @@ class MAPPOActor:
         
         if self.config.debug:
             print(f"\n{'#'*80}")
-            print(f"🎮 STARTING NEW GAME")
+            print("🎮 STARTING NEW GAME")
             print(f"{'#'*80}\n")
         
         engine = GameEngine(self.game_config)
@@ -874,7 +876,7 @@ class MAPPOActor:
                 
                 if self.config.debug:
                     print(f"\n{'#'*80}")
-                    print(f"🏁 GAME OVER")
+                    print("🏁 GAME OVER")
                     print(f"{'#'*80}")
                     print(f"Turns: {turn_count + 1}")
                     print(f"End reason: {end_reason.name}")
@@ -1183,7 +1185,7 @@ class MAPPOTrainer:
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
     
-    def pretrain_value_head(self):
+    def pretrain_value_head(self): # MARK: .      PRETRAINING
         """Pre-train value head on existing game trajectories in data/ folder"""
         print(f"\n{'='*80}")
         print("PRETRAINING VALUE HEAD ON EXISTING GAMES")
@@ -1327,7 +1329,7 @@ class MAPPOTrainer:
         
         print("Value head pretraining complete!\n")
     
-    def _compute_value(self, global_state_repr: str) -> torch.Tensor:
+    def _compute_value(self, global_state_repr: str) -> torch.Tensor: # MARK: .      VALUE
         """Compute value estimate for a global state"""
         # Note: Caller controls value_head.train() vs .eval() mode
         
@@ -1339,7 +1341,6 @@ class MAPPOTrainer:
         ).to(self.model.device)
         
         # ====================================================================
-        # MARK: DEBUGGING PRINT
         # Print the sequence length that is about to be processed
         seq_len = inputs.input_ids.shape[1]
         if self.config.debug:
@@ -1374,7 +1375,7 @@ class MAPPOTrainer:
         chosen_action_idx: int,
         reasoning: str,
         use_reference_model: bool = False
-    ) -> torch.Tensor:
+    ) -> torch.Tensor: # MARK: .      LOGPROB
         """
         GENERATIVE PPO: Re-computes RAW per-token log-probs for the
         ENTIRE generated sequence (reasoning + prefix + action).
@@ -1415,7 +1416,6 @@ class MAPPOTrainer:
         full_input_ids = torch.cat([context_ids, generated_ids], dim=1)
         
         # ====================================================================
-        # MARK: DEBUGGING PRINT
         # Print the sequence length that is about to be processed
         seq_len = full_input_ids.shape[1]
         if self.config.debug:
@@ -1472,7 +1472,7 @@ class MAPPOTrainer:
         
         return result
     
-    def _collect_trajectories_sequential(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
+    def _collect_trajectories_sequential(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      COLLECT SEQ
         """Sequential trajectory collection (fallback when parallel doesn't work)"""
         collection_start_time = time.time()
         trajectories = []
@@ -1531,7 +1531,7 @@ class MAPPOTrainer:
         
         return trajectories, collection_stats
     
-    def _load_recent_trajectories_from_disk(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
+    def _load_recent_trajectories_from_disk(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      LOAD RECENT
         """Load the most recent N trajectories from disk and reconstruct TurnData for PPO update.
         
         This is a DEBUG feature to resume from saved trajectories without re-collection.
@@ -1687,7 +1687,7 @@ class MAPPOTrainer:
         
         return trajectories, collection_stats
     
-    def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
+    def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      COLLECT PARA
         """Collect multiple trajectories (parallel if max_parallel_workers > 1, else sequential)
         
         Returns:
@@ -1822,7 +1822,7 @@ class MAPPOTrainer:
         
         return trajectories, collection_stats
     
-    def update_policy_mappo(self, trajectories: List[Trajectory]) -> Dict:
+    def update_policy_mappo(self, trajectories: List[Trajectory]) -> Dict: # MARK: .      UPDATE POLICY
         """
         MAPPO update using PPO clipped surrogate objective with GAE.
         """
@@ -2392,7 +2392,7 @@ class MAPPOTrainer:
         
         return stats
     
-    def train(self):
+    def train(self): # MARK: .      TRAIN
         """Main training loop"""
         print("=" * 80)
         print("MAPPO TRAINING FOR AMONG THEM")
@@ -2540,7 +2540,7 @@ class MAPPOTrainer:
         
         wandb.finish()
     
-    def save_checkpoint(self, iteration: int):
+    def save_checkpoint(self, iteration: int): # MARK: .      LOAD SAVE
         """Save model checkpoint with full training state for resume"""
         checkpoint_path = Path(self.config.checkpoint_dir) / f"iteration_{iteration}"
         checkpoint_path.mkdir(parents=True, exist_ok=True)

@@ -37,6 +37,9 @@ sentence-transformers = ">=4.1.0,<5.0.0"
 openai = "^1.97.1"
 pytest-cov = "^6.2.1"
 gguf = "^0.17.1"
+loky = "^3.5.6"
+wandb = "^0.23.0"
+peft = "^0.18.0"
 
 [build-system]
 requires = ["poetry-core"]
