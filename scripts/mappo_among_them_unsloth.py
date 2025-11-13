@@ -1338,6 +1338,14 @@ class MAPPOTrainer:
             max_length=self.config.max_seq_length
         ).to(self.model.device)
         
+        # ====================================================================
+        # MARK: DEBUGGING PRINT
+        # Print the sequence length that is about to be processed
+        seq_len = inputs.input_ids.shape[1]
+        if self.config.debug:
+            print(f"      [DEBUG _compute_value] Processing seq_len: {seq_len}")
+        # ====================================================================
+        
         # Base model always in eval for value computation (no gradients needed)
         self.model.eval()
         with torch.no_grad():
@@ -1347,9 +1355,15 @@ class MAPPOTrainer:
         # Detach hidden_states from the model's computation graph
         hidden_states = hidden_states.detach()
         
+        # CRITICAL: Delete outputs and inputs immediately to free VRAM
+        del outputs, inputs
+        
         # Explicitly enable gradients for the value_head pass
         with torch.enable_grad():
             value = self.value_head(hidden_states).squeeze(-1)
+        
+        # CRITICAL: Delete hidden_states after value computation
+        del hidden_states
         
         return value
     
@@ -1400,6 +1414,14 @@ class MAPPOTrainer:
         # 3. Concatenate
         full_input_ids = torch.cat([context_ids, generated_ids], dim=1)
         
+        # ====================================================================
+        # MARK: DEBUGGING PRINT
+        # Print the sequence length that is about to be processed
+        seq_len = full_input_ids.shape[1]
+        if self.config.debug:
+            print(f"      [DEBUG _compute_log_prob] Processing seq_len: {seq_len}")
+        # ====================================================================
+        
         # 4. Forward pass
         if use_reference_model:
             with torch.no_grad(), self.model.disable_adapter():
@@ -1419,8 +1441,15 @@ class MAPPOTrainer:
         # [1, G, V] (G = number of generated tokens)
         generated_logits = logits[:, context_len-1:-1, :]
         
+        # CRITICAL: Delete full logits tensor immediately to free VRAM
+        # The generated_logits view will hold its own reference
+        del logits, outputs
+        
         # [1, G, V]
         generated_log_probs = F.log_softmax(generated_logits, dim=-1)
+        
+        # CRITICAL: Delete generated_logits after computing log_probs
+        del generated_logits
 
         # [1, G, 1]
         generated_ids_expanded = generated_ids.unsqueeze(-1)
@@ -1433,9 +1462,15 @@ class MAPPOTrainer:
             index=generated_ids_expanded
         )
         
+        # CRITICAL: Delete generated_log_probs after gathering
+        del generated_log_probs, generated_ids_expanded
+        
         # Return the TENSOR of all per-token log-probs
         # Squeeze to shape [G]
-        return chosen_token_log_probs.squeeze()
+        result = chosen_token_log_probs.squeeze()
+        del chosen_token_log_probs
+        
+        return result
     
     def _collect_trajectories_sequential(self, num_trajectories: int) -> tuple[List[Trajectory], dict]:
         """Sequential trajectory collection (fallback when parallel doesn't work)"""
@@ -1973,8 +2008,11 @@ class MAPPOTrainer:
         print(f"  Avg old_log_prob: {avg_old_time*1000:.1f}ms/turn")
         print(f"  Avg ref_log_prob: {avg_ref_time*1000:.1f}ms/turn")
         
+        # Final cache clear after precomputation
+        print("\n🧹 Final GPU cache clear after precomputation...")
         torch.cuda.empty_cache()
-        self._print_vram_summary("After LogProb Pre-computation")
+        
+        self._print_vram_summary("After LogProb Pre-computation + Final Clear")
         # ====================================================================
         # END STABILITY FIX
         # ====================================================================
@@ -2026,6 +2064,10 @@ class MAPPOTrainer:
                 minibatch_start_time = time.time()
                 minibatch = all_turns[minibatch_idx : minibatch_idx + minibatch_size]
                 
+                # CRITICAL: Aggressively clear cache BEFORE each minibatch to fight fragmentation
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                
                 # Zero gradients for this minibatch
                 self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
@@ -2038,16 +2080,28 @@ class MAPPOTrainer:
                 minibatch_value_time = 0.0
                 minibatch_backward_time = 0.0
                 
+                if self.config.debug:
+                    print(f"\n  🔄 Minibatch {minibatch_num}/{total_minibatches}")
+                    print(f"  🧹 Cleared CUDA cache before minibatch")
+                    self._print_vram_summary(f"Minibatch {minibatch_num} - START (after cache clear)")
+                
                 for i, turn in enumerate(minibatch):
                     # Explicitly control model state for each computation step
                     # to ensure gradient checkpointing works correctly
                     device = self.model.device
                     
+                    # Create turn identifier for debugging
+                    turn_identifier = f"Turn {minibatch_idx + i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})"
+                    
                     try:
-                        # Step 1: Get current_log_prob (only forward pass that needs gradients)
+                        # =======================================================
+                        # Step 1: Get current_log_prob (ACTOR)
+                        # =======================================================
                         # Model MUST be in .train() mode for checkpointing to work with .backward()
                         self.model.train()
                         logprob_start = time.time()
+                        if self.config.debug:
+                            self._print_vram_summary(f"{turn_identifier} - Before LogProb")
                         current_log_prob = self._compute_log_prob(
                             turn.conversation,
                             turn.actions,
@@ -2057,6 +2111,9 @@ class MAPPOTrainer:
                         )
                         logprob_time = time.time() - logprob_start
                         minibatch_logprob_time += logprob_time
+                        
+                        if self.config.debug:
+                            self._print_vram_summary(f"{turn_identifier} - After LogProb")
                         
                         # Step 2: Use pre-computed ref_log_prob and old_log_prob
                         # Move from CPU back to GPU for computation
@@ -2078,95 +2135,171 @@ class MAPPOTrainer:
                         total_training_tokens += turn.input_tokens + turn.output_tokens
                         
                         epoch_turns_processed += 1
-                    
-                    except Exception as e:
+                        
+                        # =======================================================
+                        # Step 3: Get value_pred (CRITIC)
+                        # =======================================================
+                        # Base model set to .eval() inside _compute_value
+                        # Value_head must be in .train() mode to learn
+                        self.value_head.train()
+                        value_start = time.time()
+                        value_pred = self._compute_value(turn.global_state_repr)
+                        value_time = time.time() - value_start
+                        minibatch_value_time += value_time
+                        
                         if self.config.debug:
-                            print(f"      ❌ Error computing log prob for turn {i}: {e}")
-                            import traceback
-                            traceback.print_exc()
-                        continue
-                    
-                    # Step 3: Get value_pred
-                    # Base model set to .eval() inside _compute_value
-                    # Value_head must be in .train() mode to learn
-                    self.value_head.train()
-                    value_start = time.time()
-                    value_pred = self._compute_value(turn.global_state_repr)
-                    value_time = time.time() - value_start
-                    minibatch_value_time += value_time
-                    
-                    # Now compute losses
-                    
-                    # PER-TOKEN Importance sampling ratio
-                    # ratio is shape [T]
-                    ratio = torch.exp(current_log_prob - old_log_prob_tensor)
-                    
-                    # Track ratio and clipping (use mean for tracking)
-                    total_ratio += ratio.mean().item()
-                    ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
-                    total_clipped += ratio_clipped_mask.float().mean().item()
-                    
-                    # PER-TOKEN Clipped surrogate objective
-                    # adv is a scalar, but broadcast to shape [T]
-                    adv = torch.tensor([turn.advantage], device=self.model.device)
-                    surr1 = ratio * adv
-                    surr2 = torch.clamp(
-                        ratio,
-                        1 - self.config.clip_epsilon,
-                        1 + self.config.clip_epsilon
-                    ) * adv
-                    # Average per-token losses
-                    policy_loss = -torch.min(surr1, surr2).mean()
-                    
-                    # PER-TOKEN KL divergence penalty
-                    kl_div_per_token = (current_log_prob - ref_log_prob)
-                    kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
-                    
-                    # Value loss
-                    value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
-                    value_loss = F.mse_loss(value_pred, value_target)
-                    
-                    # Entropy (approximate - would need full action distribution)
-                    entropy = 0.01
-                    
-                    # SEPARATE BACKWARD PASSES to avoid gradient checkpointing conflict
-                    
-                    # 1. Actor Loss (backprops only to model/LoRA)
-                    actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
-                    actor_loss = actor_loss / len(minibatch)  # Average over minibatch
-                    
-                    # 2. Critic Loss (backprops only to value_head)
-                    critic_loss = self.config.value_loss_coef * value_loss
-                    critic_loss = critic_loss / len(minibatch)  # Average over minibatch
-                    
-                    # NaN/Inf check - skip this turn if loss is invalid
-                    if torch.isnan(actor_loss) or torch.isnan(critic_loss) or torch.isinf(actor_loss) or torch.isinf(critic_loss):
+                            self._print_vram_summary(f"{turn_identifier} - After Value")
+                        
+                        # =======================================================
+                        # Step 4: Compute Losses
+                        # =======================================================
+                        
+                        # PER-TOKEN Importance sampling ratio
+                        # ratio is shape [T]
+                        ratio = torch.exp(current_log_prob - old_log_prob_tensor)
+                        
+                        # Track ratio and clipping (use mean for tracking)
+                        total_ratio += ratio.mean().item()
+                        ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
+                        total_clipped += ratio_clipped_mask.float().mean().item()
+                        
+                        # PER-TOKEN Clipped surrogate objective
+                        # adv is a scalar, but broadcast to shape [T]
+                        adv = torch.tensor([turn.advantage], device=self.model.device)
+                        surr1 = ratio * adv
+                        surr2 = torch.clamp(
+                            ratio,
+                            1 - self.config.clip_epsilon,
+                            1 + self.config.clip_epsilon
+                        ) * adv
+                        # Average per-token losses
+                        policy_loss = -torch.min(surr1, surr2).mean()
+                        
+                        # PER-TOKEN KL divergence penalty
+                        kl_div_per_token = (current_log_prob - ref_log_prob)
+                        kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
+                        
+                        # Value loss
+                        value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
+                        value_loss = F.mse_loss(value_pred, value_target)
+                        
+                        # Entropy (approximate - would need full action distribution)
+                        entropy = 0.01
+                        
+                        # =======================================================
+                        # Step 5: Backward Passes
+                        # =======================================================
+                        
+                        # 1. Actor Loss (backprops only to model/LoRA)
+                        actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
+                        actor_loss = actor_loss / len(minibatch)  # Average over minibatch
+                        
+                        # 2. Critic Loss (backprops only to value_head)
+                        critic_loss = self.config.value_loss_coef * value_loss
+                        critic_loss = critic_loss / len(minibatch)  # Average over minibatch
+                        
+                        # NaN/Inf check - skip this turn if loss is invalid
+                        if torch.isnan(actor_loss) or torch.isnan(critic_loss) or torch.isinf(actor_loss) or torch.isinf(critic_loss):
+                            if self.config.debug:
+                                print(f"      ⚠️ Skipping update for turn {i} due to NaN/Inf loss.")
+                                print(f"         Policy Loss: {policy_loss.item()}, KL Loss: {kl_loss.item()}, Value Loss: {value_loss.item()}")
+                            continue  # Skip this turn, do not backpropagate
+                        
+                        # Explicitly delete intermediate tensors to free VRAM *before* backward()
+                        try:
+                            del current_log_prob, value_pred, ratio
+                            del surr1, surr2, kl_div_per_token, adv, value_target
+                        except NameError:
+                            pass  # In case a tensor wasn't created
+                        
+                        # CRITICAL: Set model to train mode before backward() to ensure
+                        # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
+                        self.model.train()
+                        backward_start = time.time()
+                        actor_loss.backward()
                         if self.config.debug:
-                            print(f"      ⚠️ Skipping update for turn {i} due to NaN/Inf loss.")
-                            print(f"         Policy Loss: {policy_loss.item()}, KL Loss: {kl_loss.item()}, Value Loss: {value_loss.item()}")
-                        continue  # Skip this turn, do not backpropagate
+                            self._print_vram_summary(f"{turn_identifier} - After Actor Backward")
+                        critic_loss.backward()
+                        if self.config.debug:
+                            self._print_vram_summary(f"{turn_identifier} - After Critic Backward")
+                        backward_time = time.time() - backward_start
+                        minibatch_backward_time += backward_time
+                        
+                        
+                        total_policy_loss += policy_loss.item()
+                        total_value_loss += value_loss.item()
+                        total_kl_loss += kl_loss.item()
+                        total_entropy += entropy
+                        num_updates += 1
                     
-                    # Explicitly delete intermediate tensors to free VRAM *before* backward()
-                    try:
-                        del current_log_prob, value_pred, ratio
-                        del surr1, surr2, kl_div_per_token, adv, value_target
-                    except NameError:
-                        pass  # In case a tensor wasn't created
-                    
-                    # CRITICAL: Set model to train mode before backward() to ensure
-                    # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
-                    self.model.train()
-                    backward_start = time.time()
-                    actor_loss.backward()
-                    critic_loss.backward()
-                    backward_time = time.time() - backward_start
-                    minibatch_backward_time += backward_time
-                    
-                    total_policy_loss += policy_loss.item()
-                    total_value_loss += value_loss.item()
-                    total_kl_loss += kl_loss.item()
-                    total_entropy += entropy
-                    num_updates += 1
+                    except torch.cuda.OutOfMemoryError as oom_error:
+                        print(f"\n{'='*80}")
+                        print(f"❌❌ CAUGHT OOM on: {turn_identifier} ❌❌")
+                        print(f"Error: {oom_error}")
+                        
+                        # CRITICAL: Delete any tensors that were created before the OOM
+                        # These are the massive tensors holding VRAM hostage
+                        try:
+                            del current_log_prob
+                        except NameError:
+                            pass
+                        try:
+                            del ref_log_prob, old_log_prob_tensor
+                        except NameError:
+                            pass
+                        try:
+                            del value_pred
+                        except NameError:
+                            pass
+                        try:
+                            del ratio, surr1, surr2, kl_div_per_token, adv, value_target
+                        except NameError:
+                            pass
+                        try:
+                            del actor_loss, critic_loss, policy_loss, value_loss, kl_loss
+                        except NameError:
+                            pass
+                        
+                        # Tokenize and get exact lengths
+                        actor_seq_len = "N/A"
+                        try:
+                            # Re-run _compute_log_prob logic to get length
+                            input_text = self.tokenizer.apply_chat_template(turn.conversation, tokenize=False, add_generation_prompt=True)
+                            context_ids = self.tokenizer(input_text, return_tensors="pt").to(device).input_ids
+                            reasoning_tokens = self.tokenizer.encode(turn.reasoning, add_special_tokens=False)
+                            end_think_tokens = self.tokenizer.encode("\n</think>", add_special_tokens=False)
+                            chosen_action = turn.actions[turn.chosen_action_idx]
+                            action_prefix_tokens = self.tokenizer.encode("\n\nTell:" if chosen_action.type == ActionType.SPEAK else "\n\nAction:", add_special_tokens=False)
+                            action_tokens = self.tokenizer.encode(chosen_action.command_perspective, add_special_tokens=False)
+                            generated_ids_list = reasoning_tokens + end_think_tokens + action_prefix_tokens + action_tokens
+                            generated_ids = torch.tensor([generated_ids_list], device=device)
+                            full_input_ids = torch.cat([context_ids, generated_ids], dim=1)
+                            actor_seq_len = full_input_ids.shape[1]
+                            # Clean up these debug tensors too
+                            del context_ids, generated_ids, full_input_ids
+                        except Exception as e_len:
+                            actor_seq_len = f"Error getting length: {e_len}"
+
+                        critic_seq_len = "N/A"
+                        try:
+                            critic_inputs = self.tokenizer(turn.global_state_repr, return_tensors="pt")
+                            critic_seq_len = critic_inputs.input_ids.shape[1]
+                            del critic_inputs
+                        except Exception as e_len:
+                            critic_seq_len = f"Error getting length: {e_len}"
+
+                        print(f"\n  Problematic Turn Details:")
+                        print(f"  Actor Seq Len (LogProb):  {actor_seq_len}")
+                        print(f"  Critic Seq Len (Value): {critic_seq_len}")
+                        print(f"  (Config max_seq_length is {self.config.max_seq_length})")
+                        print(f"{'='*80}\n")
+                        
+                        # CRITICAL: Empty cache to recover from OOM and continue loop
+                        torch.cuda.empty_cache()
+                        
+                        if self.config.debug:
+                            self._print_vram_summary(f"After OOM cleanup")
+                        raise oom_error
                 
                 # End of minibatch: clip gradients and step optimizers
                 optimizer_start = time.time()
@@ -2193,18 +2326,18 @@ class MAPPOTrainer:
                 epoch_optimizer_time += optimizer_time
                 
                 minibatch_total_time = time.time() - minibatch_start_time
+                avg_turn_time = minibatch_total_time / max(len(minibatch), 1)
                 
-                # Print progress every minibatch (or every 3 minibatches if too verbose)
-                if minibatch_num % 3 == 0 or minibatch_num == total_minibatches:
-                    avg_turn_time = minibatch_total_time / max(len(minibatch), 1)
-                    print(f"  Minibatch {minibatch_num}/{total_minibatches}: "
-                          f"{minibatch_total_time:.2f}s total, {avg_turn_time*1000:.1f}ms/turn "
-                          f"(logprob: {minibatch_logprob_time*1000:.0f}ms, "
-                          f"value: {minibatch_value_time*1000:.0f}ms, "
-                          f"backward: {minibatch_backward_time*1000:.0f}ms, "
-                          f"opt: {optimizer_time*1000:.0f}ms)")
+                # Print timing summary for this minibatch
+                print(f"\n  ✅ Minibatch {minibatch_num}/{total_minibatches} Complete: "
+                      f"{minibatch_total_time:.2f}s total, {avg_turn_time*1000:.1f}ms/turn")
+                print(f"    Time breakdown: logprob={minibatch_logprob_time*1000:.0f}ms, "
+                      f"value={minibatch_value_time*1000:.0f}ms, "
+                      f"backward={minibatch_backward_time*1000:.0f}ms, "
+                      f"opt={optimizer_time*1000:.0f}ms")
                 
-                self._print_vram_summary(f"Epoch {epoch+1} - End of Minibatch {minibatch_num}")
+                # Print VRAM at end of minibatch
+                self._print_vram_summary(f"Minibatch {minibatch_num} - END")
             
             epoch_total_time = time.time() - epoch_start_time
             avg_epoch_turn_time = epoch_total_time / max(epoch_turns_processed, 1)
@@ -2663,7 +2796,7 @@ def main():
         # Debug
         debug=True,
         seed=42,
-        load_trajectories_from_disk=8,  # Load last 8 trajectories from disk and skip collection (debug only)
+        load_trajectories_from_disk=1,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
     trainer = MAPPOTrainer(config)
