@@ -88,6 +88,7 @@ class MAPPOConfig:
     num_policy_iterations: int = 400
     trajectories_per_iteration: int = 4
     max_parallel_workers: int = 1  # Parallel doesn't work on Colab (complex class serialization fails)
+    max_missing_trajectories: int = 2  # Allow up to N failed trajectories in parallel collection
     actor_lr: float = 1e-6
     critic_lr: float = 3e-6
     gradient_accumulation_steps: int = 4
@@ -933,20 +934,20 @@ def run_game_worker(
     
     try:
         log_progress(f"Worker {worker_id} started (PID: {os.getpid()})")
-        print(f"[Worker {worker_id}] Process started (PID: {os.getpid()})")
+        log_progress(f"[Worker {worker_id}] Process started (PID: {os.getpid()})")
         sys.stdout.flush()
         
         # 1. Reconstruct config from dict
-        print(f"[Worker {worker_id}] Reconstructing config...")
+        log_progress(f"[Worker {worker_id}] Reconstructing config...")
         sys.stdout.flush()
         config = MAPPOConfig(**config_dict)
 
         # Stagger worker startup to avoid simultaneous GPU memory allocation
-        print(f"[Worker {worker_id}] Staggering startup by {(worker_id % config.max_parallel_workers) * 3}s...")
+        log_progress(f"[Worker {worker_id}] Staggering startup by {(worker_id % config.max_parallel_workers) * 3}s...")
         sys.stdout.flush()
         time.sleep((worker_id % config.max_parallel_workers) * 3)
         
-        print(f"[Worker {worker_id}] Loading model from {model_name}...")
+        log_progress(f"[Worker {worker_id}] Loading model from {model_name}...")
         sys.stdout.flush()
         
         # Disable debug in workers to avoid log clutter
@@ -973,12 +974,12 @@ def run_game_worker(
         log_progress("LoRA adapters loaded")
         
         # 4. Compile model for optimized inference
-        # log_progress("Compiling model...")
-        # try:
-        #     model = torch.compile(model, mode="reduce-overhead")
-        #     log_progress("Model compiled")
-        # except Exception as e:
-        #     log_progress(f"torch.compile failed: {e}")
+        log_progress("Compiling model...")
+        try:
+            model = torch.compile(model, mode="reduce-overhead")
+            log_progress("Model compiled")
+        except Exception as e:
+            log_progress(f"torch.compile failed: {e}")
         
         # 5. Load value head (critic)
         log_progress("Loading value head...")
@@ -989,7 +990,7 @@ def run_game_worker(
         log_progress("Value head loaded")
         
         # 6. Create mock trainer for iteration tracking (needed for trajectory saving)
-        print(f"[Worker {worker_id}] Creating actor...")
+        log_progress(f"[Worker {worker_id}] Creating actor...")
         sys.stdout.flush()
         class MockTrainer:
             pass
@@ -1004,7 +1005,7 @@ def run_game_worker(
             config=config,
             trainer=mock_trainer
         )
-        print(f"[Worker {worker_id}] Actor created")
+        log_progress(f"[Worker {worker_id}] Actor created")
         sys.stdout.flush()
         
         # 8. Collect ONE trajectory with turn-by-turn progress
@@ -1026,14 +1027,17 @@ def run_game_worker(
         return trajectory
         
     except Exception as e:
-        print(f"\n{'='*80}", file=sys.stderr)
-        print(f"FATAL ERROR in worker {worker_id} (PID: {os.getpid()})", file=sys.stderr)
-        print(f"{'='*80}", file=sys.stderr)
-        print(f"Exception type: {type(e).__name__}", file=sys.stderr)
-        print(f"Exception message: {e}", file=sys.stderr)
-        print(f"\nFull traceback:", file=sys.stderr)
-        tb.print_exc(file=sys.stderr)
-        print(f"{'='*80}\n", file=sys.stderr)
+        del model, tokenizer, value_head, actor
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        log_progress(f"\n{'='*80}")
+        log_progress(f"FATAL ERROR in worker {worker_id} (PID: {os.getpid()})")
+        log_progress(f"{'='*80}")
+        log_progress(f"Exception type: {type(e).__name__}")
+        log_progress(f"Exception message: {e}")
+        log_progress(f"\nFull traceback:")
+        tb.print_exc()
+        log_progress(f"{'='*80}\n")
         sys.stderr.flush()
         return None
 
@@ -1712,12 +1716,24 @@ class MAPPOTrainer:
         print(f"   Max parallel workers: {self.config.max_parallel_workers}")
         print(f"{'='*80}\n")
         
+        # 0. Optionally offload main model to CPU during collection to free GPU memory
+        # Useful when running many parallel workers
+        offload_main_model = self.config.max_parallel_workers > 4
+        if offload_main_model and torch.cuda.is_available():
+            print("🔄 Moving main model to CPU to free GPU for workers...")
+            self.model = self.model.to('cpu')
+            self.value_head = self.value_head.to('cpu')
+            torch.cuda.empty_cache()
+            print(f"   Freed ~3-4GB GPU memory")
+            print()
+        
         # 1. Save current policy and value head for workers to load
         temp_policy_dir = Path(self.config.checkpoint_dir) / "temp_policy_for_workers"
         temp_policy_dir.mkdir(parents=True, exist_ok=True)
         
-        # Create progress directory for real-time monitoring
-        progress_dir = Path(self.config.checkpoint_dir) / "worker_progress"
+        # Create progress directory for real-time monitoring under current iteration
+        iteration_dir = Path(self.config.checkpoint_dir) / f"iteration_{self.iteration}"
+        progress_dir = iteration_dir / "worker_progress"
         progress_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"Saving current policy to {temp_policy_dir}...")
@@ -1737,10 +1753,12 @@ class MAPPOTrainer:
         num_workers = min(self.config.max_parallel_workers, num_trajectories)
         total_collected = 0
         worker_id_counter = 0
+        min_required_trajectories = max(1, num_trajectories - self.config.max_missing_trajectories)
         
-        while total_collected < num_trajectories:
-            batch_size = min(num_workers, num_trajectories - total_collected)
-            print(f"\n🔄 Launching batch of {batch_size} workers (collected {total_collected}/{num_trajectories})...")
+        while total_collected < min_required_trajectories:
+            remaining_needed = num_trajectories - total_collected
+            batch_size = min(num_workers, remaining_needed)
+            print(f"\n🔄 Launching batch of {batch_size} workers (collected {total_collected}/{num_trajectories}, min required: {min_required_trajectories})...")
             
             # 5. Launch worker pool for this batch (loky auto-handles spawn context)
             with ProcessPoolExecutor(max_workers=batch_size) as executor:
@@ -1786,15 +1804,26 @@ class MAPPOTrainer:
             total_collected = len(trajectories)
             worker_id_counter += batch_size
             
+            # Check if we have enough trajectories (within tolerance)
+            if total_collected >= min_required_trajectories:
+                if total_collected < num_trajectories:
+                    missing = num_trajectories - total_collected
+                    print(f"\n✅ Collected {total_collected}/{num_trajectories} trajectories ({missing} missing, within tolerance of {self.config.max_missing_trajectories})")
+                break
+            
             # Add delay between batches to ensure cleanup
-            if total_collected < num_trajectories:
+            if total_collected < min_required_trajectories:
                 print(f"\n⏳ Waiting 10s before next batch...")
                 time.sleep(10)
         
         collection_total_time = time.time() - collection_start_time
         
+        missing_count = num_trajectories - len(trajectories)
         if len(trajectories) < num_trajectories:
-            print(f"\n⚠️  Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories")
+            if missing_count <= self.config.max_missing_trajectories:
+                print(f"\n✅ Collected {len(trajectories)}/{num_trajectories} trajectories ({missing_count} missing, within tolerance)")
+            else:
+                print(f"\n⚠️  Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories ({missing_count} missing, exceeds tolerance of {self.config.max_missing_trajectories})")
         
         # Aggregate statistics
         total_input_tokens = sum(t.total_input_tokens for t in trajectories)
@@ -1819,6 +1848,13 @@ class MAPPOTrainer:
         print(f"Total input tokens: {total_input_tokens}")
         print(f"Total output tokens: {total_output_tokens}")
         print(f"{'='*80}\n")
+        
+        # Restore main model to GPU if we offloaded it
+        if offload_main_model and torch.cuda.is_available():
+            print("🔄 Restoring main model to GPU...")
+            self.model = self.model.to('cuda')
+            self.value_head = self.value_head.to('cuda')
+            print("   Model restored\n")
         
         return trajectories, collection_stats
     
@@ -2027,7 +2063,7 @@ class MAPPOTrainer:
         }
         
         # Define minibatch size for efficient gradient checkpointing
-        minibatch_size = 16  # Process 4 turns at a time for optimal memory/speed trade-off
+        minibatch_size = 64  # Process 4 turns at a time for optimal memory/speed trade-off
         
         for epoch in range(self.config.ppo_epochs):
             epoch_start_time = time.time()
@@ -2100,8 +2136,8 @@ class MAPPOTrainer:
                         # Model MUST be in .train() mode for checkpointing to work with .backward()
                         self.model.train()
                         logprob_start = time.time()
-                        if self.config.debug:
-                            self._print_vram_summary(f"{turn_identifier} - Before LogProb")
+                        # if self.config.debug:
+                        #     self._print_vram_summary(f"{turn_identifier} - Before LogProb")
                         current_log_prob = self._compute_log_prob(
                             turn.conversation,
                             turn.actions,
@@ -2112,8 +2148,8 @@ class MAPPOTrainer:
                         logprob_time = time.time() - logprob_start
                         minibatch_logprob_time += logprob_time
                         
-                        if self.config.debug:
-                            self._print_vram_summary(f"{turn_identifier} - After LogProb")
+                        # if self.config.debug:
+                        #     self._print_vram_summary(f"{turn_identifier} - After LogProb")
                         
                         # Step 2: Use pre-computed ref_log_prob and old_log_prob
                         # Move from CPU back to GPU for computation
@@ -2147,8 +2183,8 @@ class MAPPOTrainer:
                         value_time = time.time() - value_start
                         minibatch_value_time += value_time
                         
-                        if self.config.debug:
-                            self._print_vram_summary(f"{turn_identifier} - After Value")
+                        # if self.config.debug:
+                        #     self._print_vram_summary(f"{turn_identifier} - After Value")
                         
                         # =======================================================
                         # Step 4: Compute Losses
@@ -2217,11 +2253,11 @@ class MAPPOTrainer:
                         self.model.train()
                         backward_start = time.time()
                         actor_loss.backward()
-                        if self.config.debug:
-                            self._print_vram_summary(f"{turn_identifier} - After Actor Backward")
+                        # if self.config.debug:
+                        #     self._print_vram_summary(f"{turn_identifier} - After Actor Backward")
                         critic_loss.backward()
-                        if self.config.debug:
-                            self._print_vram_summary(f"{turn_identifier} - After Critic Backward")
+                        # if self.config.debug:
+                        #     self._print_vram_summary(f"{turn_identifier} - After Critic Backward")
                         backward_time = time.time() - backward_start
                         minibatch_backward_time += backward_time
                         
@@ -2746,11 +2782,12 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=8,
-        actor_lr=1e-6,
-        critic_lr=3e-6,
+        trajectories_per_iteration=6,
+        max_missing_trajectories=5,
+        actor_lr=1e-5,
+        critic_lr=1e-4,
         gradient_accumulation_steps=1,
-        max_parallel_workers=1,  # Requires loky: pip install loky
+        max_parallel_workers=10,  # Requires loky: pip install loky
         
         # PPO-specific
         ppo_epochs=4,
@@ -2796,7 +2833,7 @@ def main():
         # Debug
         debug=True,
         seed=42,
-        load_trajectories_from_disk=1,  # Load last 8 trajectories from disk and skip collection (debug only)
+        load_trajectories_from_disk=14,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
     trainer = MAPPOTrainer(config)
