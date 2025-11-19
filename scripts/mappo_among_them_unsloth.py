@@ -2782,8 +2782,8 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=6,
-        max_missing_trajectories=5,
+        trajectories_per_iteration=16,
+        max_missing_trajectories=8,
         actor_lr=1e-5,
         critic_lr=1e-4,
         gradient_accumulation_steps=1,
@@ -2804,19 +2804,19 @@ def main():
         pretrain_epochs=10,
         pretrain_examples=100,
         pretrain_lr=1e-4,
-        data_dir="/content/among_them/data", # TODO change them
+        data_dir=os.environ.get("MAPPO_DATA_DIR", "/content/among_them/data"), # TODO change them
         
         # Output paths
-        output_dir="/content/drive/MyDrive/among_them/outputs/mappo_training",
-        checkpoint_dir="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints",
+        output_dir=os.environ.get("MAPPO_OUTPUT_DIR", "/content/drive/MyDrive/among_them/outputs/mappo_training"),
+        checkpoint_dir=os.environ.get("MAPPO_CHECKPOINT_DIR", "/content/drive/MyDrive/among_them/outputs/mappo_checkpoints"),
         
         # Checkpoint loading (for transfer learning - starts training from iteration 0)
         # load_model="50",                                                                     # Load model from iteration 50
         # load_model="final",                                                                   # Load final saved model 
-        load_model="/content/drive/MyDrive/among_them/sft_sampled",  # Direct path to checkpoint dir
+        load_model=os.environ.get("MAPPO_LOAD_MODEL", os.path.expanduser("/content/drive/MyDrive/among_them/sft_sampled")),  # Direct path to checkpoint dir
         # load_head="50",                                                                      # Load value head from iteration 50
         # load_head="final",                                                                   # Load final saved value head
-        load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt",  # Direct path to .pt file
+        load_head=os.environ.get("MAPPO_LOAD_HEAD", os.path.expanduser("/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt")),  # Direct path to .pt file
         
         # Resume training (restores full state: weights + optimizers + iteration)
         # resume_from="50",                                                                    # Resume from iteration 50
@@ -2833,7 +2833,7 @@ def main():
         # Debug
         debug=True,
         seed=42,
-        load_trajectories_from_disk=14,  # Load last 8 trajectories from disk and skip collection (debug only)
+        load_trajectories_from_disk=None,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
     trainer = MAPPOTrainer(config)
