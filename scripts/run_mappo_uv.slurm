@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=among_them_uv
 #SBATCH --partition=hgx              # or ngpu if you prefer 4080/4090
-#SBATCH --account=ai155842           # CHANGE to your account if needed
+#SBATCH --account=inz_atllm           # CHANGE to your account if needed
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20           # 16 workers + overhead
@@ -89,7 +89,7 @@ UV_VENV_DIR="${HOME}/.uv-venvs/among_them-mappo"
 mkdir -p "$(dirname "${UV_VENV_DIR}")"
 
 echo "Creating / updating uv environment at ${UV_VENV_DIR} ..."
-uv venv "${UV_VENV_DIR}"
+uv venv "${UV_VENV_DIR}" --python 3.11
 
 # Activate the environment (POSIX shell)
 # uv venv creates a standard virtualenv layout
@@ -120,28 +120,31 @@ uv pip install --upgrade \
     pillow
 
 # Torch & GPU stack
-# On Ubuntu 22.04 + recent NVIDIA drivers, this pulls a CUDA-enabled wheel.
-uv pip install --upgrade \
-    "torch>=2.3.0" \
-    "torchvision>=0.18.0" \
-    "torchaudio>=2.3.0"
+# Install PyTorch with CUDA 11.8 to match cluster CUDA toolkit version
+# (nvidia-smi shows driver 13.0, but nvcc --version shows toolkit 11.8)
+uv pip install --force-reinstall \
+    --index-url https://download.pytorch.org/whl/cu118 \
+    "torch==2.7.1" \
+    "torchvision==0.22.1" \
+    "torchaudio==2.7.1"
 
 # Optional: bitsandbytes (GPU-accelerated quantization)
 # If it fails on this system, training will still work without it.
 # uv pip install --quiet "bitsandbytes>=0.43.0" || echo "bitsandbytes install failed; continuing without it."
 
-# # Transformers / TRL / Unsloth stack
-# uv pip install --upgrade --quiet \
-#     "transformers==4.56.2" \
-#     "tokenizers" \
-#     "trl==0.22.2"
+echo "Installing flash-attn (this compiles from source and takes time)..."
+# Build deps for flash-attn
+uv pip install setuptools wheel packaging ninja hatchling
+uv pip install flash-attn==2.7.3 --no-build-isolation
 
-# # Unsloth + zoo from GitHub (as you used in Colab)
-# uv pip install --quiet \
-#     "unsloth[base] @ git+https://github.com/unslothai/unsloth" \
-#     "unsloth_zoo[base] @ git+https://github.com/unslothai/unsloth-zoo"
-uv pip install unsloth
-uv pip install --upgrade --no-deps transformers==4.56.2 tokenizers trl==0.22.2 unsloth unsloth_zoo
+# Transformers / TRL stack
+uv pip install transformers==4.56.2 tokenizers trl==0.22.2
+
+# xformers for memory efficiency (prebuilt for cu118)
+uv pip install xformers --index-url https://download.pytorch.org/whl/cu118
+
+# Unsloth (install without extras to avoid pyproject.toml validation bug)
+uv pip install "git+https://github.com/unslothai/unsloth.git"
 
 # Project-local package install (among_them as a package)
 # If your repo is structured as a Python package, this makes imports work.

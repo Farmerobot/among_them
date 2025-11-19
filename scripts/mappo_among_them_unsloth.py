@@ -2836,6 +2836,12 @@ def main():
         load_trajectories_from_disk=None,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
+    if os.environ.get("WANDB_API_KEY"):
+        wandb.login()
+    else:
+        raise ValueError("WANDB_API_KEY environment variable not set")
+        
+    print("WANDB login successful")
     trainer = MAPPOTrainer(config)
     
     # Catch all errors and save stacktrace to file
