@@ -920,57 +920,125 @@ def run_game_worker(
     """
     Worker function that runs ONE game in a separate process.
     Writes progress to progress_file for real-time monitoring.
+    
+    IMPORTANT: All imports must happen inside this function to avoid
+    serialization issues with loky/multiprocessing.
     """
     import sys
     import traceback as tb
     from pathlib import Path
+    import torch
+    import os
+    import time
+    
+    # Suppress tokenizers parallelism warning in workers
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     
     def log_progress(msg: str):
         """Write progress to file for parent to monitor"""
-        with open(progress_file, 'a') as f:
-            timestamp = time.strftime("%H:%M:%S")
-            f.write(f"[{timestamp}] {msg}\n")
-            f.flush()
+        try:
+            with open(progress_file, 'a') as f:
+                timestamp = time.strftime("%H:%M:%S")
+                f.write(f"[{timestamp}] {msg}\n")
+                f.flush()
+        except Exception as e:
+            # If logging fails, print to stderr
+            print(f"[Worker {worker_id}] Failed to log: {e}", file=sys.stderr)
+    
+    # Redirect stdout/stderr to avoid BrokenPipeError
+    # This happens when parent process closes pipes before worker finishes
+    try:
+        import io
+        sys.stdout = io.StringIO()
+        sys.stderr = io.StringIO()
+    except:
+        pass
+    
+    # Set up proper signal handling for clean termination
+    import signal
+    import atexit
+    
+    # Track resources for cleanup
+    resources_to_cleanup = {
+        'model': None,
+        'tokenizer': None,
+        'value_head': None,
+        'actor': None
+    }
+    
+    def cleanup_resources():
+        """Clean up GPU resources on exit"""
+        try:
+            for name, resource in resources_to_cleanup.items():
+                if resource is not None:
+                    del resource
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except:
+            pass
+    
+    def signal_handler(signum, frame):
+        """Handle termination signals gracefully"""
+        log_progress(f"Worker {worker_id} received signal {signum}, cleaning up...")
+        cleanup_resources()
+        sys.exit(0)
+    
+    def timeout_handler(signum, frame):
+        """Handle timeout - worker took too long"""
+        log_progress(f"Worker {worker_id} TIMEOUT after 3600s, forcing exit...")
+        cleanup_resources()
+        sys.exit(1)
+    
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGALRM, timeout_handler)
+    atexit.register(cleanup_resources)
+    
+    # Set 1 hour timeout for worker (prevents infinite hangs)
+    signal.alarm(3600)
     
     try:
         log_progress(f"Worker {worker_id} started (PID: {os.getpid()})")
-        log_progress(f"[Worker {worker_id}] Process started (PID: {os.getpid()})")
-        sys.stdout.flush()
         
-        # 1. Reconstruct config from dict
+        # Import all required modules inside worker to avoid serialization issues
+        log_progress(f"[Worker {worker_id}] Importing dependencies...")
+        from unsloth import FastLanguageModel
+        from peft import PeftModel
+        
         log_progress(f"[Worker {worker_id}] Reconstructing config...")
-        sys.stdout.flush()
         config = MAPPOConfig(**config_dict)
 
         # Stagger worker startup to avoid simultaneous GPU memory allocation
         log_progress(f"[Worker {worker_id}] Staggering startup by {(worker_id % config.max_parallel_workers) * 3}s...")
-        sys.stdout.flush()
         time.sleep((worker_id % config.max_parallel_workers) * 3)
         
         log_progress(f"[Worker {worker_id}] Loading model from {model_name}...")
-        sys.stdout.flush()
         
         # Disable debug in workers to avoid log clutter
         config.debug = False
         
         # 2. Load base model and tokenizer
-        log_progress("Loading model...")
+        log_progress("Loading base model...")
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name,
             load_in_4bit=config.load_in_4bit,
             max_seq_length=config.max_seq_length,
             attn_implementation="flash_attention_2",
         )
-        log_progress("Model loaded")
+        resources_to_cleanup['tokenizer'] = tokenizer
+        log_progress("Base model loaded")
         
-        # 3. Load LoRA adapters (policy)
-        log_progress("Loading LoRA adapters...")
-        from peft import PeftModel
+        # 3. Load LoRA adapters (policy) - the saved checkpoint is already a PEFT model
+        log_progress("Loading LoRA adapters from checkpoint...")
+        # The checkpoint saved by trainer is already a PeftModel, so load it directly
         model = PeftModel.from_pretrained(
             model,
             str(lora_adapter_path),
-            is_trainable=False  # Not training in workers, just collecting
+            is_trainable=False,  # Not training in workers, just collecting
+            adapter_name="policy"  # Give it a name to avoid conflicts
         )
+        resources_to_cleanup['model'] = model
         log_progress("LoRA adapters loaded")
         
         # 4. Compile model for optimized inference
@@ -987,11 +1055,11 @@ def run_game_worker(
         value_head = ValueHead(hidden_size).to(device=model.device, dtype=torch.float32)
         state_dict = torch.load(value_head_path, map_location=model.device, weights_only=True)
         value_head.load_state_dict(state_dict)
+        resources_to_cleanup['value_head'] = value_head
         log_progress("Value head loaded")
         
         # 6. Create mock trainer for iteration tracking (needed for trajectory saving)
         log_progress(f"[Worker {worker_id}] Creating actor...")
-        sys.stdout.flush()
         class MockTrainer:
             pass
         mock_trainer = MockTrainer()
@@ -1005,8 +1073,8 @@ def run_game_worker(
             config=config,
             trainer=mock_trainer
         )
+        resources_to_cleanup['actor'] = actor
         log_progress(f"[Worker {worker_id}] Actor created")
-        sys.stdout.flush()
         
         # 8. Collect ONE trajectory with turn-by-turn progress
         log_progress("Starting game...")
@@ -1017,28 +1085,31 @@ def run_game_worker(
         trajectory = actor.collect_trajectory()
         log_progress(f"Game complete: {len(trajectory.turns) if trajectory else 0} turns")
         
-        # 9. Clean up GPU memory before exit
+        # 9. Cancel timeout alarm - we completed successfully
+        signal.alarm(0)
+        
+        # 10. Clean up GPU memory before exit (atexit will also call cleanup_resources)
         log_progress("Cleaning up...")
-        del model, tokenizer, value_head, actor
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        cleanup_resources()
         log_progress("Complete!")
         
         return trajectory
         
     except Exception as e:
-        del model, tokenizer, value_head, actor
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # Cancel timeout alarm
+        signal.alarm(0)
+        
+        # Clean up any allocated resources (atexit will also call cleanup_resources)
+        cleanup_resources()
+        
         log_progress(f"\n{'='*80}")
         log_progress(f"FATAL ERROR in worker {worker_id} (PID: {os.getpid()})")
         log_progress(f"{'='*80}")
         log_progress(f"Exception type: {type(e).__name__}")
         log_progress(f"Exception message: {e}")
         log_progress(f"\nFull traceback:")
-        tb.print_exc()
+        log_progress(tb.format_exc())
         log_progress(f"{'='*80}\n")
-        sys.stderr.flush()
         return None
 
 
@@ -2634,20 +2705,39 @@ class MAPPOTrainer:
         print(f"Checkpoint: {checkpoint_path}")
         
         # Load model (LoRA adapters)
-        print("Loading model LoRA adapters...")
-        from peft import PeftModel
-        self.model = PeftModel.from_pretrained(
-            self.model,
-            str(checkpoint_path),
-            is_trainable=True
-        )
-        print("✅ Model loaded")
+        # NOTE: self.model already has LoRA applied via get_peft_model() in __init__
+        # We need to load the saved adapter weights, not apply PEFT again
+        print("Loading model LoRA adapter weights...")
+        from peft import set_peft_model_state_dict
+        import safetensors
+        
+        # Load the adapter weights from the checkpoint
+        adapter_path = checkpoint_path / "adapter_model.safetensors"
+        if adapter_path.exists():
+            # Load safetensors file
+            from safetensors.torch import load_file
+            adapter_weights = load_file(str(adapter_path))
+            # Set the weights directly on the existing PEFT model
+            set_peft_model_state_dict(self.model, adapter_weights)
+            del adapter_weights  # Free memory
+            print("✅ Model adapter weights loaded")
+        else:
+            # Fallback: try loading from adapter_model.bin
+            adapter_bin_path = checkpoint_path / "adapter_model.bin"
+            if adapter_bin_path.exists():
+                adapter_weights = torch.load(adapter_bin_path, map_location=self.model.device, weights_only=True)
+                set_peft_model_state_dict(self.model, adapter_weights)
+                del adapter_weights  # Free memory
+                print("✅ Model adapter weights loaded (from .bin)")
+            else:
+                raise FileNotFoundError(f"No adapter weights found in {checkpoint_path}")
         
         # Load value head
         print("Loading value head...")
         value_head_path = checkpoint_path / "value_head.pt"
         state_dict = torch.load(value_head_path, map_location=self.model.device, weights_only=True)
         self.value_head.load_state_dict(state_dict)
+        del state_dict  # Free memory
         print("✅ Value head loaded")
         
         # Load training state (optimizers, iteration, stats)
@@ -2665,6 +2755,8 @@ class MAPPOTrainer:
             
             # Get saved iteration
             saved_iteration = training_state['iteration']
+            
+            del training_state  # Free memory
             
             print(f"✅ Training state loaded (was at iteration {saved_iteration})")
             print(f"{'='*80}\n")
@@ -2713,15 +2805,29 @@ class MAPPOTrainer:
         print(f"📥 Loading model from: {checkpoint_path}")
         print(f"{'='*60}")
         
-        # Load LoRA adapters onto base model
-        # This should be called BEFORE get_peft_model() is applied
-        from peft import PeftModel
-        self.model = PeftModel.from_pretrained(
-            self.model, 
-            str(checkpoint_path),
-            is_trainable=True
-        )
-        print("✅ Model LoRA adapters loaded")
+        # Load LoRA adapter weights
+        # NOTE: This is called AFTER get_peft_model() in __init__, so we just load weights
+        print("Loading LoRA adapter weights...")
+        from peft import set_peft_model_state_dict
+        
+        # Load the adapter weights from the checkpoint
+        adapter_path = checkpoint_path / "adapter_model.safetensors"
+        if adapter_path.exists():
+            from safetensors.torch import load_file
+            adapter_weights = load_file(str(adapter_path))
+            set_peft_model_state_dict(self.model, adapter_weights)
+            del adapter_weights  # Free memory
+            print("✅ Model LoRA adapter weights loaded")
+        else:
+            # Fallback: try loading from adapter_model.bin
+            adapter_bin_path = checkpoint_path / "adapter_model.bin"
+            if adapter_bin_path.exists():
+                adapter_weights = torch.load(adapter_bin_path, map_location=self.model.device, weights_only=True)
+                set_peft_model_state_dict(self.model, adapter_weights)
+                del adapter_weights  # Free memory
+                print("✅ Model LoRA adapter weights loaded (from .bin)")
+            else:
+                raise FileNotFoundError(f"No adapter weights found in {checkpoint_path}")
     
     def _load_value_head_checkpoint(self, checkpoint_id: str):
         """Load value head from checkpoint
@@ -2751,8 +2857,9 @@ class MAPPOTrainer:
         print(f"{'='*60}")
         
         # Load value head state dict
-        state_dict = torch.load(value_head_path, map_location=self.model.device)
+        state_dict = torch.load(value_head_path, map_location=self.model.device, weights_only=True)
         self.value_head.load_state_dict(state_dict)
+        del state_dict  # Free memory
         print("✅ Value head loaded")
 
 
@@ -2782,12 +2889,12 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=16,
+        trajectories_per_iteration=18,
         max_missing_trajectories=8,
         actor_lr=1e-5,
         critic_lr=1e-4,
         gradient_accumulation_steps=1,
-        max_parallel_workers=10,  # Requires loky: pip install loky
+        max_parallel_workers=18,  # Requires loky: pip install loky
         
         # PPO-specific
         ppo_epochs=4,
