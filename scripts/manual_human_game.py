@@ -56,9 +56,10 @@ def main() -> None:
         if is_discussion:
             # Discussion phase: just type a message
             if is_impostor:
+                print(f"\n{PROMPT_COLOR}Enter your thoughts (chain of thought):{RESET_COLOR}")
+                cot = input("> ")
                 print(f"\n{PROMPT_COLOR}Enter your message:{RESET_COLOR}")
                 response_text = input("> ")
-                cot = ""
             else:
                 response_text = "I don't know who is sus"
                 cot = "Auto-playing as crewmate"
