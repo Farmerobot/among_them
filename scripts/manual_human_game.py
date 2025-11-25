@@ -10,9 +10,9 @@ ASSISTANT_COLOR = "\033[92m"  # Green for assistant messages
 RESET_COLOR = "\033[0m"
 
 def clear_screen():
-    os.system('clear')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-def main():
+def main() -> None:
     game_config = GameConfig(
         num_tasks=2,
         num_players=3,
