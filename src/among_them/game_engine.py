@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from typing import List, Optional
 
@@ -20,6 +21,7 @@ from among_them.utils.player_utils import (get_last_player_action,
                                            get_players_in_room)
 from among_them.utils.end_utils import get_end_game_reason
 from among_them.utils.history_utils import initialize_history, create_system_message
+from among_them.utils.prompt_utils import build_conversation_for_player, get_initial_turn_prompt, get_incremental_observations
 from among_them.game_config import GameConfig
 
 class GameEngine:
@@ -127,8 +129,6 @@ class GameEngine:
         )
 
         # Build conversation history from existing turns + new user message
-        from among_them.utils.prompt_utils import build_conversation_for_player, get_initial_turn_prompt, get_incremental_observations
-        
         # Get past conversation turns for this player
         conversation, last_turn_index = build_conversation_for_player(
             current_player, self.history, self.players, self.game_config
@@ -329,7 +329,6 @@ class GameEngine:
         """Saves the current game state (history, players, config) to a JSON file."""
         try:
             # Ensure the directory exists
-            import os
             os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
             
             with open(self.file_path, 'w') as f:

@@ -13,6 +13,7 @@ import time
 import math
 from typing import List, Tuple
 
+import numpy as np
 import mlx.core as mx
 from mlx_lm import load as mlx_load
 from mlx_lm import stream_generate
@@ -154,8 +155,6 @@ def generate_reasoning_and_calculate_probabilities(
     print("\n🎯 TOP TOKEN PROBABILITIES after Action: prefix:")
     print("-" * 60)
     if base_logprobs is not None:
-        import numpy as np
-
         logp_np = np.asarray(base_logprobs.tolist(), dtype=np.float32)
         probs_np = np.exp(logp_np)
         top_k = 10

@@ -1,15 +1,21 @@
 import argparse
-import tempfile
-import os
 import json
+import os
+import random
 import statistics
-from pathlib import Path
-from typing import List, Optional, Dict, Any
+import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+
+import tiktoken
 
 from among_them.game_config import GameConfig
 from among_them.game_engine import GameEngine
+from among_them.models.action_type import ActionType
+from among_them.models.player_role import PlayerRole
+from among_them.utils.llm_utils import parse_llm_response_to_action
 
 
 def generate_long_cot(action, current_player, history, players, target_tokens: int = 3000) -> str:
@@ -53,13 +59,6 @@ def run_random_game_in_memory(game_config: GameConfig, greedy: bool = False) -> 
         try:
             # Initialize engine
             engine = GameEngine(game_config, temp_path)
-            
-            # Import random game logic
-            import random
-            from among_them.models.action_type import ActionType
-            from among_them.models.player_role import PlayerRole
-            from among_them.utils.llm_utils import parse_llm_response_to_action
-            import tiktoken
             
             # Run game loop
             while True:
@@ -596,7 +595,6 @@ def main():
     
     # Save detailed results if requested
     if args.output:
-        import json
         output_data = {
             "game_config": {
                 "num_players": args.num_players,
