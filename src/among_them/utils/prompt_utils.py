@@ -345,7 +345,7 @@ def get_incremental_observations(
             hist_entry = history[i]
             action = hist_entry.action_taken
             if action.type == ActionType.SPEAK and action.player_name != "System":
-                discussion_messages.append(f"{action.player_name} said: {action.target_message}")
+                discussion_messages.append(f"{action.player_name} said: {getattr(action, 'target_message', '')}")
         
         if discussion_messages:
             prompt_parts.extend(discussion_messages)

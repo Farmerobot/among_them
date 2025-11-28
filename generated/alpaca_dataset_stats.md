@@ -2,29 +2,27 @@
 
 Tokenizer used for token counts: `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`
 
-- **Training conversations:** 367
-- **Evaluation conversations:** 92
-- **Total conversations:** 459
-
-> **Soft Mode (Default):** Conversations are split at 3000 tokens. If a single user-assistant pair exceeds this limit, it becomes its own chunk (preserves all data). Maximum chunk size may exceed limit.
+- **Training conversations:** 137
+- **Evaluation conversations:** 35
+- **Total conversations:** 172
 
 ## Maximum Token Lengths
-- **Longest conversation input (all user turns):** 1,833 tokens
-- **Longest conversation output (all assistant turns):** 6,442 tokens
-- **Longest single turn output:** 6,442 tokens
-- **Longest combined (instruction + output):** 6,634 tokens
+- **Longest conversation input (all user turns):** 2,946 tokens
+- **Longest conversation output (all assistant turns):** 4,843 tokens
+- **Longest single turn output:** 4,808 tokens
+- **Longest combined (instruction + output):** 6,175 tokens
 
 ## Total Token Counts
-- **Total input tokens (all user turns):** 345,171 tokens
-- **Total output tokens (all assistant turns):** 694,314 tokens
-- **Overall total (all inputs + all outputs):** 1,039,485 tokens
+- **Total input tokens (all user turns):** 304,151 tokens
+- **Total output tokens (all assistant turns):** 87,893 tokens
+- **Overall total (all inputs + all outputs):** 392,044 tokens
 
 ## Token Count Distribution Summary
 | Statistic | Input Tokens | Output Tokens | Total Tokens |
 | :-------- | :----------- | :------------ | :----------- |
-| **Count** | 459 | 459 | 459 |
-| **Min** | 39 | 71 | 226 |
-| **Median** | 686 | 1,350 | 2,391 |
-| **Mean** | 752.01 | 1,512.67 | 2,264.67 |
-| **Max** | 1,833 | 6,442 | 6,634 |
-| **Std Dev** | 473.44 | 1,047.99 | 1,013.65 |
+| **Count** | 172 | 172 | 172 |
+| **Min** | 1,012 | 77 | 1,215 |
+| **Median** | 1,728.50 | 282.00 | 2,088.00 |
+| **Mean** | 1,768.32 | 511.01 | 2,279.33 |
+| **Max** | 2,946 | 4,843 | 6,175 |
+| **Std Dev** | 463.99 | 676.17 | 797.59 |
