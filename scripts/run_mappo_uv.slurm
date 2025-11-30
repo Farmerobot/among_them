@@ -4,7 +4,7 @@
 #SBATCH --account=inz_atllm           # CHANGE to your account if needed
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=20           # 16 workers + overhead
+#SBATCH --cpus-per-task=2           # 16 workers + overhead
 #SBATCH --gres=gpu:1                 # 1 GPU (A100-80GB on hgx, 4080/4090 on ngpu)
 #SBATCH --mem=128G
 #SBATCH --time=48:00:00
@@ -48,6 +48,21 @@ export MAPPO_CHECKPOINT_DIR="${CHECKPOINT_DIR}"
 # Pretrained LoRA and value head paths on the cluster
 export MAPPO_LOAD_MODEL="${WORK_DIR}/sft_sampled"
 export MAPPO_LOAD_HEAD="${WORK_DIR}/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt"
+
+# -----------------------------------------------------------------------------
+# NCCL & CUDA Environment Variables (Prevent GPU Hang Deadlocks)
+# -----------------------------------------------------------------------------
+# Force NCCL to crash if communication takes too long (prevents infinite waits)
+export NCCL_BLOCKING_WAIT=1
+export NCCL_ASYNC_ERROR_HANDLING=1
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=120
+export PYTHONUNBUFFERED=1
+
+# Disable tokenizers parallelism in workers (prevents warnings)
+export TOKENIZERS_PARALLELISM=false
+
+# Optional: Disable P2P if you suspect hardware issues with peer-to-peer GPU communication
+# export NCCL_P2P_DISABLE=1
 
 echo "Working Directory: ${WORK_DIR}"
 echo "Data Directory: ${DATA_DIR}"
