@@ -29,11 +29,12 @@ CONFIGS = {
 def copy_dataset_to_local(drive_dir, local_dir):
     """Copy dataset from Google Drive to local Colab VM for faster access."""
     if os.path.exists(local_dir):
-        print(f"Local copy already exists at {local_dir}")
-    else:
-        print(f"Copying dataset from {drive_dir} to {local_dir}...")
-        shutil.copytree(drive_dir, local_dir)
-        print("Copy complete.")
+        print(f"Removing existing local copy at {local_dir}...")
+        shutil.rmtree(local_dir)
+    
+    print(f"Copying dataset from {drive_dir} to {local_dir}...")
+    shutil.copytree(drive_dir, local_dir)
+    print("Copy complete.")
     return local_dir
 
 def load_and_prepare_dataset(dataset_dir, cache_dir):
@@ -52,6 +53,111 @@ def load_and_prepare_dataset(dataset_dir, cache_dir):
     )
 
     return raw_datasets["train"], raw_datasets["validation"]
+
+def validate_assistant_messages(dataset, dataset_name="dataset"):
+    """Validate assistant message structure in the dataset.
+    
+    Checks:
+    1. Last assistant message always has a <think> block
+    2. Non-last assistant messages never have <think> blocks
+    3. All assistant messages have content outside <think> blocks
+    """
+    import re
+    
+    print(f"\nValidating assistant messages in {dataset_name}...")
+    
+    errors = []
+    warnings = []
+    stats = {
+        "total_examples": 0,
+        "total_assistant_messages": 0,
+        "last_with_think": 0,
+        "non_last_without_think": 0,
+    }
+    
+    for idx, example in enumerate(dataset):
+        stats["total_examples"] += 1
+        conversations = example["conversations"]
+        
+        # Get all assistant messages with their indices
+        assistant_msgs = [
+            (i, msg) for i, msg in enumerate(conversations) 
+            if msg.get("role") == "assistant"
+        ]
+        
+        if not assistant_msgs:
+            warnings.append(f"Example {idx}: No assistant messages found")
+            continue
+        
+        stats["total_assistant_messages"] += len(assistant_msgs)
+        
+        for msg_idx, (conv_idx, msg) in enumerate(assistant_msgs):
+            content = msg.get("content", "") or ""
+            is_last = msg_idx == len(assistant_msgs) - 1
+            
+            has_think_open = "<think>" in content
+            has_think_close = "</think>" in content
+            has_think_block = has_think_open and has_think_close
+            
+            # Extract content outside think block
+            content_outside_think = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            
+            if is_last:
+                # Last assistant message must have think block
+                if not has_think_block:
+                    errors.append(
+                        f"Example {idx}, assistant msg {msg_idx} (last): "
+                        f"Missing <think> block"
+                    )
+                else:
+                    stats["last_with_think"] += 1
+                
+                # Check for mismatched tags
+                if has_think_open != has_think_close:
+                    errors.append(
+                        f"Example {idx}, assistant msg {msg_idx} (last): "
+                        f"Mismatched think tags (open={has_think_open}, close={has_think_close})"
+                    )
+            else:
+                # Non-last assistant messages must NOT have think block
+                if has_think_open or has_think_close:
+                    errors.append(
+                        f"Example {idx}, assistant msg {msg_idx}: "
+                        f"Unexpected <think> block in non-last assistant message"
+                    )
+                else:
+                    stats["non_last_without_think"] += 1
+            
+            # All assistant messages must have content outside think block
+            if not content_outside_think:
+                errors.append(
+                    f"Example {idx}, assistant msg {msg_idx}: "
+                    f"No content outside <think> block"
+                )
+    
+    # Print summary
+    print(f"  Total examples: {stats['total_examples']}")
+    print(f"  Total assistant messages: {stats['total_assistant_messages']}")
+    print(f"  Last messages with think block: {stats['last_with_think']}")
+    print(f"  Non-last messages without think: {stats['non_last_without_think']}")
+    
+    if warnings:
+        print(f"\n  Warnings ({len(warnings)}):")
+        for w in warnings[:5]:
+            print(f"    - {w}")
+        if len(warnings) > 5:
+            print(f"    ... and {len(warnings) - 5} more")
+    
+    if errors:
+        print(f"\n  ❌ Errors ({len(errors)}):")
+        for e in errors[:10]:
+            print(f"    - {e}")
+        if len(errors) > 10:
+            print(f"    ... and {len(errors) - 10} more")
+        raise ValueError(f"Dataset validation failed with {len(errors)} errors. Fix the dataset before training.")
+    
+    print(f"  ✓ All assistant messages validated successfully!")
+    return True
 
 def prepare_model_and_tokenizer(model_name, max_seq_length, load_in_4bit, dtype):
     """Load model and tokenizer with LoRA configuration."""
@@ -193,11 +299,74 @@ def format_dataset(example, tokenizer):
     
     return {"text": formatted_text}
 
-def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_seq_length):
-    """Train the model using SFTTrainer with response-only training.
+def mask_all_but_last_response(trainer, assistant_token="<｜Assistant｜>"):
+    """Mask all tokens except the last assistant response.
     
-    Only trains on assistant responses while keeping user prompts as context.
-    This matches the in-game format exactly without adding any special tokens.
+    In multi-turn conversations where past assistant messages had their think blocks
+    removed, we only want to train on the final response (which has the think block).
+    All prior messages (user AND past assistant) are kept for context but masked.
+    """
+    tokenizer = trainer.tokenizer
+    
+    # Get the token ID for the assistant marker
+    assistant_ids = tokenizer.encode(assistant_token, add_special_tokens=False)
+    if len(assistant_ids) != 1:
+        raise ValueError(f"Expected single token for '{assistant_token}', got {len(assistant_ids)} tokens: {assistant_ids}")
+    assistant_token_id = assistant_ids[0]
+    
+    def mask_example(example):
+        input_ids = example["input_ids"]
+        
+        # Find all positions of the assistant token
+        assistant_positions = [i for i, token_id in enumerate(input_ids) if token_id == assistant_token_id]
+        
+        if not assistant_positions:
+            # No assistant responses found - mask everything
+            return {"labels": [-100] * len(input_ids)}
+        
+        # Get the position of the LAST assistant token
+        last_assistant_pos = assistant_positions[-1]
+        
+        # Create labels: mask everything before last assistant, train on the rest
+        # We also mask the assistant token itself (train starts after it)
+        labels = []
+        for i, token_id in enumerate(input_ids):
+            if i <= last_assistant_pos:
+                labels.append(-100)  # Masked - not trained on
+            else:
+                labels.append(token_id)  # Train on this token
+        
+        return {"labels": labels}
+    
+    # Apply masking to train dataset
+    trainer.train_dataset = trainer.train_dataset.map(
+        mask_example,
+        batched=False,
+        desc="Masking all but last response"
+    )
+    
+    # Apply masking to eval dataset if present
+    if trainer.eval_dataset is not None:
+        trainer.eval_dataset = trainer.eval_dataset.map(
+            mask_example,
+            batched=False,
+            desc="Masking eval dataset"
+        )
+    
+    # Set data collator that properly pads labels with -100
+    trainer.data_collator = DataCollatorForSeq2Seq(
+        tokenizer=tokenizer,
+        padding=True,
+        label_pad_token_id=-100,
+    )
+    
+    return trainer
+
+def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_seq_length):
+    """Train the model using SFTTrainer with last-response-only training.
+    
+    Only trains on the last assistant response while keeping all prior messages
+    (both user and past assistant) as masked context.
     """
     training_start_time = datetime.now()
     print(f"\n{'='*60}")
@@ -295,23 +464,22 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
     )
 
     # Setup trainer (following official Unsloth pattern)
+    # Note: Don't use custom data_collator - SFTTrainer's default handles label padding correctly
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),  # More efficient padding
         args=training_args,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=10, early_stopping_threshold=0)],
     )
 
-    # Apply response-only training
-    # This will tokenize the dataset internally and mask user prompts
-    print("\nApplying train_on_responses_only masking...")
-    trainer = train_on_responses_only(
+    # Apply custom masking - only train on the LAST assistant response
+    # Past assistant messages (without think blocks) are masked like user messages
+    print("\nApplying last-response-only masking...")
+    trainer = mask_all_but_last_response(
         trainer,
-        instruction_part="<｜User｜>",
-        response_part="<｜Assistant｜>",
+        assistant_token="<｜Assistant｜>",
     )
     
     # Verify masking worked
@@ -330,7 +498,7 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
     elif masked_tokens == 0:
         print("\n  ⚠️ WARNING: No tokens masked (training on full conversation)")
     else:
-        print("\n  ✓ Masking successful - training on assistant responses only")
+        print("\n  ✓ Masking successful - training on last assistant response only")
     
     # Debug: Print full masked example with visible masking
     if DEBUG:
@@ -471,6 +639,10 @@ def train_and_save_pipeline(config_name):
         dataset_dir,
         config["cache_dir"]
     )
+
+    # Validate assistant message structure
+    validate_assistant_messages(train_dataset, "train")
+    validate_assistant_messages(eval_dataset, "validation")
 
     # Prepare model
     model, tokenizer = prepare_model_and_tokenizer(
