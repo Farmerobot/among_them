@@ -86,6 +86,13 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
             event.action_taken.set_stories()
             is_last_turn = turn_idx == len(player_turn_indices) - 1
             action_text = event.action_taken.command_perspective.strip()
+            
+            # Validate action_text is not empty
+            if not action_text:
+                print(f"  Warning: Empty action_text for {player.name} turn {turn_idx} in {os.path.basename(file_path)}, skipping conversation")
+                conversation = None
+                break
+            
             if is_last_turn:
                 assistant_response = f"{event.llm_cot}{action_text}"
             else:
@@ -107,6 +114,10 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
                 "role": "assistant",
                 "content": assistant_response
             })
+        
+        # Skip this player if conversation was invalidated
+        if conversation is None:
+            continue
         
         # Create result item for this player's conversation
         item_data = {
