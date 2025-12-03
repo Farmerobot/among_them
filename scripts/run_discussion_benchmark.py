@@ -247,8 +247,7 @@ def compute_voting_outcome(history: List[History]) -> Tuple[str, Dict[str, str]]
 
 
 def call_llm_with_retry(
-    system_prompt: str,
-    user_prompt: str,
+    conversation: List[dict],
     model_name: str,
     *,
     allowed_actions: Optional[List[str]] = None,
@@ -261,8 +260,7 @@ def call_llm_with_retry(
     for attempt in range(max_retries):
         try:
             return invoke_llm(
-                system_prompt=system_prompt,
-                prompt=user_prompt,
+                conversation=conversation,
                 model_name=model_name,
                 allowed_actions=allowed_actions,
                 single_line_only=single_line_only,
@@ -304,6 +302,30 @@ def is_voting_complete(engine: GameEngine) -> bool:
     return False
 
 
+def is_voting_complete_after_index(engine: GameEngine, start_idx: int) -> bool:
+    """Check if voting completed in history entries AFTER start_idx."""
+    if not engine.history or len(engine.history) <= start_idx:
+        return False
+    
+    # Only check entries after start_idx
+    for entry in engine.history[start_idx:]:
+        # Check for TASKS phase (voting done, tasks resumed)
+        if entry.phase == GamePhase.TASKS:
+            return True
+        # Check for "was voted out" or "was ejected" system message
+        if (hasattr(entry, 'action_taken') and 
+            hasattr(entry.action_taken, 'player_name') and
+            entry.action_taken.player_name == "System" and
+            hasattr(entry.action_taken, 'target_message') and
+            entry.action_taken.target_message and
+            ("was voted out" in entry.action_taken.target_message or 
+             "was ejected" in entry.action_taken.target_message or
+             "Voting concluded" in entry.action_taken.target_message)):
+            return True
+    
+    return False
+
+
 def run_discussion_to_voting(
     engine: GameEngine,
     target_player: str,
@@ -326,13 +348,15 @@ def run_discussion_to_voting(
     voting_completed_once = False  # Track if we've already completed one voting phase
     discuss_counter_reset_done = False  # Ensure we only reset DISCUSS counter once at start
     pre_votes_disabled_logged = False  # Log the disable notice only once
+    discussion_start_len = initial_history_len  # Track where this discussion started to ignore prior votes
     
     try:
         first_turn_done = False
         while True:
-            # Check if voting already completed (before getting turn context)
+            # Check if voting already completed AFTER the discussion start (before getting turn context)
             # This prevents continuing if a new discussion starts after voting
-            if is_voting_complete(engine):
+            # Only check history entries added after discussion_start_len
+            if len(engine.history) > discussion_start_len and is_voting_complete_after_index(engine, discussion_start_len):
                 if not voting_completed_once:
                     voting_completed_once = True
                     if log_fp:
@@ -352,9 +376,14 @@ def run_discussion_to_voting(
             
             # Get turn context (same as manual_llm_game.py)
             if force_first_player and not first_turn_done:
-                turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context(player_name=target_player)
+                _ctx = engine.get_turn_context(player_name=target_player)
             else:
-                turn_context_history, actions_player_can_take, system_prompt, user_prompt, pre_discussion_vote_prompts = engine.get_turn_context()
+                _ctx = engine.get_turn_context()
+            # get_turn_context returns 4-tuple: (turn_history, actions, conversation, pre_discussion_vote_prompts)
+            if isinstance(_ctx, tuple) and len(_ctx) == 4:
+                turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = _ctx
+            else:
+                raise ValueError(f"Unexpected get_turn_context return length: {len(_ctx) if isinstance(_ctx, tuple) else 'unknown'}")
 
             # Safety: only at the very first turn, if stored counter on the last history item is <= 0,
             # reset once to allow a discussion; do NOT reset on later turns when it reaches 0 naturally
@@ -396,7 +425,7 @@ def run_discussion_to_voting(
                 break
             
             # Check if voting completed after getting context (but before processing turn)
-            if is_voting_complete(engine):
+            if is_voting_complete_after_index(engine, discussion_start_len):
                 if not voting_completed_once:
                     voting_completed_once = True
                     if log_fp:
@@ -424,8 +453,7 @@ def run_discussion_to_voting(
                 pre_discussion_votes = {}
                 for vote_prompt in pre_discussion_vote_prompts:
                     player = vote_prompt["player"]
-                    system_prompt_pd = vote_prompt["system_prompt"]
-                    user_prompt_pd = vote_prompt["user_prompt"]
+                    voting_conversation = vote_prompt["conversation"]
                     actions_pd = vote_prompt["actions"]
                     
                     # Override model for this player
@@ -435,9 +463,18 @@ def run_discussion_to_voting(
                     
                     try:
                         allowed_actions_pd = [a.set_stories().command_perspective for a in actions_pd]
+                        # Print prompt for pre-discussion vote
+                        print(f"\n{'='*80}")
+                        print(f"PRE-VOTE PROMPT FOR {player.name}:")
+                        print(f"{'='*80}")
+                        for i, msg in enumerate(voting_conversation):
+                            role = msg.get("role", "unknown")
+                            content = msg.get("content", "")
+                            print(f"\n[{i}] {role.upper()}:")
+                            print(content)
+                        print(f"{'='*80}\n")
                         llm_response, cot = call_llm_with_retry(
-                            system_prompt_pd,
-                            user_prompt_pd,
+                            voting_conversation,
                             model_to_use,
                             allowed_actions=allowed_actions_pd,
                             single_line_only=True,
@@ -507,9 +544,19 @@ def run_discussion_to_voting(
                 single_line_only = len(allowed_actions_main) > 0
                 allowed_actions_for_call = allowed_actions_main if single_line_only else None
                 
+                # Print full conversation prompt for debugging
+                print(f"\n{'='*80}")
+                print(f"PROMPT FOR {current_player_name} ({turn_context_history.phase.name}):")
+                print(f"{'='*80}")
+                for i, msg in enumerate(conversation):
+                    role = msg.get("role", "unknown")
+                    content = msg.get("content", "")
+                    print(f"\n[{i}] {role.upper()}:")
+                    print(content)
+                print(f"{'='*80}\n")
+                
                 llm_response, cot = call_llm_with_retry(
-                    system_prompt,
-                    user_prompt,
+                    conversation,
                     model_to_use,
                     allowed_actions=allowed_actions_for_call,
                     single_line_only=single_line_only,
@@ -557,7 +604,9 @@ def run_discussion_to_voting(
             
             # Calculate token usage (same as manual_llm_game.py)
             encoding = tiktoken.encoding_for_model("gpt-4o")
-            input_tokens = len(encoding.encode(system_prompt + user_prompt))
+            # Count tokens from conversation list
+            input_text = "".join([msg.get("content", "") for msg in conversation])
+            input_tokens = len(encoding.encode(input_text))
             output_tokens = len(encoding.encode(response_text + (cot or "")))
             token_usage = {"input_tokens": input_tokens, "output_tokens": output_tokens}
             
@@ -573,7 +622,7 @@ def run_discussion_to_voting(
             first_turn_done = True
             
             # Check if voting completed after step
-            if is_voting_complete(engine):
+            if is_voting_complete_after_index(engine, discussion_start_len):
                 if not voting_completed_once:
                     voting_completed_once = True
                     if log_fp:
@@ -640,6 +689,12 @@ def run_discussion_episode(
     target_player = episode['ejected_player']
     original_role = episode['ejected_player_role']
     
+    # Prepare containers for original discussion info used for reporting
+    original_messages: List[Dict[str, str]] = []
+    original_intervention_pos: Optional[int] = None
+    original_votes: Dict[str, str] = {}
+    original_vote_counts: Dict[str, int] = {}
+    
     # Determine slice based on variant
     if start_variant in ("first_msg", "second_msg"):
         anchor_idx, msg_indices = find_target_discuss_indices(source_file, start_idx, target_player, max_count=2)
@@ -681,19 +736,147 @@ def run_discussion_episode(
                 f"Anchor/start mismatch likely means the dataset start index points after the actual discussion start."
             )
         
-        # slice from discussion start up to just before the target player's message
-        # This avoids including earlier voting results that would confuse is_voting_complete()
-        history_slice, players, game_config = slice_history_before_index(source_file, pick_idx, min_start_idx=anchor_idx)
+        # Find the last TASKS phase restart before this discussion to exclude previous discussion/voting
+        tasks_restart_idx = 0
+        with open(source_file, 'r') as f:
+            data_check = json.load(f, object_hook=game_object_hook)
+        history_check = data_check[0]
+        for i in range(anchor_idx - 1, -1, -1):
+            h = history_check[i]
+            if (h.phase == GamePhase.TASKS and 
+                getattr(h.action_taken, 'player_name', '') == 'System' and
+                'task phase now' in getattr(h.action_taken, 'target_message', '').lower()):
+                tasks_restart_idx = i
+                break
         
+        # slice from last tasks restart up to just before the target player's message (pick_idx, excluded)
+        # This includes all relevant context: tasks + discussion start + other players' messages before intervention
+        history_slice, players, game_config = slice_history_before_index(source_file, pick_idx, min_start_idx=tasks_restart_idx)
+
         # Ensure we have at least the discussion start message
         if len(history_slice) == 0:
             raise ValueError(f"Empty history slice: anchor_idx={anchor_idx}, pick_idx={pick_idx}")
-        
+
         print(f"  Debug: sliced history has {len(history_slice)} entries")
+
+        # Collect original discussion messages (from original file) and mark intervention position
+        with open(source_file, 'r') as f:
+            data_full = json.load(f, object_hook=game_object_hook)
+        full_history: List[History] = data_full[0]
+
+        # Ensure the last entry in sliced history has DISCUSS phase
+        # This is critical because get_turn_context uses history[-1].phase to determine actions
+        if history_slice:
+            history_slice[-1].phase = GamePhase.DISCUSS
+
+            # Preserve original turn order for deterministic benchmark results
+            # Extract the turn order from the original history starting AFTER the intervention point
+            turn_order = []
+            for idx in range(pick_idx + 1, len(full_history)):
+                h = full_history[idx]
+                if h.phase != GamePhase.DISCUSS:
+                    break
+                if getattr(h.action_taken, 'player_name', None) and h.action_taken.player_name != 'System':
+                    if h.action_taken.player_name not in turn_order:
+                        turn_order.append(h.action_taken.player_name)
+
+            # For variants that start with the target player's message, ensure target player is first
+            if start_variant in ("first_msg", "second_msg"):
+                # Insert target player at the beginning to force them to speak first
+                turn_order.insert(0, target_player)
+            else:
+                # For full discussion, remove target from beginning since they haven't spoken yet in this simulation
+                if turn_order and turn_order[0] == target_player:
+                    turn_order = turn_order[1:]
+
+            # Set the turn order on the sliced history
+            if turn_order:
+                history_slice[-1].player_names_to_play_next = turn_order
+        # Find end boundary for the discussion segment
+        end_exclusive = len(full_history)
+        for j in range(anchor_idx + 1, len(full_history)):
+            hh = full_history[j]
+            if hh.phase == GamePhase.TASKS:
+                end_exclusive = j
+                break
+            if (
+                getattr(hh.action_taken, 'player_name', '') == 'System' and
+                hh.phase == GamePhase.VOTING and
+                isinstance(getattr(hh.action_taken, 'target_message', None), str) and
+                ("was voted out" in hh.action_taken.target_message or "was ejected" in hh.action_taken.target_message)
+            ):
+                end_exclusive = j
+                break
+        # Walk original messages
+        for idx in range(anchor_idx + 1, end_exclusive):
+            hmsg = full_history[idx]
+            if hmsg.phase != GamePhase.DISCUSS:
+                break
+            if getattr(hmsg.action_taken, 'player_name', None) and hmsg.action_taken.player_name != 'System' and getattr(hmsg.action_taken, 'type', None) == ActionType.SPEAK:
+                if original_intervention_pos is None and idx == pick_idx:
+                    original_intervention_pos = len(original_messages)
+                original_messages.append({
+                    "speaker": hmsg.action_taken.player_name,
+                    "message": getattr(hmsg.action_taken, 'target_message', '') or ''
+                })
+        # Compute original votes and counts within the subsequent voting block
+        last_vote_idx = -1
+        for j in range(anchor_idx + 1, len(full_history)):
+            hh = full_history[j]
+            if hh.phase == GamePhase.TASKS:
+                break
+            if (
+                getattr(hh.action_taken, 'player_name', '') == 'System' and
+                hh.phase == GamePhase.VOTING and
+                isinstance(getattr(hh.action_taken, 'target_message', None), str) and
+                ("was voted out" in hh.action_taken.target_message or "was ejected" in hh.action_taken.target_message)
+            ):
+                break
+            if getattr(hh.action_taken, 'type', None) == ActionType.VOTE:
+                last_vote_idx = j
+        if last_vote_idx != -1:
+            hist_for_count = full_history[: last_vote_idx + 1]
+            _, original_votes = count_votes(hist_for_count)
+            for voted_for in original_votes.values():
+                original_vote_counts[voted_for] = original_vote_counts.get(voted_for, 0) + 1
     else:
         # Slice to actual discussion start anchor for full-discussion runs
         anchor_idx, _ = find_target_discuss_indices(source_file, start_idx, target_player, max_count=0)
         history_slice, players, game_config = slice_history_at_discussion_start(source_file, anchor_idx)
+
+        # Ensure the last entry in sliced history has DISCUSS phase for full-discussion runs too
+        if history_slice:
+            history_slice[-1].phase = GamePhase.DISCUSS
+        # Also gather original messages from this discussion start (no intervention position)
+        try:
+            with open(source_file, 'r') as f:
+                data_full = json.load(f, object_hook=game_object_hook)
+            full_history: List[History] = data_full[0]
+            end_exclusive = len(full_history)
+            for j in range(anchor_idx + 1, len(full_history)):
+                hh = full_history[j]
+                if hh.phase == GamePhase.TASKS:
+                    end_exclusive = j
+                    break
+                if (
+                    getattr(hh.action_taken, 'player_name', '') == 'System' and
+                    hh.phase == GamePhase.VOTING and
+                    isinstance(getattr(hh.action_taken, 'target_message', None), str) and
+                    ("was voted out" in hh.action_taken.target_message or "was ejected" in hh.action_taken.target_message)
+                ):
+                    end_exclusive = j
+                    break
+            for idx in range(anchor_idx + 1, end_exclusive):
+                hmsg = full_history[idx]
+                if hmsg.phase != GamePhase.DISCUSS:
+                    break
+                if getattr(hmsg.action_taken, 'player_name', None) and hmsg.action_taken.player_name != 'System' and getattr(hmsg.action_taken, 'type', None) == ActionType.SPEAK:
+                    original_messages.append({
+                        "speaker": hmsg.action_taken.player_name,
+                        "message": getattr(hmsg.action_taken, 'target_message', '') or ''
+                    })
+        except Exception:
+            pass
     
     # Write sliced state to game_state.json (default STATE_FILE - engine will auto-save here)
     state_file_path = STATE_FILE  # Use default game_state.json
@@ -751,8 +934,8 @@ def run_discussion_episode(
             total_allowed = max(1, per_player) * max(1, alive_player_count)
 
             remaining = max(0, total_allowed - messages_so_far)
-            # get_turn_context typically pre-decrements by 1, so set to remaining-1 (but not negative)
-            desired_counter = max(0, remaining - 1)
+            # Set counter to remaining messages (get_turn_context will decrement when called)
+            desired_counter = remaining
 
             # Apply only if current counter is missing or larger than desired (to cap the discussion length)
             current_counter = getattr(engine.history[-1], 'actions_until_phase_ends', None)
@@ -770,6 +953,14 @@ def run_discussion_episode(
         pass
 
     print(f"  ✓ Loaded game state: {len(engine.history)} history entries, {len(engine.players)} players")
+    
+    # Validate that target player is alive at the intervention point
+    if target_player not in engine.history[-1].alive_player_names:
+        raise ValueError(
+            f"Target player {target_player} is not alive at the intervention point. "
+            f"Alive players: {engine.history[-1].alive_player_names}. "
+            f"This benchmark episode is invalid."
+        )
     
     # Run simulation using existing game loop pattern
     ejected_player, messages, votes = run_discussion_to_voting(
@@ -811,6 +1002,10 @@ def run_discussion_episode(
         "survived": survived,
         "messages": messages,
         "votes": votes,
+        "original_messages": original_messages,
+        "original_intervention_pos": original_intervention_pos,
+        "original_votes": original_votes,
+        "original_vote_counts": original_vote_counts,
     }
     
     print(f"  Result: {target_player} {outcome}")
@@ -825,6 +1020,7 @@ def main():
     parser.add_argument("--max_episodes", type=int, default=None, help="Maximum episodes to run")
     parser.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), '..', 'generated', 'benchmarks'))
     parser.add_argument("--disable_prevotes", action="store_true", help="Disable pre-discussion votes; only vote at end of discussion")
+    parser.add_argument("--only_second", action="store_true", help="Run only the second message variant (skip the first)")
     args = parser.parse_args()
     
     # Load benchmark
@@ -885,17 +1081,18 @@ def main():
     for i, episode in enumerate(episodes, 1):
         print(f"[{i}/{len(episodes)}] ", end="")
         try:
-            # Variant 1: start at target player's first message
-            res_first = run_discussion_episode(
-                episode, 
-                model_for_target, 
-                model_for_others, 
-                temp_dir, 
-                log_file, 
-                disable_prevotes=args.disable_prevotes,
-                start_variant="first_msg"
-            )
-            results.append(res_first)
+            # Variant 1: start at target player's first message (skip if only_second)
+            if not args.only_second:
+                res_first = run_discussion_episode(
+                    episode, 
+                    model_for_target, 
+                    model_for_others, 
+                    temp_dir, 
+                    log_file, 
+                    disable_prevotes=args.disable_prevotes,
+                    start_variant="first_msg"
+                )
+                results.append(res_first)
         except Exception as e:
             print(f"  Error (first_msg): {e}")
             import traceback
@@ -959,10 +1156,26 @@ def main():
         detailed_lines.append(f"  Outcome: {r.get('outcome', 'error')}")
         if 'ejected_player' in r:
             detailed_lines.append(f"  Ejected: {r['ejected_player']}")
+        # Show Original Messages (full discussion from anchor) with intervention mark
+        if r.get('original_messages'):
+            detailed_lines.append(f"  Original Messages: {len(r['original_messages'])}")
+            for idx, msg in enumerate(r['original_messages']):
+                mark = "*" if (r.get('original_intervention_pos') is not None and idx == r['original_intervention_pos']) else " "
+                detailed_lines.append(f"   {mark} {msg['speaker']}: {msg['message']}")
+        # Show Original Votes and Counts for comparison
+        if r.get('original_votes'):
+            detailed_lines.append(f"  Original Votes:")
+            for voter, voted_for in r['original_votes'].items():
+                detailed_lines.append(f"    {voter} -> {voted_for}")
+            if r.get('original_vote_counts'):
+                detailed_lines.append(f"  Original Vote Counts:")
+                for player, count in sorted(r['original_vote_counts'].items(), key=lambda x: x[1], reverse=True):
+                    detailed_lines.append(f"    {player}: {count}")
         if 'votes' in r and r['votes']:
             detailed_lines.append(f"  Votes:")
             for voter, voted_for in r['votes'].items():
-                detailed_lines.append(f"    {voter} -> {voted_for}")
+                mark = "*" if voter == r.get('target_player') else " "
+                detailed_lines.append(f"   {mark} {voter} -> {voted_for}")
             # Also show vote counts if available
             vote_counts = {}
             for voted_for in r['votes'].values():
@@ -975,8 +1188,9 @@ def main():
             detailed_lines.append(f"  Votes: None (no votes cast)")
         if 'messages' in r:
             detailed_lines.append(f"  Messages: {len(r['messages'])}")
-            for msg in r['messages']:
-                detailed_lines.append(f"    {msg['speaker']}: {msg['message'][:100]}")
+            for idx, msg in enumerate(r['messages']):
+                # All newly generated messages are starred for clarity
+                detailed_lines.append(f"   * {msg['speaker']}: {msg['message']}")
         if 'error' in r:
             detailed_lines.append(f"  Error: {r['error']}")
         detailed_lines.append("")

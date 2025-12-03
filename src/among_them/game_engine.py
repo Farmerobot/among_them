@@ -138,13 +138,13 @@ class GameEngine:
         if last_turn_index is None:
             # First turn: include system prompt
             new_user_msg = get_initial_turn_prompt(
-                current_player, self.history, self.players, self.game_config, len(self.history)
+                current_player, self.history, self.players, self.game_config, len(self.history), phase=phase
             )
         else:
             # Subsequent turn: only incremental observations  
             new_user_msg = get_incremental_observations(
-                current_player, self.history, self.players, self.game_config, 
-                last_turn_index, len(self.history)
+                current_player, self.history, self.players, self.game_config,
+                last_turn_index, len(self.history), phase=phase
             )
         
         # Append new user message to conversation

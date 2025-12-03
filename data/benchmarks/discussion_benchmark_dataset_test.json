@@ -1,80 +1,60 @@
 {
   "benchmark_dataset": [
     {
-      "id": "game_state_9.json:21",
-      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_9.json",
-      "start_history_index": 21,
+      "id": "game_state_7.json:50",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_7.json",
+      "start_history_index": 50,
       "ejected_player": "Eve",
-      "ejected_player_role": "CREWMATE",
+      "ejected_player_role": "IMPOSTOR",
       "players_alive": [
+        "Alice",
         "David",
-        "Bob",
-        "Eve",
-        "Charlie",
-        "Frank"
+        "Eve"
       ],
-      "discussion_message_count": 10,
+      "discussion_message_count": 6,
       "original_messages": [
         {
-          "speaker": "Frank",
-          "message": "I saw David working in Medbay right when Alice was killed. Who else was near Cafeteria?"
-        },
-        {
-          "speaker": "Charlie",
-          "message": "I was with Bob the whole time fixing tasks. Eve must've killed Alice when I left for a second."
-        },
-        {
-          "speaker": "Bob",
-          "message": "Eve reported the body but didn't see me or Charlie. We need to push suspicion on her. Based on being in Cafeteria and her proximity.  \nI should back up Charlie's story and suggest Eve was alone with Alice. The message should support Charlie's alibi while accusing Eve."
+          "speaker": "David",
+          "message": "No one else was in Admin besides Eve and Charlie. Eve must have killed him."
         },
         {
           "speaker": "Eve",
-          "message": "I saw Charlie kill Alice in the Cafeteria. We need to vote him out!"
+          "message": "David was in Storage which connects to Admin. You could've returned to kill Charlie!"
         },
         {
-          "speaker": "David",
-          "message": "I trust Charlie and Bob's alibi. Eve was alone with Alice and has no proof. Let's vote Eve."
-        },
-        {
-          "speaker": "David",
-          "message": "I trust Charlie and Bob's alibi. Eve was alone with Alice and has no proof. Let's vote Eve."
-        },
-        {
-          "speaker": "Frank",
-          "message": "Eve's accusation against Charlie doesn't align with their alibi. Let's vote Eve out to be safe."
-        },
-        {
-          "speaker": "Bob",
-          "message": "Eve was alone with Alice. Vote Eve!"
+          "speaker": "Alice",
+          "message": "\"Eve, since you reported Charlie's body in Admin, you were there with him. Did you see anyone else enter or leave before finding the body?\"\n\"Eve, if you were in Admin when Charlie died, why didn't you see the killer?\""
         },
         {
           "speaker": "Eve",
-          "message": "Charlie killed Alice! I saw it happen. Don't fall for their lies!"
+          "message": "I arrived after the kill - Charlie was already dead when I entered Admin."
         },
         {
-          "speaker": "Charlie",
-          "message": "Eve was alone with Alice in Cafeteria. The evidence points to her. Let's vote Eve out."
+          "speaker": "Alice",
+          "message": "\"Eve, if you arrived after the kill, who left Admin before you entered? The killer must have been there.\"\nEve, who left Admin before you arrived? The killer must have escaped."
+        },
+        {
+          "speaker": "David",
+          "message": "\"Eve, if you entered Admin after Charlie's death, who left just before you? The killer had to escape!\""
         }
       ],
       "voting": {
         "votes": {
-          "Charlie": "Eve",
-          "Eve": "Charlie",
-          "Frank": "Eve",
-          "Bob": "Eve",
+          "Alice": "Eve",
+          "Eve": "David",
           "David": "Eve"
         },
         "counts": {
-          "Eve": 4,
-          "Charlie": 1
+          "Eve": 2,
+          "David": 1
         }
       },
-      "reason_summary": "Eve was voted out primarily due to the strong alibis provided by Charlie and Bob, which contradicted her claims and left her without credible evidence to support her innocence."
+      "reason_summary": "Eve was voted out because she failed to provide a convincing explanation for her presence in Admin after Charlie's death, leading others to suspect her involvement in the murder."
     }
   ],
   "metadata": {
     "generated_at": "20251028_150600",
-    "max_examples": 5,
+    "max_examples": 1,
     "source_game_files": [
       "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_23.json",
       "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/game_state_2.json",

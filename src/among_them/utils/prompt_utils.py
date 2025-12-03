@@ -214,7 +214,8 @@ def get_initial_turn_prompt(
     history: List[History],
     all_players: List[Player],
     game_config: GameConfig,
-    history_index: int
+    history_index: int,
+    phase: GamePhase = None
 ) -> str:
     """
     Generate the first turn prompt for a player, including system context and initial observations.
@@ -253,7 +254,8 @@ def get_initial_turn_prompt(
     prompt_parts.append("")
     
     # Add initial observations
-    phase = history[history_index].phase if history_index < len(history) else GamePhase.TASKS
+    if phase is None:
+        phase = history[history_index].phase if history_index < len(history) else GamePhase.TASKS
     prompt_parts.append(get_observations_at_history_point(
         player, history, all_players, game_config, history_index - 1, phase
     ))
@@ -267,7 +269,8 @@ def get_incremental_observations(
     all_players: List[Player],
     game_config: GameConfig,
     last_turn_index: int,
-    current_turn_index: int
+    current_turn_index: int,
+    phase: GamePhase = None
 ) -> str:
     """
     Generate observations for a player's turn, including only what happened since their last turn.
@@ -303,7 +306,8 @@ def get_incremental_observations(
         prompt_parts.append("")
     
     # Add current state observations
-    phase = history[current_turn_index].phase if current_turn_index < len(history) else GamePhase.TASKS
+    if phase is None:
+        phase = history[current_turn_index].phase if current_turn_index < len(history) else GamePhase.TASKS
     prompt_parts.append(get_observations_at_history_point(
         player, history, all_players, game_config, current_turn_index - 1, phase
     ))
