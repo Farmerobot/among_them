@@ -8,16 +8,13 @@ but using recorded LLM responses instead of calling the LLM again.
 
 import json
 import os
+import shutil
+import traceback
 from pathlib import Path
 
-from among_them.config import STATE_FILE
 from among_them.game_engine import GameEngine
 from among_them.models.action import Action
 from among_them.models.action_type import ActionType
-from among_them.models.history import History
-from among_them.utils.end_utils import get_end_game_reason
-from among_them.utils.llm_utils import parse_llm_response_to_action
-from among_them.game_config import GameConfig
 
 
 def replay_game(json_file: Path, output_folder: Path):
@@ -29,7 +26,6 @@ def replay_game(json_file: Path, output_folder: Path):
     
     # Copy the JSON file to the state file location
     try:
-        import shutil
         shutil.copyfile(json_file, state_file)
     except Exception as e:
         print(f"Error copying game file to state file: {e}")
@@ -200,7 +196,6 @@ def replay_game(json_file: Path, output_folder: Path):
                 
         except Exception as e:
             print(f"Error during step: {e}")
-            import traceback
             traceback.print_exc()
             break
     
@@ -236,7 +231,6 @@ def replay_all_games(data_folder: str, output_folder: str):
             # print(f"Completed replay of {json_file.name}")
         except Exception as e:
             print(f"Failed to replay {json_file.name}: {e}")
-            import traceback
             traceback.print_exc()
     
     print(f"\nSuccessfully replayed {successful_replays}/{len(json_files)} games")

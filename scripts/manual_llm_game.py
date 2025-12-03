@@ -1,11 +1,15 @@
+import argparse
+import os
+import sys
+import traceback
+
 import tiktoken
+
 from among_them.config import STATE_FILE
 from among_them.game_engine import GameEngine
-from among_them.utils.llm_utils import parse_llm_response_to_action, invoke_llm
+from among_them.utils.llm_utils import parse_llm_response_to_action, invoke_llm, ConfigurationError
 from among_them.utils.ui_utils import prompt_manual_fallback_action
 from among_them.game_config import GameConfig
-import os
-import argparse
 
 def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_file_path: str = None):
     """Runs the game with manual LLM control."""
@@ -92,6 +96,12 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                                 break
                             continue  # retry with same prompt
                             
+                    except ConfigurationError as config_error:
+                        # Configuration errors should not be retried
+                        print(f"\033[91mConfiguration Error: {config_error}\033[0m")
+                        print(f"\033[91mPlease fix your configuration and restart the game.\033[0m")
+                        sys.exit(1)
+                            
                     except KeyboardInterrupt:
                         action_idx, llm_response, cot, _ = prompt_manual_fallback_action(actions_pd)
                         action_taken = actions_pd[action_idx]
@@ -158,6 +168,12 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                         break
                     continue  # retry with same prompt
                     
+            except ConfigurationError as config_error:
+                # Configuration errors should not be retried
+                print(f"\033[91mConfiguration Error: {config_error}\033[0m")
+                print(f"\033[91mPlease fix your configuration and restart the game.\033[0m")
+                sys.exit(1)
+                    
             except KeyboardInterrupt:
                 # First Ctrl+C: switch to manual fallback. If another Ctrl+C occurs during fallback, exit cleanly.
                 try:
@@ -170,7 +186,6 @@ def main(reset=False, remove_last_n=0, game_config: GameConfig = None, state_fil
                     return  # exit the main() function cleanly
             except Exception as e:
                 # Log the error but keep the loop running
-                import traceback
                 stacktrace = traceback.format_exc()
                 print(f"\033[91mError during LLM invocation: {e}\033[0m")
                 print(f"\033[91mStacktrace: {stacktrace}\033[0m")
@@ -216,5 +231,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         # Any uncaught Ctrl+C lands here – exit without stack trace.
         print("\nGame interrupted by user. Goodbye!")
-        import sys
         sys.exit(0)

@@ -6,6 +6,11 @@ from among_them.config import LLMBackend, LLM_BACKEND, OPENROUTER_API_KEY, MODEL
 from among_them.models.action import Action, ActionType
 
 
+class ConfigurationError(Exception):
+    """Exception for configuration errors that should not be retried."""
+    pass
+
+
 def invoke_llm(
     conversation: List[dict],
     model_name: str,
@@ -62,7 +67,6 @@ def invoke_llm(
         response_text = best_action.command_perspective
         
         # Extract chain of thought from generated text
-        import re
         cot_match = re.search(r"<think>.*?</think>", generated_text, re.DOTALL)
         if cot_match:
             cot = cot_match.group(0)
@@ -102,6 +106,21 @@ def invoke_llm(
             
             elif LLM_BACKEND == LLMBackend.OLLAMA:
                 import ollama
+                
+                # Validate model exists before attempting to use it
+                try:
+                    models_response = ollama.list()
+                    available_models = [m.model for m in models_response.models]
+                    # Check both exact match and with :latest tag
+                    model_variants = [model_name, f"{model_name}:latest"]
+                    if not any(variant in available_models for variant in model_variants):
+                        raise ConfigurationError(
+                            f"Model '{model_name}' not found in Ollama.\n"
+                            f"Available models: {', '.join(available_models)}\n"
+                            f"Pull the model first with: ollama pull {model_name}"
+                        )
+                except ollama.ResponseError as e:
+                    raise ConfigurationError(f"Failed to list Ollama models: {e}")
                 
                 print(f"Using Ollama with model: {model_name}")
                 

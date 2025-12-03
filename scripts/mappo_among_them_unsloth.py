@@ -13,7 +13,7 @@ Key components:
 
 # Environment setup BEFORE importing torch
 import os
-from types import FunctionType
+from typing import Callable
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # Uncomment for debugging CUDA errors - forces synchronous execution
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -31,18 +31,11 @@ import random
 import math
 import re
 from dataclasses import dataclass, asdict
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from collections import defaultdict
 from pathlib import Path
 
-# Try to use loky for better Jupyter/Colab compatibility
-# Falls back to standard concurrent.futures if loky not available
-try:
-    from loky import ProcessPoolExecutor, as_completed
-    LOKY_AVAILABLE = True
-except ImportError:
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    LOKY_AVAILABLE = False
+# Note: Multiprocessing removed in favor of in-process batch inference
 
 # Unsloth imports
 from unsloth import FastLanguageModel, is_bfloat16_supported
@@ -87,14 +80,17 @@ class MAPPOConfig:
     # Training configuration
     num_policy_iterations: int = 400
     trajectories_per_iteration: int = 4
-    max_parallel_workers: int = 1  # Parallel doesn't work on Colab (complex class serialization fails)
-    max_missing_trajectories: int = 2  # Allow up to N failed trajectories in parallel collection
+    inference_batch_size: int = 16  # Number of environments to batch during inference
     actor_lr: float = 1e-6
     critic_lr: float = 3e-6
     gradient_accumulation_steps: int = 4
     
     # PPO-specific
     ppo_epochs: int = 4
+    ppo_minibatch_size: int = 128  # Turns per minibatch during PPO update (A100: 128-256)
+    precompute_batch_size: int = 16  # DEPRECATED: use logprob_batch_size instead
+    logprob_batch_size: int = 4  # Batch size for log-prob computation (small - full sequences are very long)
+    value_batch_size: int = 4  # Batch size for value computation (small - global states are long)
     clip_epsilon: float = 0.2
     gamma: float = 1.0
     gae_lambda: float = 0.95
@@ -157,6 +153,11 @@ class TurnData:
     # Global state for critic (centralized)
     global_state_repr: str
     
+    # === Fields with default values must come after required fields ===
+    
+    # Action distribution for entropy computation (softmax over discrete actions)
+    action_probs: Optional[List[float]] = None  # Probability for each action
+    
     # Token statistics
     input_tokens: int = 0
     output_tokens: int = 0
@@ -166,6 +167,12 @@ class TurnData:
     value_estimate: Optional[float] = None
     advantage: Optional[float] = None
     returns: Optional[float] = None
+    
+    # Pre-computed tensors for PPO update (stored on CPU)
+    precomputed_old_log_probs: Optional[Any] = None  # torch.Tensor on CPU
+    precomputed_ref_log_probs: Optional[Any] = None  # torch.Tensor on CPU
+    advantage_tensor: Optional[Any] = None  # torch.Tensor on device
+    returns_tensor: Optional[Any] = None  # torch.Tensor on device
 
 
 @dataclass
@@ -255,7 +262,12 @@ class MAPPOActor:
         self.value_head = value_head
         self.config = config
         self.trainer = trainer  # Reference to trainer for iteration tracking
-        self.progress_callback: FunctionType = lambda x: None  # Optional callback for turn-by-turn progress updates
+        self.progress_callback: Callable[[int, int], None] = lambda x, y: None  # Optional callback for turn-by-turn progress updates
+        
+        # Set tokenizer padding for batch inference (do once, not every call)
+        self.tokenizer.padding_side = "left"
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
         
         self.game_config = GameConfig(
             num_tasks=config.num_tasks,
@@ -541,7 +553,9 @@ class MAPPOActor:
                 
                 generated_action_text = self.tokenizer.decode(generated_action_ids, skip_special_tokens=True)
                 
-                # Update the action object
+                # Update the action object - MUST set target_message for SPEAK actions
+                # because set_stories() reads from target_message to set command_perspective
+                actions[0].target_message = generated_action_text
                 actions[0].command_perspective = generated_action_text
                 chosen_idx = 0
                 chosen_per_token_log_probs = action_log_probs_list
@@ -634,7 +648,12 @@ class MAPPOActor:
                     all_per_token_log_probs.append(raw_token_log_probs)
                 
                 # Select action using word-normalized scores
-                action_probs = torch.softmax(torch.tensor(selection_scores, device=device), dim=-1)
+                # Handle edge case: if all scores are -inf, use uniform distribution
+                scores_tensor = torch.tensor(selection_scores, device=device)
+                if torch.all(torch.isinf(scores_tensor)):
+                    action_probs = torch.ones(len(actions), device=device) / len(actions)
+                else:
+                    action_probs = torch.softmax(scores_tensor, dim=-1)
                 chosen_idx = int(torch.multinomial(action_probs, num_samples=1).item())
                 chosen_per_token_log_probs = all_per_token_log_probs[chosen_idx]
             
@@ -685,7 +704,379 @@ class MAPPOActor:
                     print(f"Overall tok/s:        {output_token_count/max(total_time,1e-6):8.1f}")
                 print(f"{'='*60}\n")
             
-            return chosen_idx, full_generation_log_probs, reasoning, input_token_count, output_token_count
+            # Return action_probs for proper entropy computation
+            # For generative turns, there's only one "action" (the generated text)
+            action_probs_list = action_probs.cpu().tolist() if not is_generative_turn else [1.0]
+            
+            return chosen_idx, full_generation_log_probs, reasoning, input_token_count, output_token_count, action_probs_list
+    
+    def generate_action_batch( # MARK: .    GENERATE BATCH
+        self,
+        batch_conversations: List[List[Dict[str, str]]],
+        batch_actions_list: List[List[Action]],
+    ) -> List[Tuple[int, List[float], str, int, int]]:
+        """
+        BATCH GENERATION for vectorized environment stepping.
+        
+        Generate actions for a batch of environments simultaneously.
+        Uses left-padding for decoder-only models and handles variable-length reasoning.
+        
+        Args:
+            batch_conversations: List of conversations, one per environment
+            batch_actions_list: List of action lists, one per environment
+            
+        Returns:
+            List of (action_idx, generation_log_probs, reasoning, input_tokens, output_tokens)
+            for each environment in the batch
+        """
+        self.model.eval()
+        device = self.model.device
+        batch_size = len(batch_conversations)
+        
+        if batch_size == 0:
+            return []
+        
+        # Timing
+        t_batch_start = time.time()
+        timing = {
+            "tokenization": 0.0,
+            "prefill": 0.0,
+            "reasoning_loop": 0.0,
+            "reasoning_tokens": 0,
+            "action_selection": 0.0,
+            "action_forward_passes": 0,
+        }
+        
+        # 1. Apply chat template and tokenize with LEFT padding (already set in __init__)
+        t_tok_start = time.time()
+        input_texts = [
+            self.tokenizer.apply_chat_template(
+                conv,
+                tokenize=False,
+                add_generation_prompt=True
+            ) for conv in batch_conversations
+        ]
+        
+        # Tokenize as batch with left padding
+        inputs = self.tokenizer(
+            input_texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.config.max_seq_length
+        ).to(device)
+        
+        input_lengths = (inputs.attention_mask == 1).sum(dim=1).tolist()
+        timing["tokenization"] = time.time() - t_tok_start
+        
+        # 2. Prefill batch
+        t_prefill_start = time.time()
+        with torch.no_grad():
+            prompt_len = inputs.input_ids.shape[1]
+            cache_position = torch.arange(prompt_len, device=device).unsqueeze(0).expand(batch_size, -1)
+            
+            # Prefill all prompts
+            out = self.model(
+                inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                cache_position=cache_position,
+                past_key_values=None,
+                use_cache=True,
+            )
+            logits = out.logits
+            past_key_values = out.past_key_values
+            timing["prefill"] = time.time() - t_prefill_start
+            
+            # Get </think> token
+            think_close_token = self.tokenizer.encode("</think>", add_special_tokens=False)[0]
+            
+            # Get generation config for sampling
+            gen_cfg = getattr(self.model, "generation_config", None)
+            temperature = float(getattr(gen_cfg, "temperature", 1.0) or 1.0)
+            top_p = float(getattr(gen_cfg, "top_p", 1.0) or 1.0)
+            top_k = int(getattr(gen_cfg, "top_k", 0) or 0)
+            
+            # 3. Generate reasoning tokens for batch until all generate </think>
+            # Track which sequences are still generating
+            t_reasoning_start = time.time()
+            active_mask = torch.ones(batch_size, dtype=torch.bool, device=device)
+            batch_reasoning_ids = [[] for _ in range(batch_size)]
+            batch_reasoning_log_probs = [[] for _ in range(batch_size)]
+            cur_pos = torch.tensor([prompt_len] * batch_size, device=device)
+            
+            for _ in range(self.config.max_reasoning_tokens):
+                if not active_mask.any():
+                    break
+                
+                # Get logits for the last position (works for both prefill and KV-cache steps)
+                step_logits = logits[:, -1, :].clone()
+                
+                # Apply sampling (temperature, top_k, top_p)
+                if temperature != 1.0:
+                    step_logits = step_logits / max(temperature, 1e-6)
+                
+                if top_k and top_k > 0:
+                    for i in range(batch_size):
+                        if not active_mask[i]:
+                            continue
+                        if top_k < step_logits[i].numel():
+                            kth_vals, _ = torch.topk(step_logits[i], top_k)
+                            min_keep = kth_vals[-1]
+                            step_logits[i] = torch.where(
+                                step_logits[i] < min_keep,
+                                torch.tensor(float('-inf'), device=device, dtype=step_logits.dtype),
+                                step_logits[i]
+                            )
+                
+                if top_p and top_p < 1.0:
+                    for i in range(batch_size):
+                        if not active_mask[i]:
+                            continue
+                        sorted_logits, sorted_indices = torch.sort(step_logits[i], descending=True)
+                        sorted_probs = torch.softmax(sorted_logits, dim=-1)
+                        cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+                        sorted_mask = cumulative_probs > top_p
+                        if sorted_mask.any():
+                            sorted_mask[1:] = sorted_mask[:-1].clone()
+                            sorted_mask[0] = False
+                        sorted_logits = torch.where(
+                            sorted_mask,
+                            torch.tensor(float('-inf'), device=device, dtype=sorted_logits.dtype),
+                            sorted_logits
+                        )
+                        step_logits[i] = torch.full_like(step_logits[i], float('-inf'))
+                        step_logits[i].scatter_(0, sorted_indices, sorted_logits)
+                
+                # Sample tokens
+                step_log_probs = F.log_softmax(step_logits, dim=-1)
+                probs = torch.softmax(step_logits, dim=-1)
+                next_tokens = torch.multinomial(probs, num_samples=1).squeeze(-1)
+                
+                # Update only active sequences
+                for i in range(batch_size):
+                    if not active_mask[i]:
+                        continue
+                    
+                    token_id = int(next_tokens[i].item())
+                    
+                    if token_id == think_close_token:
+                        active_mask[i] = False
+                        continue
+                    
+                    batch_reasoning_ids[i].append(token_id)
+                    batch_reasoning_log_probs[i].append(step_log_probs[i, token_id].item())
+                
+                # Continue generation for active sequences
+                # For inactive ones, we pad with eos tokens
+                next_tokens_padded = torch.where(
+                    active_mask,
+                    next_tokens,
+                    torch.tensor(self.tokenizer.eos_token_id, device=device)
+                )
+                
+                out_tuple = self.model(
+                    next_tokens_padded.unsqueeze(1),
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    position_ids=cur_pos.unsqueeze(1),
+                )
+                logits = out_tuple[0]
+                past_key_values = out_tuple[1]
+                cur_pos += 1
+            
+            timing["reasoning_loop"] = time.time() - t_reasoning_start
+            timing["reasoning_tokens"] = sum(len(ids) for ids in batch_reasoning_ids)
+            
+            # 4. Process action selection for each item in batch
+            t_action_start = time.time()
+            # Since different items may have different action types (generative vs discrete),
+            # we need to handle them individually after reasoning
+            
+            results = []
+            
+            for batch_idx in range(batch_size):
+                actions = batch_actions_list[batch_idx]
+                reasoning_ids = batch_reasoning_ids[batch_idx]
+                reasoning_log_probs = batch_reasoning_log_probs[batch_idx]
+                
+                # Decode reasoning
+                reasoning = self.tokenizer.decode(reasoning_ids)
+                
+                # Append prefix: \n</think>\n\nAction: or \n</think>\n\nTell:
+                is_generative_turn = actions[0].type == ActionType.SPEAK
+                
+                end_think_token_ids = self.tokenizer.encode("\n</think>", add_special_tokens=False)
+                if is_generative_turn:
+                    action_prefix_token_ids = self.tokenizer.encode("\n\nTell:", add_special_tokens=False)
+                else:
+                    action_prefix_token_ids = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+                
+                prefix_ids = end_think_token_ids + action_prefix_token_ids
+                prefix_log_probs = []
+                
+                # Build full sequence for fresh forward pass (avoids Unsloth KV cache batch size issues)
+                # Get the original input tokens for this item (without left padding)
+                orig_input_ids = inputs.input_ids[batch_idx]
+                orig_mask = inputs.attention_mask[batch_idx]
+                # Remove left padding
+                non_pad_mask = orig_mask == 1
+                orig_input_ids = orig_input_ids[non_pad_mask]
+                
+                # Build: input + reasoning + prefix
+                reasoning_tensor = torch.tensor(reasoning_ids, dtype=torch.long, device=device)
+                prefix_tensor = torch.tensor(prefix_ids, dtype=torch.long, device=device)
+                full_seq = torch.cat([orig_input_ids, reasoning_tensor, prefix_tensor]).unsqueeze(0)
+                
+                # Fresh forward pass without KV cache
+                with torch.no_grad():
+                    out = self.model(full_seq, use_cache=True)
+                    item_past_kv = out.past_key_values
+                    last_logits = out.logits[0, -1, :]
+                    timing["action_forward_passes"] += 1
+                
+                # Compute log probs for prefix tokens
+                prefix_start = len(orig_input_ids) + len(reasoning_ids)
+                for i, tid in enumerate(prefix_ids):
+                    pos = prefix_start + i - 1  # -1 because we predict from previous position
+                    if pos >= 0:
+                        step_log_probs = F.log_softmax(out.logits[0, pos, :], dim=-1)
+                        prefix_log_probs.append(step_log_probs[tid].item())
+                
+                prefix_end_pos = full_seq.shape[1]
+                
+                # Now handle generative vs discrete
+                if is_generative_turn:
+                    # Generative: generate freely
+                    generated_action_ids = []
+                    action_log_probs_list = []
+                    action_kv_cache = item_past_kv
+                    cache_position_act = torch.tensor([prefix_end_pos], device=device)
+                    current_logits_branch = last_logits
+                    
+                    for _ in range(100):
+                        step_logits = current_logits_branch
+                        
+                        if temperature != 1.0:
+                            step_logits = step_logits / max(temperature, 1e-6)
+                        
+                        # Apply sampling...
+                        step_log_probs = F.log_softmax(step_logits, dim=-1)
+                        probs = torch.softmax(step_logits, dim=-1)
+                        next_token = torch.multinomial(probs, num_samples=1)
+                        token_id = int(next_token.item())
+                        
+                        if token_id == self.tokenizer.eos_token_id:
+                            break
+                        
+                        generated_action_ids.append(token_id)
+                        action_log_probs_list.append(step_log_probs[token_id].item())
+                        
+                        next_output_tuple = self.model(
+                            next_token[:, None].to(dtype=torch.long),
+                            past_key_values=action_kv_cache,
+                            use_cache=True,
+                            position_ids=cache_position_act,
+                        )
+                        current_logits_branch = next_output_tuple[0][0, -1, :]
+                        action_kv_cache = next_output_tuple[1]
+                        cache_position_act += 1
+                    
+                    generated_action_text = self.tokenizer.decode(generated_action_ids, skip_special_tokens=True)
+                    # MUST set target_message for SPEAK actions (set_stories() reads from it)
+                    actions[0].target_message = generated_action_text
+                    actions[0].command_perspective = generated_action_text
+                    chosen_idx = 0
+                    chosen_per_token_log_probs = action_log_probs_list
+                    action_probs = [1.0]  # Generative turn = deterministic single action
+                    generated_message = generated_action_text  # Return for caller to use
+                
+                else:
+                    # Discrete: rank actions
+                    selection_scores = []
+                    all_per_token_log_probs = []
+                    
+                    for action in actions:
+                        action_kv_cache = tuple(
+                            (k.clone(), v.clone()) for k, v in item_past_kv
+                        )
+                        action_text = action.command_perspective
+                        action_tokens = self.tokenizer(action_text, add_special_tokens=False, return_tensors="pt")
+                        action_token_ids = action_tokens.input_ids[0].to(device)
+                        
+                        num_words = len(action_text.split())
+                        if len(action_token_ids) == 0:
+                            selection_scores.append(float('-inf'))
+                            all_per_token_log_probs.append([])
+                            continue
+                        
+                        raw_token_log_probs = []
+                        total_log_prob = 0.0
+                        current_logits_branch = last_logits
+                        cache_position_act = torch.tensor([prefix_end_pos], device=device)
+                        
+                        for i, token_id in enumerate(action_token_ids):
+                            step_log_probs = F.log_softmax(current_logits_branch, dim=-1)
+                            log_prob = step_log_probs[token_id].item()
+                            raw_token_log_probs.append(log_prob)
+                            total_log_prob += log_prob
+                            
+                            if i < len(action_token_ids) - 1:
+                                next_output_tuple = self.model(
+                                    token_id.unsqueeze(0).unsqueeze(0),
+                                    past_key_values=action_kv_cache,
+                                    use_cache=True,
+                                    position_ids=cache_position_act,
+                                )
+                                current_logits_branch = next_output_tuple[0][0, -1, :]
+                                action_kv_cache = next_output_tuple[1]
+                                cache_position_act += 1
+                        
+                        word_normalized_log_prob = total_log_prob / max(num_words, 1)
+                        selection_scores.append(word_normalized_log_prob)
+                        all_per_token_log_probs.append(raw_token_log_probs)
+                    
+                    # Handle edge case: if all scores are -inf, use uniform distribution
+                    scores_tensor = torch.tensor(selection_scores, device=device)
+                    if torch.all(torch.isinf(scores_tensor)):
+                        action_probs_tensor = torch.ones(len(actions), device=device) / len(actions)
+                    else:
+                        action_probs_tensor = torch.softmax(scores_tensor, dim=-1)
+                    chosen_idx = int(torch.multinomial(action_probs_tensor, num_samples=1).item())
+                    chosen_per_token_log_probs = all_per_token_log_probs[chosen_idx]
+                    action_probs = action_probs_tensor.cpu().tolist()  # Convert to list for storage
+                    generated_message = None  # Discrete actions don't generate message
+                
+                # Combine all log_probs
+                full_generation_log_probs = reasoning_log_probs + prefix_log_probs + chosen_per_token_log_probs
+                output_token_count = len(full_generation_log_probs)
+                
+                results.append((
+                    chosen_idx,
+                    full_generation_log_probs,
+                    reasoning,
+                    input_lengths[batch_idx],
+                    output_token_count,
+                    action_probs,  # Add action distribution for entropy
+                    generated_message  # Generated text for SPEAK actions
+                ))
+            
+            timing["action_selection"] = time.time() - t_action_start
+            total_time = time.time() - t_batch_start
+            
+            # Print timing summary with VRAM
+            vram_info = ""
+            if torch.cuda.is_available():
+                vram_gb = torch.cuda.memory_allocated() / 1024**3
+                vram_info = f" | vram={vram_gb:.1f}GB"
+            
+            print(f"⏱️  BATCH (n={batch_size}): "
+                  f"tok={timing['tokenization']*1000:.0f}ms "
+                  f"prefill={timing['prefill']*1000:.0f}ms "
+                  f"reason={timing['reasoning_loop']*1000:.0f}ms/{timing['reasoning_tokens']}tok "
+                  f"action={timing['action_selection']*1000:.0f}ms/{timing['action_forward_passes']}fwd "
+                  f"total={total_time*1000:.0f}ms{vram_info}", flush=True)
+            
+            return results
     
     def _build_global_state(self, history_items: List[History], current_turn_index: int) -> str: # MARK: .      GLOBAL
         """
@@ -741,14 +1132,17 @@ class MAPPOActor:
             import os
             from datetime import datetime
             
-            # Create trajectories directory if it doesn't exist
-            traj_dir = os.path.join(os.path.dirname(self.config.output_dir), "trajectories")
+            # Get iteration from trainer (use +1 to match checkpoint naming convention)
+            iteration = getattr(self.trainer, 'iteration', 0) if self.trainer else 0
+            iteration_num = iteration + 1  # Match checkpoint folder naming (1-indexed)
+            
+            # Create iteration-specific trajectories directory
+            traj_dir = os.path.join(self.config.checkpoint_dir, f"iteration_{iteration_num}", "trajectories")
             os.makedirs(traj_dir, exist_ok=True)
             
-            # Generate filename with timestamp and metadata
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            iteration = getattr(self.trainer, 'iteration', 0) if self.trainer else 0
-            filename = f"traj_{timestamp}_iter{iteration:03d}_{winner_role.name}_{len(turns_data)}turns.json"
+            # Generate filename with timestamp + microseconds to avoid collision
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = f"traj_{timestamp}_{winner_role.name}_{len(turns_data)}turns.json"
             filepath = os.path.join(traj_dir, filename)
             
             # Save using the same format as GameEngine
@@ -813,7 +1207,7 @@ class MAPPOActor:
             # Generate action using policy
             try:
                 turn_gen_start = time.time()
-                action_idx, log_prob, reasoning, input_tokens, output_tokens = self._generate_action_with_policy(
+                action_idx, log_prob, reasoning, input_tokens, output_tokens, action_probs = self._generate_action_with_policy(
                     conversation,
                     actions_player_can_take
                 )
@@ -842,7 +1236,8 @@ class MAPPOActor:
                 chosen_action_idx=action_idx,
                 chosen_action=chosen_action,
                 reasoning=reasoning,
-                generation_log_probs=log_prob,  # Now a List[float]
+                generation_log_probs=log_prob,
+                action_probs=action_probs,  # Store for entropy computation
                 global_state_repr=global_state,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
@@ -905,144 +1300,6 @@ class MAPPOActor:
 
 
 # ============================================================================
-# MARK: PARALLEL WORKER
-# ============================================================================
-
-def run_game_worker(
-    config_dict: dict,
-    model_name: str,
-    lora_adapter_path: str,
-    value_head_path: str,
-    iteration: int,
-    worker_id: int,
-    progress_file: str
-) -> Optional[Trajectory]:
-    """
-    Worker function that runs ONE game in a separate process.
-    Writes progress to progress_file for real-time monitoring.
-    """
-    import sys
-    import traceback as tb
-    from pathlib import Path
-    
-    def log_progress(msg: str):
-        """Write progress to file for parent to monitor"""
-        with open(progress_file, 'a') as f:
-            timestamp = time.strftime("%H:%M:%S")
-            f.write(f"[{timestamp}] {msg}\n")
-            f.flush()
-    
-    try:
-        log_progress(f"Worker {worker_id} started (PID: {os.getpid()})")
-        log_progress(f"[Worker {worker_id}] Process started (PID: {os.getpid()})")
-        sys.stdout.flush()
-        
-        # 1. Reconstruct config from dict
-        log_progress(f"[Worker {worker_id}] Reconstructing config...")
-        sys.stdout.flush()
-        config = MAPPOConfig(**config_dict)
-
-        # Stagger worker startup to avoid simultaneous GPU memory allocation
-        log_progress(f"[Worker {worker_id}] Staggering startup by {(worker_id % config.max_parallel_workers) * 3}s...")
-        sys.stdout.flush()
-        time.sleep((worker_id % config.max_parallel_workers) * 3)
-        
-        log_progress(f"[Worker {worker_id}] Loading model from {model_name}...")
-        sys.stdout.flush()
-        
-        # Disable debug in workers to avoid log clutter
-        config.debug = False
-        
-        # 2. Load base model and tokenizer
-        log_progress("Loading model...")
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name,
-            load_in_4bit=config.load_in_4bit,
-            max_seq_length=config.max_seq_length,
-            attn_implementation="flash_attention_2",
-        )
-        log_progress("Model loaded")
-        
-        # 3. Load LoRA adapters (policy)
-        log_progress("Loading LoRA adapters...")
-        from peft import PeftModel
-        model = PeftModel.from_pretrained(
-            model,
-            str(lora_adapter_path),
-            is_trainable=False  # Not training in workers, just collecting
-        )
-        log_progress("LoRA adapters loaded")
-        
-        # 4. Compile model for optimized inference
-        log_progress("Compiling model...")
-        try:
-            model = torch.compile(model, mode="reduce-overhead")
-            log_progress("Model compiled")
-        except Exception as e:
-            log_progress(f"torch.compile failed: {e}")
-        
-        # 5. Load value head (critic)
-        log_progress("Loading value head...")
-        hidden_size = model.config.hidden_size
-        value_head = ValueHead(hidden_size).to(device=model.device, dtype=torch.float32)
-        state_dict = torch.load(value_head_path, map_location=model.device, weights_only=True)
-        value_head.load_state_dict(state_dict)
-        log_progress("Value head loaded")
-        
-        # 6. Create mock trainer for iteration tracking (needed for trajectory saving)
-        log_progress(f"[Worker {worker_id}] Creating actor...")
-        sys.stdout.flush()
-        class MockTrainer:
-            pass
-        mock_trainer = MockTrainer()
-        mock_trainer.iteration = iteration
-        
-        # 7. Create actor
-        actor = MAPPOActor(
-            model=model,
-            tokenizer=tokenizer,
-            value_head=value_head,
-            config=config,
-            trainer=mock_trainer
-        )
-        log_progress(f"[Worker {worker_id}] Actor created")
-        sys.stdout.flush()
-        
-        # 8. Collect ONE trajectory with turn-by-turn progress
-        log_progress("Starting game...")
-        
-        # Pass progress callback to actor for turn-by-turn updates
-        actor.progress_callback = lambda turn, total: log_progress(f"Turn {turn}/{total} complete")
-        
-        trajectory = actor.collect_trajectory()
-        log_progress(f"Game complete: {len(trajectory.turns) if trajectory else 0} turns")
-        
-        # 9. Clean up GPU memory before exit
-        log_progress("Cleaning up...")
-        del model, tokenizer, value_head, actor
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        log_progress("Complete!")
-        
-        return trajectory
-        
-    except Exception as e:
-        del model, tokenizer, value_head, actor
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        log_progress(f"\n{'='*80}")
-        log_progress(f"FATAL ERROR in worker {worker_id} (PID: {os.getpid()})")
-        log_progress(f"{'='*80}")
-        log_progress(f"Exception type: {type(e).__name__}")
-        log_progress(f"Exception message: {e}")
-        log_progress(f"\nFull traceback:")
-        tb.print_exc()
-        log_progress(f"{'='*80}\n")
-        sys.stderr.flush()
-        return None
-
-
-# ============================================================================
 # MARK: MAPPO TRAINER
 # ============================================================================
 
@@ -1096,7 +1353,7 @@ class MAPPOTrainer:
         print(f"Max sequence length: {config.max_seq_length}")
         print(f"LoRA rank: {config.lora_rank}")
         print(f"4-bit quantization: {config.load_in_4bit}")
-        print(f"{'='*80}\n")
+        print(f"{'='*80}\n", flush=True)
         
         self.model, self.tokenizer = FastLanguageModel.from_pretrained(
             config.model_name,
@@ -1182,12 +1439,17 @@ class MAPPOTrainer:
                 self.pretrain_value_head()
     
     def _set_seeds(self, seed: int):
-        """Set random seeds for reproducibility"""
+        """Set random seeds for full reproducibility (critical for scientific papers)"""
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
+            # Deterministic operations (trades speed for reproducibility)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        # Set environment variable for hash seed
+        os.environ["PYTHONHASHSEED"] = str(seed)
     
     def pretrain_value_head(self): # MARK: .      PRETRAINING
         """Pre-train value head on existing game trajectories in data/ folder"""
@@ -1318,11 +1580,11 @@ class MAPPOTrainer:
             avg_loss = total_loss / len(training_data_with_tokens)
             print(f"  Epoch {epoch+1}/{self.config.pretrain_epochs}: Loss = {avg_loss:.4f}")
             
-            # Log to wandb
+            # Log to wandb with explicit step to avoid auto-increment confusion
             wandb.log({
                 "pretrain/epoch": epoch + 1,
                 "pretrain/loss": avg_loss,
-            })
+            }, step=epoch)
             
             # Save value head after each epoch
             pretrain_checkpoint_dir = Path(self.config.checkpoint_dir) / "pretrain"
@@ -1334,9 +1596,12 @@ class MAPPOTrainer:
         print("Value head pretraining complete!\n")
     
     def _compute_value(self, global_state_repr: str) -> torch.Tensor: # MARK: .      VALUE
-        """Compute value estimate for a global state"""
-        # Note: Caller controls value_head.train() vs .eval() mode
+        """Compute value estimate for a global state
         
+        Note: This function does NOT change model mode. Caller is responsible for
+        setting appropriate mode before calling. Uses torch.no_grad() for model
+        forward pass regardless of mode.
+        """
         inputs = self.tokenizer(
             global_state_repr,
             return_tensors="pt",
@@ -1344,21 +1609,11 @@ class MAPPOTrainer:
             max_length=self.config.max_seq_length
         ).to(self.model.device)
         
-        # ====================================================================
-        # Print the sequence length that is about to be processed
-        seq_len = inputs.input_ids.shape[1]
-        if self.config.debug:
-            print(f"      [DEBUG _compute_value] Processing seq_len: {seq_len}")
-        # ====================================================================
-        
-        # Base model always in eval for value computation (no gradients needed)
-        self.model.eval()
+        # Model forward without gradients (hidden states don't need gradients)
+        # Don't change model mode - let caller control it
         with torch.no_grad():
             outputs = self.model(**inputs, output_hidden_states=True)
-            hidden_states = outputs.hidden_states[-1]
-        
-        # Detach hidden_states from the model's computation graph
-        hidden_states = hidden_states.detach()
+            hidden_states = outputs.hidden_states[-1].detach()
         
         # CRITICAL: Delete outputs and inputs immediately to free VRAM
         del outputs, inputs
@@ -1371,6 +1626,71 @@ class MAPPOTrainer:
         del hidden_states
         
         return value
+    
+    def _compute_value_batch(
+        self,
+        global_state_reprs: List[str],
+        batch_size: int = 16
+    ) -> List[float]:  # MARK: .      VALUE BATCH
+        """
+        Batched value computation for efficient GAE.
+        
+        Args:
+            global_state_reprs: List of global state strings
+            batch_size: Number of states to process in parallel
+            
+        Returns:
+            List of value estimates (floats)
+        """
+        device = self.model.device
+        all_values = []
+        total_batches = (len(global_state_reprs) + batch_size - 1) // batch_size
+        start_time = time.time()
+        
+        for batch_idx, batch_start in enumerate(range(0, len(global_state_reprs), batch_size)):
+            batch_states = global_state_reprs[batch_start:batch_start + batch_size]
+            
+            # Progress print every 5 batches or on last batch
+            if batch_idx % 5 == 0 or batch_idx == total_batches - 1:
+                elapsed = time.time() - start_time
+                if batch_idx > 0:
+                    eta = elapsed / (batch_idx + 1) * (total_batches - batch_idx - 1)
+                    print(f"    Value batch {batch_idx + 1}/{total_batches} ({len(all_values)}/{len(global_state_reprs)} done) | {elapsed:.1f}s elapsed, ~{eta:.1f}s remaining", end="\r", flush=True)
+                else:
+                    print(f"    Value batch {batch_idx + 1}/{total_batches} ({len(all_values)}/{len(global_state_reprs)} done)", end="\r", flush=True)
+            
+            # Tokenize with left-padding for batch processing
+            encoded = self.tokenizer(
+                batch_states,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.config.max_seq_length
+            ).to(device)
+            
+            with torch.no_grad():
+                outputs = self.model(**encoded, output_hidden_states=True)
+                # Get last hidden state for each sequence (last non-padded position)
+                hidden_states = outputs.hidden_states[-1]  # [B, seq_len, hidden]
+                
+                # For left-padded sequences, the last token is always the last position
+                last_hidden = hidden_states[:, -1, :]  # [B, hidden]
+                
+                del outputs, hidden_states
+            
+            # Compute values (no gradients needed for GAE)
+            with torch.no_grad():
+                values = self.value_head(last_hidden).squeeze(-1)  # [B]
+                
+            batch_values = values.cpu().tolist()
+            if isinstance(batch_values, float):
+                batch_values = [batch_values]
+            all_values.extend(batch_values)
+            
+            del encoded, last_hidden, values
+        
+        print()  # Newline after progress
+        return all_values
     
     def _compute_log_prob(
         self,
@@ -1422,8 +1742,8 @@ class MAPPOTrainer:
         # ====================================================================
         # Print the sequence length that is about to be processed
         seq_len = full_input_ids.shape[1]
-        if self.config.debug:
-            print(f"      [DEBUG _compute_log_prob] Processing seq_len: {seq_len}")
+        # if self.config.debug:
+        #     print(f"      [DEBUG _compute_log_prob] Processing seq_len: {seq_len}")
         # ====================================================================
         
         # 4. Forward pass
@@ -1476,75 +1796,150 @@ class MAPPOTrainer:
         
         return result
     
-    def _collect_trajectories_sequential(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      COLLECT SEQ
-        """Sequential trajectory collection (fallback when parallel doesn't work)"""
-        collection_start_time = time.time()
-        trajectories = []
-        attempts = 0
-        max_attempts = num_trajectories * 3
+    def _compute_log_prob_batch(
+        self,
+        turns: List[TurnData],
+        use_reference_model: bool = False,
+        batch_size: int = 4
+    ) -> List[torch.Tensor]:  # MARK: .      LOGPROB BATCH
+        """
+        Batched version of _compute_log_prob for efficient pre-computation.
         
-        print(f"\n{'='*80}")
-        print(f"📊 SEQUENTIAL COLLECTION: {num_trajectories} TRAJECTORIES")
-        print(f"{'='*80}\n")
+        Processes multiple turns in parallel using left-padding.
         
-        while len(trajectories) < num_trajectories and attempts < max_attempts:
-            if self.config.debug:
-                print(f"\n🔄 Attempt {attempts + 1}/{max_attempts}")
+        Args:
+            turns: List of TurnData objects
+            use_reference_model: If True, use base model without LoRA
+            batch_size: Number of turns to process in each batch
             
-            trajectory = self.actor.collect_trajectory()
+        Returns:
+            List of tensors, each of shape [G_i] where G_i = generated tokens for turn i
+        """
+        device = self.model.device
+        results = []
+        total_batches = (len(turns) + batch_size - 1) // batch_size
+        start_time = time.time()
+        
+        for batch_idx, batch_start in enumerate(range(0, len(turns), batch_size)):
+            batch_turns = turns[batch_start:batch_start + batch_size]
             
-            if trajectory is not None:
-                trajectories.append(trajectory)
-                print(f"\n✅ Collected {len(trajectories)}/{num_trajectories}: "
-                      f"{len(trajectory.turns)} turns, winner: {trajectory.winner_role.name}, "
-                      f"end_reason: {trajectory.end_reason.name}, "
-                      f"time: {trajectory.collection_time:.2f}s, "
-                      f"tokens: {trajectory.total_input_tokens}in/{trajectory.total_output_tokens}out")
+            # Progress print every 5 batches or on last batch
+            if batch_idx % 5 == 0 or batch_idx == total_batches - 1:
+                elapsed = time.time() - start_time
+                if batch_idx > 0:
+                    eta = elapsed / (batch_idx + 1) * (total_batches - batch_idx - 1)
+                    print(f"    LogProb batch {batch_idx + 1}/{total_batches} ({len(results)}/{len(turns)} done) | {elapsed:.1f}s elapsed, ~{eta:.1f}s remaining", end="\r", flush=True)
+                else:
+                    print(f"    LogProb batch {batch_idx + 1}/{total_batches} ({len(results)}/{len(turns)} done)", end="\r", flush=True)
+            
+            # Build all sequences for this batch
+            all_full_ids = []
+            all_context_lens = []
+            all_generated_lens = []
+            
+            for turn in batch_turns:
+                # Build context
+                input_text = self.tokenizer.apply_chat_template(
+                    turn.conversation, tokenize=False, add_generation_prompt=True
+                )
+                context_ids = self.tokenizer.encode(input_text, add_special_tokens=False)
+                context_len = len(context_ids)
+                
+                # Build generated sequence
+                reasoning_tokens = self.tokenizer.encode(turn.reasoning, add_special_tokens=False)
+                end_think_tokens = self.tokenizer.encode("\n</think>", add_special_tokens=False)
+                
+                chosen_action = turn.actions[turn.chosen_action_idx]
+                is_generative_turn = chosen_action.type == ActionType.SPEAK
+                
+                if is_generative_turn:
+                    action_prefix_tokens = self.tokenizer.encode("\n\nTell:", add_special_tokens=False)
+                else:
+                    action_prefix_tokens = self.tokenizer.encode("\n\nAction:", add_special_tokens=False)
+                
+                action_tokens = self.tokenizer.encode(chosen_action.command_perspective, add_special_tokens=False)
+                generated_ids = reasoning_tokens + end_think_tokens + action_prefix_tokens + action_tokens
+                
+                full_ids = context_ids + generated_ids
+                all_full_ids.append(full_ids)
+                all_context_lens.append(context_len)
+                all_generated_lens.append(len(generated_ids))
+            
+            # Pad sequences (left-padding for decoder-only models)
+            max_len = max(len(ids) for ids in all_full_ids)
+            padded_ids = []
+            attention_masks = []
+            
+            pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+            
+            for ids in all_full_ids:
+                pad_len = max_len - len(ids)
+                padded = [pad_token_id] * pad_len + ids
+                mask = [0] * pad_len + [1] * len(ids)
+                padded_ids.append(padded)
+                attention_masks.append(mask)
+            
+            input_ids = torch.tensor(padded_ids, device=device)
+            attention_mask = torch.tensor(attention_masks, device=device)
+            
+            # Forward pass
+            if use_reference_model:
+                with torch.no_grad(), self.model.disable_adapter():
+                    outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
             else:
-                print(f"  ❌ Failed trajectory (attempt {attempts + 1})")
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
             
-            attempts += 1
+            logits = outputs.logits  # [B, max_len, V]
+            del outputs
+            
+            # Extract log probs for each turn in the batch
+            for i, turn in enumerate(batch_turns):
+                pad_len = max_len - len(all_full_ids[i])
+                context_len = all_context_lens[i]
+                generated_len = all_generated_lens[i]
+                
+                # Adjust indices for padding
+                # The context starts at pad_len, generated tokens start at pad_len + context_len
+                # Logits that predict generated tokens are at positions [pad_len + context_len - 1 : pad_len + context_len + generated_len - 1]
+                start_idx = pad_len + context_len - 1
+                end_idx = pad_len + context_len + generated_len - 1
+                
+                generated_logits = logits[i, start_idx:end_idx, :]  # [G, V]
+                generated_log_probs = F.log_softmax(generated_logits, dim=-1)  # [G, V]
+                
+                # Get the actual generated token ids
+                generated_ids = all_full_ids[i][context_len:]
+                generated_ids_tensor = torch.tensor(generated_ids, device=device)
+                
+                # Gather log probs for chosen tokens
+                chosen_log_probs = generated_log_probs[
+                    torch.arange(generated_len, device=device),
+                    generated_ids_tensor
+                ]  # [G]
+                
+                results.append(chosen_log_probs)
+            
+            del logits, input_ids, attention_mask
         
-        collection_total_time = time.time() - collection_start_time
-        
-        if len(trajectories) < num_trajectories:
-            print(f"\n⚠️  Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories")
-        
-        # Aggregate statistics
-        total_input_tokens = sum(t.total_input_tokens for t in trajectories)
-        total_output_tokens = sum(t.total_output_tokens for t in trajectories)
-        avg_collection_time = sum(t.collection_time for t in trajectories) / max(len(trajectories), 1)
-        
-        collection_stats = {
-            "collection/total_time": collection_total_time,
-            "collection/avg_time_per_trajectory": avg_collection_time,
-            "collection/total_input_tokens": total_input_tokens,
-            "collection/total_output_tokens": total_output_tokens,
-            "collection/avg_input_tokens_per_trajectory": total_input_tokens / max(len(trajectories), 1),
-            "collection/avg_output_tokens_per_trajectory": total_output_tokens / max(len(trajectories), 1),
-        }
-        
-        print(f"\n{'='*80}")
-        print(f"📊 SEQUENTIAL COLLECTION SUMMARY")
-        print(f"{'='*80}")
-        print(f"Total time: {collection_total_time:.2f}s")
-        print(f"Avg time per trajectory: {avg_collection_time:.2f}s")
-        print(f"Total input tokens: {total_input_tokens}")
-        print(f"Total output tokens: {total_output_tokens}")
-        print(f"{'='*80}\n")
-        
-        return trajectories, collection_stats
+        print()  # Newline after progress
+        return results
     
-    def _load_recent_trajectories_from_disk(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      LOAD RECENT
+    def _load_recent_trajectories_from_disk(self, num_trajectories: int, iteration: int = None) -> tuple[List[Trajectory], dict]: # MARK: .      LOAD RECENT
         """Load the most recent N trajectories from disk and reconstruct TurnData for PPO update.
         
         This is a DEBUG feature to resume from saved trajectories without re-collection.
+        If iteration is specified, loads from that iteration's folder, otherwise from global trajectories.
         """
         print(f"\n{'='*80}")
-        print(f"🔄 LOADING {num_trajectories} TRAJECTORIES FROM DISK (DEBUG MODE)")
+        print(f"🔄 LOADING {num_trajectories} TRAJECTORIES FROM DISK")
         print(f"{'='*80}\n")
         
-        traj_dir = Path(self.config.output_dir).parent / "trajectories"
+        # Use iteration-specific folder if provided, otherwise use global
+        if iteration is not None:
+            traj_dir = Path(self.config.checkpoint_dir) / f"iteration_{iteration}" / "trajectories"
+        else:
+            traj_dir = Path(self.config.output_dir).parent / "trajectories"
+        
         if not traj_dir.exists():
             raise FileNotFoundError(f"Trajectory directory not found: {traj_dir}")
         
@@ -1691,172 +2086,283 @@ class MAPPOTrainer:
         
         return trajectories, collection_stats
     
-    def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      COLLECT PARA
-        """Collect multiple trajectories (parallel if max_parallel_workers > 1, else sequential)
-        
-        Returns:
-            trajectories: List of collected trajectories
-            collection_stats: Dictionary of collection statistics
-        """
-        collection_start_time = time.time()
-        trajectories = []
-        
-        # Fall back to sequential collection if parallel disabled or loky not available
-        if self.config.max_parallel_workers <= 1:
-            return self._collect_trajectories_sequential(num_trajectories)
-        
-        if not LOKY_AVAILABLE:
-            print(f"\n⚠️  WARNING: loky not installed. Install with: pip install loky")
-            print(f"   Falling back to sequential collection for Colab compatibility.")
-            return self._collect_trajectories_sequential(num_trajectories)
-        
-        print(f"\n{'='*80}")
-        print(f"📊 PARALLEL COLLECTION: {num_trajectories} TRAJECTORIES")
-        print(f"   Using loky ProcessPoolExecutor (Jupyter/Colab compatible)")
-        print(f"   Max parallel workers: {self.config.max_parallel_workers}")
-        print(f"{'='*80}\n")
-        
-        # 0. Optionally offload main model to CPU during collection to free GPU memory
-        # Useful when running many parallel workers
-        offload_main_model = self.config.max_parallel_workers > 4
-        if offload_main_model and torch.cuda.is_available():
-            print("🔄 Moving main model to CPU to free GPU for workers...")
-            self.model = self.model.to('cpu')
-            self.value_head = self.value_head.to('cpu')
-            torch.cuda.empty_cache()
-            print(f"   Freed ~3-4GB GPU memory")
-            print()
-        
-        # 1. Save current policy and value head for workers to load
-        temp_policy_dir = Path(self.config.checkpoint_dir) / "temp_policy_for_workers"
-        temp_policy_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Create progress directory for real-time monitoring under current iteration
-        iteration_dir = Path(self.config.checkpoint_dir) / f"iteration_{self.iteration}"
-        progress_dir = iteration_dir / "worker_progress"
-        progress_dir.mkdir(parents=True, exist_ok=True)
-        
-        print(f"Saving current policy to {temp_policy_dir}...")
-        self.model.save_pretrained(str(temp_policy_dir))
-        temp_value_head_path = temp_policy_dir / "value_head.pt"
-        torch.save(self.value_head.state_dict(), temp_value_head_path)
-        print("Policy saved.\n")
-        
-        # 2. Convert config to dict for pickling
-        config_dict = asdict(self.config)
-        
-        # 3. loky handles spawn context automatically with cloudpickle
-        # No need to explicitly set mp_context with loky
-        
-        # 4. Collect trajectories in batches to avoid OOM
-        # Process in batches of max_parallel_workers
-        num_workers = min(self.config.max_parallel_workers, num_trajectories)
-        total_collected = 0
-        worker_id_counter = 0
-        min_required_trajectories = max(1, num_trajectories - self.config.max_missing_trajectories)
-        
-        while total_collected < min_required_trajectories:
-            remaining_needed = num_trajectories - total_collected
-            batch_size = min(num_workers, remaining_needed)
-            print(f"\n🔄 Launching batch of {batch_size} workers (collected {total_collected}/{num_trajectories}, min required: {min_required_trajectories})...")
-            
-            # 5. Launch worker pool for this batch (loky auto-handles spawn context)
-            with ProcessPoolExecutor(max_workers=batch_size) as executor:
-                # Submit jobs for this batch with progress files
-                futures = {}
-                for i in range(batch_size):
-                    wid = worker_id_counter + i
-                    progress_file = str(progress_dir / f"worker_{wid}.log")
-                    # Clear previous progress file
-                    Path(progress_file).write_text(f"=== Worker {wid} Log ===\n")
-                    
-                    future = executor.submit(
-                        run_game_worker,
-                        config_dict,
-                        self.config.model_name,
-                        str(temp_policy_dir),
-                        str(temp_value_head_path),
-                        self.iteration,
-                        wid,
-                        progress_file
-                    )
-                    futures[future] = wid
-                
-                # Collect results as they complete
-                for future in as_completed(futures):
-                    worker_id = futures[future]
-                    try:
-                        trajectory = future.result()
-                        if trajectory is not None:
-                            trajectories.append(trajectory)
-                            print(f"\n✅ Worker {worker_id} completed: "
-                                  f"{len(trajectory.turns)} turns, winner: {trajectory.winner_role.name}, "
-                                  f"end_reason: {trajectory.end_reason.name}, "
-                                  f"time: {trajectory.collection_time:.2f}s, "
-                                  f"tokens: {trajectory.total_input_tokens}in/{trajectory.total_output_tokens}out")
-                            print(f"   Progress: {len(trajectories)}/{num_trajectories}")
-                        else:
-                            print(f"❌ Worker {worker_id} failed to collect trajectory")
-                    except Exception as e:
-                        print(f"❌ Worker {worker_id} raised exception: {e}")
-            
-            # Update counters for next batch
-            total_collected = len(trajectories)
-            worker_id_counter += batch_size
-            
-            # Check if we have enough trajectories (within tolerance)
-            if total_collected >= min_required_trajectories:
-                if total_collected < num_trajectories:
-                    missing = num_trajectories - total_collected
-                    print(f"\n✅ Collected {total_collected}/{num_trajectories} trajectories ({missing} missing, within tolerance of {self.config.max_missing_trajectories})")
-                break
-            
-            # Add delay between batches to ensure cleanup
-            if total_collected < min_required_trajectories:
-                print(f"\n⏳ Waiting 10s before next batch...")
-                time.sleep(10)
-        
-        collection_total_time = time.time() - collection_start_time
-        
-        missing_count = num_trajectories - len(trajectories)
-        if len(trajectories) < num_trajectories:
-            if missing_count <= self.config.max_missing_trajectories:
-                print(f"\n✅ Collected {len(trajectories)}/{num_trajectories} trajectories ({missing_count} missing, within tolerance)")
-            else:
-                print(f"\n⚠️  Warning: Only collected {len(trajectories)}/{num_trajectories} trajectories ({missing_count} missing, exceeds tolerance of {self.config.max_missing_trajectories})")
-        
-        # Aggregate statistics
+    def _compute_collection_stats(self, trajectories: List[Trajectory], collection_time: float) -> dict:
+        """Compute collection statistics from trajectories"""
         total_input_tokens = sum(t.total_input_tokens for t in trajectories)
         total_output_tokens = sum(t.total_output_tokens for t in trajectories)
         avg_collection_time = sum(t.collection_time for t in trajectories) / max(len(trajectories), 1)
         
-        collection_stats = {
-            "collection/total_time": collection_total_time,
+        return {
+            "collection/total_time": collection_time,
             "collection/avg_time_per_trajectory": avg_collection_time,
             "collection/total_input_tokens": total_input_tokens,
             "collection/total_output_tokens": total_output_tokens,
             "collection/avg_input_tokens_per_trajectory": total_input_tokens / max(len(trajectories), 1),
             "collection/avg_output_tokens_per_trajectory": total_output_tokens / max(len(trajectories), 1),
         }
+    
+    def collect_trajectories(self, num_trajectories: int) -> tuple[List[Trajectory], dict]: # MARK: .      COLLECT BATCH
+        """Collect multiple trajectories using vectorized batch inference.
+        
+        Runs N GameEngine instances simultaneously and batches inference across active environments.
+        
+        Returns:
+            trajectories: List of collected trajectories
+            collection_stats: Dictionary of collection statistics
+        """
+        collection_start_time = time.time()
+        
+        # Check if we have saved trajectories from a previous run of this iteration
+        iteration_num = self.iteration + 1
+        iteration_dir = Path(self.config.checkpoint_dir) / f"iteration_{iteration_num}"
+        traj_dir = iteration_dir / "trajectories"
+        
+        if traj_dir.exists():
+            existing_files = sorted(traj_dir.glob("traj_*.json"), key=lambda p: p.stat().st_mtime)
+            if existing_files:
+                print(f"\n📂 Found {len(existing_files)} existing trajectories for iteration {iteration_num}")
+                # Allow tolerance for missing trajectories (up to 20% missing)
+                min_acceptable = int(num_trajectories * 0.8)
+                if len(existing_files) >= num_trajectories:
+                    print(f"✅ Loading all {num_trajectories} trajectories from disk (no collection needed)")
+                    return self._load_recent_trajectories_from_disk(num_trajectories, iteration=iteration_num)
+                elif len(existing_files) >= min_acceptable:
+                    print(f"⚠️  Found {len(existing_files)}/{num_trajectories} trajectories (>= {min_acceptable} min acceptable)")
+                    print(f"✅ Continuing with {len(existing_files)} existing trajectories")
+                    return self._load_recent_trajectories_from_disk(len(existing_files), iteration=iteration_num)
         
         print(f"\n{'='*80}")
-        print(f"📊 PARALLEL COLLECTION SUMMARY")
+        print(f"📊 VECTORIZED BATCH COLLECTION: {num_trajectories} TRAJECTORIES")
+        print(f"   Inference batch size: {self.config.inference_batch_size}")
+        print(f"{'='*80}\n")
+        
+        # Data structures for vectorized collection
+        @dataclass
+        class EnvState:
+            """State for a single environment"""
+            env_id: int
+            engine: GameEngine
+            turns_data: List[TurnData]
+            player_roles: Dict[str, PlayerRole]
+            turn_count: int
+            start_time: float
+            total_input_tokens: int = 0
+            total_output_tokens: int = 0
+        
+        # Initialize all environments
+        active_envs: List[EnvState] = []
+        for i in range(num_trajectories):
+            engine = GameEngine(self.actor.game_config)
+            player_roles = {p.name: p.role for p in engine.players}
+            
+            env_state = EnvState(
+                env_id=i,
+                engine=engine,
+                turns_data=[],
+                player_roles=player_roles,
+                turn_count=0,
+                start_time=time.time()
+            )
+            active_envs.append(env_state)
+        
+        if self.config.debug:
+            print(f"🎮 Initialized {len(active_envs)} game environments\n")
+        
+        completed_trajectories: List[Trajectory] = []
+        max_turns_per_game = 200
+        
+        # Main vectorized loop
+        step_count = 0
+        while active_envs:
+            step_count += 1
+            avg_turns = sum(e.turn_count for e in active_envs) / len(active_envs)
+            print(f"\n📍 Step {step_count}: {len(active_envs)} envs active, {len(completed_trajectories)} done, avg turn={avg_turns:.1f}", flush=True)
+            
+            # Step 1: Gather observations from active environments
+            batch_conversations = []
+            batch_actions_list = []
+            batch_env_indices = []  # Track which env each batch item belongs to
+            batch_player_names = []  # Track which player is acting in each env
+            
+            for idx, env_state in enumerate(active_envs):
+                turn_context = env_state.engine.get_turn_context()
+                
+                if turn_context is None or turn_context[0] is None:
+                    # Game ended, mark for removal
+                    continue
+                
+                turn_history, actions_player_can_take, conversation, _ = turn_context
+                
+                if not actions_player_can_take:
+                    # Skip if no actions available
+                    continue
+                
+                # Store the player name to ensure determinism when applying action later
+                current_player_name = turn_history.action_taken.player_name
+                
+                # Add to batch
+                batch_conversations.append(conversation)
+                batch_actions_list.append(actions_player_can_take)
+                batch_env_indices.append(idx)
+                batch_player_names.append(current_player_name)
+            
+            if not batch_conversations:
+                # All environments finished or stalled
+                break
+            
+            # Step 2: Batch inference across all active environments
+            # Process in chunks of inference_batch_size to avoid OOM
+            all_batch_results = []
+            
+            for chunk_start in range(0, len(batch_conversations), self.config.inference_batch_size):
+                chunk_end = min(chunk_start + self.config.inference_batch_size, len(batch_conversations))
+                
+                chunk_conversations = batch_conversations[chunk_start:chunk_end]
+                chunk_actions = batch_actions_list[chunk_start:chunk_end]
+                
+                # Call batch generation
+                chunk_results = self.actor.generate_action_batch(
+                    chunk_conversations,
+                    chunk_actions
+                )
+                
+                all_batch_results.extend(chunk_results)
+            
+            # Step 3: Apply actions to their respective environments
+            envs_to_remove = []
+            
+            for batch_idx, env_list_idx in enumerate(batch_env_indices):
+                env_state = active_envs[env_list_idx]
+                
+                # Get the result for this environment
+                action_idx, log_probs, reasoning, input_tokens, output_tokens, action_probs, generated_message = all_batch_results[batch_idx]
+                
+                # Use stored player name to ensure we get the same player as when we gathered observations
+                current_player_name = batch_player_names[batch_idx]
+                
+                # Get turn context with explicit player name for determinism
+                turn_context = env_state.engine.get_turn_context(player_name=current_player_name)
+                if turn_context is None or turn_context[0] is None:
+                    envs_to_remove.append(env_list_idx)
+                    continue
+                
+                turn_history, actions_player_can_take, conversation, _ = turn_context
+                chosen_action = actions_player_can_take[action_idx]
+                current_player_role = env_state.player_roles[current_player_name]
+                
+                # For SPEAK actions, apply the generated message to the new action object
+                if generated_message is not None:
+                    chosen_action.target_message = generated_message
+                    chosen_action.command_perspective = generated_message
+                
+                # Build global state for critic
+                global_state = self.actor._build_global_state(
+                    env_state.engine.history,
+                    len(env_state.engine.history)
+                )
+                
+                # Store turn data
+                turn_data = TurnData(
+                    player_name=current_player_name,
+                    player_role=current_player_role,
+                    conversation=conversation.copy(),
+                    actions=actions_player_can_take.copy(),
+                    chosen_action_idx=action_idx,
+                    chosen_action=chosen_action,
+                    reasoning=reasoning,
+                    generation_log_probs=log_probs,
+                    action_probs=action_probs,  # Store for entropy computation
+                    global_state_repr=global_state,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    generation_time=0.0,  # Not tracked in batch mode
+                )
+                env_state.turns_data.append(turn_data)
+                env_state.total_input_tokens += input_tokens
+                env_state.total_output_tokens += output_tokens
+                
+                # Execute action
+                game_over, end_reason = env_state.engine.step(
+                    turn_history,
+                    chosen_action,
+                    llm_response=chosen_action.command_perspective,
+                    llm_cot=f"<think>{reasoning}</think>",
+                    token_usage={},
+                    pre_discussion_votes=None
+                )
+                
+                env_state.turn_count += 1
+                
+                # Check if game finished
+                if game_over and end_reason:
+                    winner_role = self.actor._determine_winner_from_end_reason(end_reason)
+                    collection_time = time.time() - env_state.start_time
+                    
+                    # Save trajectory to disk
+                    self.actor._save_trajectory_to_disk(
+                        env_state.engine,
+                        env_state.turns_data,
+                        winner_role,
+                        end_reason
+                    )
+                    
+                    # Create trajectory
+                    trajectory = Trajectory(
+                        turns=env_state.turns_data,
+                        winner_role=winner_role,
+                        end_reason=end_reason,
+                        collection_time=collection_time,
+                        total_input_tokens=env_state.total_input_tokens,
+                        total_output_tokens=env_state.total_output_tokens,
+                    )
+                    completed_trajectories.append(trajectory)
+                    envs_to_remove.append(env_list_idx)
+                    
+                    print(f"\n✅ Env {env_state.env_id} completed: "
+                          f"{env_state.turn_count} turns, winner: {winner_role.name}, "
+                          f"end_reason: {end_reason.name}, time: {collection_time:.2f}s")
+                    print(f"   Progress: {len(completed_trajectories)}/{num_trajectories}")
+                
+                elif env_state.turn_count >= max_turns_per_game:
+                    # Game exceeded max turns
+                    if self.config.debug:
+                        print(f"⚠️  Env {env_state.env_id} exceeded max turns ({max_turns_per_game})")
+                    envs_to_remove.append(env_list_idx)
+            
+            # Step 4: Remove completed/failed environments
+            for env_idx in sorted(envs_to_remove, reverse=True):
+                active_envs.pop(env_idx)
+        
+        collection_total_time = time.time() - collection_start_time
+        
+        # Compute statistics
+        total_input_tokens = sum(t.total_input_tokens for t in completed_trajectories)
+        total_output_tokens = sum(t.total_output_tokens for t in completed_trajectories)
+        avg_collection_time = sum(t.collection_time for t in completed_trajectories) / max(len(completed_trajectories), 1)
+        
+        collection_stats = {
+            "collection/total_time": collection_total_time,
+            "collection/avg_time_per_trajectory": avg_collection_time,
+            "collection/total_input_tokens": total_input_tokens,
+            "collection/total_output_tokens": total_output_tokens,
+            "collection/avg_input_tokens_per_trajectory": total_input_tokens / max(len(completed_trajectories), 1),
+            "collection/avg_output_tokens_per_trajectory": total_output_tokens / max(len(completed_trajectories), 1),
+        }
+        
+        print(f"\n{'='*80}")
+        print(f"📊 VECTORIZED BATCH COLLECTION SUMMARY")
         print(f"{'='*80}")
+        print(f"Collected: {len(completed_trajectories)}/{num_trajectories} trajectories")
         print(f"Total wall-clock time: {collection_total_time:.2f}s")
         print(f"Avg time per trajectory: {avg_collection_time:.2f}s")
-        print(f"Speedup: {avg_collection_time * num_trajectories / collection_total_time:.1f}x")
         print(f"Total input tokens: {total_input_tokens}")
         print(f"Total output tokens: {total_output_tokens}")
         print(f"{'='*80}\n")
         
-        # Restore main model to GPU if we offloaded it
-        if offload_main_model and torch.cuda.is_available():
-            print("🔄 Restoring main model to GPU...")
-            self.model = self.model.to('cuda')
-            self.value_head = self.value_head.to('cuda')
-            print("   Model restored\n")
+        if len(completed_trajectories) < num_trajectories:
+            print(f"⚠️  Warning: Only collected {len(completed_trajectories)}/{num_trajectories} trajectories")
         
-        return trajectories, collection_stats
+        return completed_trajectories, collection_stats
     
     def update_policy_mappo(self, trajectories: List[Trajectory]) -> Dict: # MARK: .      UPDATE POLICY
         """
@@ -1883,69 +2389,91 @@ class MAPPOTrainer:
         total_gae_turns = 0
         total_value_time = 0.0
         
+        # ============================================================
+        # BATCHED VALUE COMPUTATION: Compute all values at once
+        # ============================================================
+        print(f"  Computing values for all turns in batches...")
+        value_batch_size = self.config.value_batch_size
+        
+        # Collect all global states and map back to turns
+        all_global_states = []
+        turn_to_traj_map = []  # (traj_idx, turn_idx_in_traj)
+        
         for traj_idx, traj in enumerate(trajectories):
-            traj_start_time = time.time()
-            
+            for turn_idx, turn in enumerate(traj.turns):
+                all_global_states.append(turn.global_state_repr)
+                turn_to_traj_map.append((traj_idx, turn_idx))
+        
+        value_start = time.time()
+        all_values = self._compute_value_batch(all_global_states, batch_size=value_batch_size)
+        total_value_time = time.time() - value_start
+        print(f"    ✅ Values computed: {total_value_time:.2f}s ({total_value_time/len(all_global_states)*1000:.1f}ms/turn)")
+        
+        # Assign values back to turns
+        for i, (traj_idx, turn_idx) in enumerate(turn_to_traj_map):
+            trajectories[traj_idx].turns[turn_idx].value_estimate = all_values[i]
+        
+        # ============================================================
+        # VECTORIZED GAE: Compute advantages per trajectory using torch
+        # ============================================================
+        print(f"  Computing GAE advantages (vectorized)...")
+        gae_compute_start = time.time()
+        
+        for traj_idx, traj in enumerate(trajectories):
             # Track wins
             for turn in traj.turns:
                 if traj.get_reward_for_role(turn.player_role) > 0:
                     role_wins[turn.player_role] += 1
                     break
             
-            # Compute GAE advantages
-            returns = []
-            advantages = []
+            num_turns = len(traj.turns)
+            total_gae_turns += num_turns
             
-            # Get rewards - sparse reward only at end
+            # Get final reward (sparse - only at end)
             final_reward = traj.get_reward_for_role(traj.turns[-1].player_role)
             
-            # Bootstrap from final state
-            next_value = 0.0
-            gae = 0.0
+            # Build tensors for vectorized GAE
+            values = torch.tensor([t.value_estimate for t in traj.turns], dtype=torch.float32)
+            rewards = torch.zeros(num_turns, dtype=torch.float32)
+            rewards[-1] = final_reward
             
-            # Backward pass
-            for turn_idx, turn in enumerate(reversed(traj.turns)):
-                # Compute value estimate
-                value_start = time.time()
-                turn.value_estimate = self._compute_value(turn.global_state_repr).item()
-                value_time = time.time() - value_start
-                total_value_time += value_time
-                total_gae_turns += 1
-                
-                # Print progress every 10 turns
-                if total_gae_turns % 10 == 0:
-                    elapsed = time.time() - gae_start_time
-                    avg_per_turn = elapsed / total_gae_turns
-                    print(f"  GAE Progress: {total_gae_turns} turns, {elapsed:.1f}s elapsed, {avg_per_turn*1000:.1f}ms/turn")
-                
-                # TD error
-                reward = final_reward if turn == traj.turns[-1] else 0.0
-                delta = reward + self.config.gamma * next_value - turn.value_estimate
-                
-                # GAE
-                gae = delta + self.config.gamma * self.config.gae_lambda * gae
-                advantages.insert(0, gae)
-                returns.insert(0, gae + turn.value_estimate)
-                
-                next_value = turn.value_estimate
+            # Vectorized GAE computation (reverse cumulative sum)
+            # delta_t = r_t + gamma * V(s_{t+1}) - V(s_t)
+            # For last step: delta_T = r_T + gamma * 0 - V(s_T) = r_T - V(s_T)
+            next_values = torch.cat([values[1:], torch.zeros(1)])
+            deltas = rewards + self.config.gamma * next_values - values
+            
+            # GAE: A_t = sum_{l=0}^{inf} (gamma * lambda)^l * delta_{t+l}
+            # Computed backwards: A_t = delta_t + gamma * lambda * A_{t+1}
+            advantages = torch.zeros(num_turns, dtype=torch.float32)
+            gae = 0.0
+            for t in reversed(range(num_turns)):
+                gae = deltas[t] + self.config.gamma * self.config.gae_lambda * gae
+                advantages[t] = gae
+            
+            returns = advantages + values
             
             # Store in turns
-            for turn, adv, ret in zip(traj.turns, advantages, returns):
+            for turn, adv, ret in zip(traj.turns, advantages.tolist(), returns.tolist()):
                 turn.advantage = adv
                 turn.returns = ret
                 all_turns.append(turn)
-            
-            traj_time = time.time() - traj_start_time
-            if self.config.debug:
-                print(f"  Trajectory {traj_idx+1}/{len(trajectories)}: {len(traj.turns)} turns, {traj_time:.2f}s ({traj_time/len(traj.turns)*1000:.1f}ms/turn)")
         
-        # Normalize advantages
+        gae_compute_time = time.time() - gae_compute_start
+        print(f"    ✅ GAE computed: {gae_compute_time:.2f}s")
+        
+        # Normalize advantages and pre-convert to tensors for PPO loop
         advantages_tensor = torch.tensor([t.advantage for t in all_turns], device=self.model.device)
+        returns_tensor = torch.tensor([t.returns for t in all_turns], device=self.model.device)
         adv_mean = advantages_tensor.mean().item()
         adv_std = advantages_tensor.std().item()
         advantages_tensor = (advantages_tensor - advantages_tensor.mean()) / (advantages_tensor.std() + 1e-8)
+        
+        # Store pre-converted tensors on each turn to avoid repeated tensor creation in PPO loop
         for i, turn in enumerate(all_turns):
             turn.advantage = advantages_tensor[i].item()
+            turn.advantage_tensor = advantages_tensor[i:i+1]  # Keep as 1-element tensor
+            turn.returns_tensor = returns_tensor[i:i+1]  # Keep as 1-element tensor
         
         gae_total_time = time.time() - gae_start_time
         avg_gae_per_turn = gae_total_time / max(total_gae_turns, 1)
@@ -1965,8 +2493,10 @@ class MAPPOTrainer:
         
         # ====================================================================
         # START STABILITY FIX: Pre-compute old_log_probs for consistency
+        # Using BATCHED computation for efficiency
         # ====================================================================
-        print(f"\nPre-computing log_probs for {len(all_turns)} turns...")
+        logprob_batch_size = self.config.logprob_batch_size
+        print(f"\nPre-computing log_probs for {len(all_turns)} turns (batch_size={logprob_batch_size})...")
         print("Emptying CUDA cache before pre-computation...")
         torch.cuda.empty_cache()
         self._print_vram_summary("Before LogProb Pre-computation")
@@ -1974,75 +2504,84 @@ class MAPPOTrainer:
         # Use .eval() to match the policy state during rollout
         self.model.eval()
         
-        # Timing for log prob pre-computation
         precomp_start_time = time.time()
-        total_old_logprob_time = 0.0
-        total_ref_logprob_time = 0.0
         successful_turns = 0
         
         with torch.no_grad():
-            for i, turn in enumerate(all_turns):
-                turn_start = time.time()
-                try:
-                    # 1. Compute and store old_log_prob (current policy)
-                    old_start = time.time()
-                    old_log_prob_tensor = self._compute_log_prob(
-                        turn.conversation,
-                        turn.actions,
-                        turn.chosen_action_idx,
-                        turn.reasoning,
-                        use_reference_model=False  # Use the current policy
-                    )
-                    old_time = time.time() - old_start
-                    total_old_logprob_time += old_time
-                    
-                    # CRITICAL: Store on CPU to free VRAM
-                    turn.precomputed_old_log_probs = old_log_prob_tensor.detach().cpu()
-                    
-                    # 2. Compute and store ref_log_prob (base model)
-                    ref_start = time.time()
-                    ref_log_prob_tensor = self._compute_log_prob(
-                        turn.conversation,
-                        turn.actions,
-                        turn.chosen_action_idx,
-                        turn.reasoning,
-                        use_reference_model=True  # Base model without LoRA
-                    )
-                    ref_time = time.time() - ref_start
-                    total_ref_logprob_time += ref_time
-                    
-                    # CRITICAL: Store on CPU to free VRAM
-                    turn.precomputed_ref_log_probs = ref_log_prob_tensor.detach().cpu()
-                    del old_log_prob_tensor, ref_log_prob_tensor
-                    
-                    successful_turns += 1
-                    turn_time = time.time() - turn_start
-                    
-                    # Print progress every 10 turns
-                    if (i + 1) % 10 == 0:
-                        elapsed = time.time() - precomp_start_time
-                        avg_per_turn = elapsed / (i + 1)
-                        print(f"  Precompute Progress: {i+1}/{len(all_turns)} turns, "
-                              f"{elapsed:.1f}s elapsed, {avg_per_turn*1000:.1f}ms/turn "
-                              f"(old: {old_time*1000:.1f}ms, ref: {ref_time*1000:.1f}ms)")
-                    
-                except Exception as e:
-                    if self.config.debug:
-                        print(f"  ❌ Error pre-computing log prob for turn {i}: {e}")
-                    turn.precomputed_old_log_probs = None
-                    turn.precomputed_ref_log_probs = None
+            # Compute old_log_probs (current policy) in batches
+            old_start = time.time()
+            print(f"  Computing old_log_probs (current policy)...")
+            try:
+                old_log_probs_list = self._compute_log_prob_batch(
+                    all_turns,
+                    use_reference_model=False,
+                    batch_size=logprob_batch_size
+                )
+                for i, (turn, log_probs) in enumerate(zip(all_turns, old_log_probs_list)):
+                    turn.precomputed_old_log_probs = log_probs.detach().cpu()
+                old_time = time.time() - old_start
+                print(f"    ✅ old_log_probs: {old_time:.2f}s ({old_time/len(all_turns)*1000:.1f}ms/turn)")
+            except Exception as e:
+                print(f"    ❌ Batched old_log_prob failed: {e}")
+                print(f"    Falling back to sequential computation...")
+                old_time = 0.0
+                for i, turn in enumerate(all_turns):
+                    try:
+                        old_log_prob = self._compute_log_prob(
+                            turn.conversation, turn.actions,
+                            turn.chosen_action_idx, turn.reasoning,
+                            use_reference_model=False
+                        )
+                        turn.precomputed_old_log_probs = old_log_prob.detach().cpu()
+                    except Exception as e2:
+                        turn.precomputed_old_log_probs = None
+                        if self.config.debug:
+                            print(f"      Error on turn {i}: {e2}")
+                old_time = time.time() - old_start
+            
+            # Compute ref_log_probs (base model without LoRA) in batches
+            ref_start = time.time()
+            print(f"  Computing ref_log_probs (reference model)...")
+            try:
+                ref_log_probs_list = self._compute_log_prob_batch(
+                    all_turns,
+                    use_reference_model=True,
+                    batch_size=logprob_batch_size
+                )
+                for i, (turn, log_probs) in enumerate(zip(all_turns, ref_log_probs_list)):
+                    turn.precomputed_ref_log_probs = log_probs.detach().cpu()
+                    if turn.precomputed_old_log_probs is not None:
+                        successful_turns += 1
+                ref_time = time.time() - ref_start
+                print(f"    ✅ ref_log_probs: {ref_time:.2f}s ({ref_time/len(all_turns)*1000:.1f}ms/turn)")
+            except Exception as e:
+                print(f"    ❌ Batched ref_log_prob failed: {e}")
+                print(f"    Falling back to sequential computation...")
+                ref_time = 0.0
+                for i, turn in enumerate(all_turns):
+                    try:
+                        ref_log_prob = self._compute_log_prob(
+                            turn.conversation, turn.actions,
+                            turn.chosen_action_idx, turn.reasoning,
+                            use_reference_model=True
+                        )
+                        turn.precomputed_ref_log_probs = ref_log_prob.detach().cpu()
+                        if turn.precomputed_old_log_probs is not None:
+                            successful_turns += 1
+                    except Exception as e2:
+                        turn.precomputed_ref_log_probs = None
+                        if self.config.debug:
+                            print(f"      Error on turn {i}: {e2}")
+                ref_time = time.time() - ref_start
         
         precomp_total_time = time.time() - precomp_start_time
-        avg_precomp_per_turn = precomp_total_time / max(successful_turns, 1)
-        avg_old_time = total_old_logprob_time / max(successful_turns, 1)
-        avg_ref_time = total_ref_logprob_time / max(successful_turns, 1)
         
         print(f"\nPre-computation complete: {successful_turns}/{len(all_turns)} successful")
         print(f"Precompute Timing:")
         print(f"  Total time: {precomp_total_time:.2f}s")
-        print(f"  Avg per turn: {avg_precomp_per_turn*1000:.1f}ms")
-        print(f"  Avg old_log_prob: {avg_old_time*1000:.1f}ms/turn")
-        print(f"  Avg ref_log_prob: {avg_ref_time*1000:.1f}ms/turn")
+        print(f"  Avg per turn: {precomp_total_time/len(all_turns)*1000:.1f}ms")
+        print(f"  old_log_prob total: {old_time:.2f}s")
+        print(f"  ref_log_prob total: {ref_time:.2f}s")
         
         # Final cache clear after precomputation
         print("\n🧹 Final GPU cache clear after precomputation...")
@@ -2062,8 +2601,8 @@ class MAPPOTrainer:
             "advantage_std": adv_std,
         }
         
-        # Define minibatch size for efficient gradient checkpointing
-        minibatch_size = 64  # Process 4 turns at a time for optimal memory/speed trade-off
+        # Minibatch size for gradient accumulation (configurable)
+        minibatch_size = self.config.ppo_minibatch_size
         
         for epoch in range(self.config.ppo_epochs):
             epoch_start_time = time.time()
@@ -2100,13 +2639,14 @@ class MAPPOTrainer:
                 minibatch_start_time = time.time()
                 minibatch = all_turns[minibatch_idx : minibatch_idx + minibatch_size]
                 
-                # CRITICAL: Aggressively clear cache BEFORE each minibatch to fight fragmentation
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                
                 # Zero gradients for this minibatch
                 self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
+                
+                # Set model to train mode ONCE per minibatch (not per turn)
+                # This is required for gradient checkpointing to work during backward()
+                self.model.train()
+                self.value_head.train()
                 
                 minibatch_num = minibatch_idx // minibatch_size + 1
                 total_minibatches = math.ceil(len(all_turns) / minibatch_size)
@@ -2118,8 +2658,7 @@ class MAPPOTrainer:
                 
                 if self.config.debug:
                     print(f"\n  🔄 Minibatch {minibatch_num}/{total_minibatches}")
-                    print(f"  🧹 Cleared CUDA cache before minibatch")
-                    self._print_vram_summary(f"Minibatch {minibatch_num} - START (after cache clear)")
+                    self._print_vram_summary(f"Minibatch {minibatch_num} - START")
                 
                 for i, turn in enumerate(minibatch):
                     # Explicitly control model state for each computation step
@@ -2127,14 +2666,18 @@ class MAPPOTrainer:
                     device = self.model.device
                     
                     # Create turn identifier for debugging
-                    turn_identifier = f"Turn {minibatch_idx + i}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})"
+                    turn_idx = minibatch_idx + i
+                    turn_identifier = f"Turn {turn_idx}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})"
+                    
+                    # Print progress every 10 turns
+                    if (turn_idx + 1) % 10 == 0:
+                        print(f"  📊 Progress: {turn_idx + 1}/{len(all_turns)} turns processed", flush=True)
                     
                     try:
                         # =======================================================
                         # Step 1: Get current_log_prob (ACTOR)
                         # =======================================================
-                        # Model MUST be in .train() mode for checkpointing to work with .backward()
-                        self.model.train()
+                        # Model already in .train() mode (set once per minibatch)
                         logprob_start = time.time()
                         # if self.config.debug:
                         #     self._print_vram_summary(f"{turn_identifier} - Before LogProb")
@@ -2175,9 +2718,7 @@ class MAPPOTrainer:
                         # =======================================================
                         # Step 3: Get value_pred (CRITIC)
                         # =======================================================
-                        # Base model set to .eval() inside _compute_value
-                        # Value_head must be in .train() mode to learn
-                        self.value_head.train()
+                        # Model and value_head already in .train() mode (set once per minibatch)
                         value_start = time.time()
                         value_pred = self._compute_value(turn.global_state_repr)
                         value_time = time.time() - value_start
@@ -2191,8 +2732,11 @@ class MAPPOTrainer:
                         # =======================================================
                         
                         # PER-TOKEN Importance sampling ratio
-                        # ratio is shape [T]
-                        ratio = torch.exp(current_log_prob - old_log_prob_tensor)
+                        # Clamp log-ratio BEFORE exp to prevent numerical explosion
+                        # Max ratio of ~7.4 (exp(2)) is reasonable for stability
+                        log_ratio = current_log_prob - old_log_prob_tensor
+                        log_ratio = torch.clamp(log_ratio, min=-2.0, max=2.0)
+                        ratio = torch.exp(log_ratio)
                         
                         # Track ratio and clipping (use mean for tracking)
                         total_ratio += ratio.mean().item()
@@ -2200,8 +2744,8 @@ class MAPPOTrainer:
                         total_clipped += ratio_clipped_mask.float().mean().item()
                         
                         # PER-TOKEN Clipped surrogate objective
-                        # adv is a scalar, but broadcast to shape [T]
-                        adv = torch.tensor([turn.advantage], device=self.model.device)
+                        # Use pre-converted tensor if available, otherwise create
+                        adv = turn.advantage_tensor if turn.advantage_tensor is not None else torch.tensor([turn.advantage], device=self.model.device)
                         surr1 = ratio * adv
                         surr2 = torch.clamp(
                             ratio,
@@ -2211,16 +2755,25 @@ class MAPPOTrainer:
                         # Average per-token losses
                         policy_loss = -torch.min(surr1, surr2).mean()
                         
-                        # PER-TOKEN KL divergence penalty
-                        kl_div_per_token = (current_log_prob - ref_log_prob)
+                        # PER-TOKEN KL divergence penalty (also clamp to prevent explosion)
+                        kl_div_per_token = torch.clamp(current_log_prob - ref_log_prob, min=-10.0, max=10.0)
                         kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
                         
                         # Value loss
-                        value_target = torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
+                        value_target = turn.returns_tensor if turn.returns_tensor is not None else torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
                         value_loss = F.mse_loss(value_pred, value_target)
                         
-                        # Entropy (approximate - would need full action distribution)
-                        entropy = 0.01
+                        # Entropy bonus: compute from action distribution (discrete actions)
+                        # H(π) = -Σ p(a) * log(p(a))
+                        if turn.action_probs is not None and len(turn.action_probs) > 1:
+                            # Proper entropy from discrete action distribution
+                            action_probs_tensor = torch.tensor(turn.action_probs, device=device)
+                            # Avoid log(0) by clamping
+                            action_probs_tensor = torch.clamp(action_probs_tensor, min=1e-10)
+                            entropy = -(action_probs_tensor * torch.log(action_probs_tensor)).sum().item()
+                        else:
+                            # Generative turn (single action) or missing probs: use token-level proxy
+                            entropy = -current_log_prob.mean().item()
                         
                         # =======================================================
                         # Step 5: Backward Passes
@@ -2243,14 +2796,12 @@ class MAPPOTrainer:
                         
                         # Explicitly delete intermediate tensors to free VRAM *before* backward()
                         try:
-                            del current_log_prob, value_pred, ratio
+                            del current_log_prob, value_pred, ratio, log_ratio
                             del surr1, surr2, kl_div_per_token, adv, value_target
                         except NameError:
                             pass  # In case a tensor wasn't created
                         
-                        # CRITICAL: Set model to train mode before backward() to ensure
-                        # gradient checkpoint re-runs in train mode (not eval mode from _compute_value)
-                        self.model.train()
+                        # Model already in .train() mode (set once per minibatch)
                         backward_start = time.time()
                         actor_loss.backward()
                         # if self.config.debug:
@@ -2416,6 +2967,14 @@ class MAPPOTrainer:
         stats["actor_grad_norm"] = total_actor_grad_norm / num_grad_steps
         stats["critic_grad_norm"] = total_critic_grad_norm / num_grad_steps
         
+        # Explained variance: how well value function predicts returns (critical for papers)
+        # EV = 1 - Var(returns - values) / Var(returns)
+        returns_arr = np.array([t.returns for t in all_turns])
+        values_arr = np.array([t.value_estimate for t in all_turns])
+        var_returns = np.var(returns_arr)
+        explained_var = 1 - np.var(returns_arr - values_arr) / (var_returns + 1e-8) if var_returns > 0 else 0
+        stats["explained_variance"] = float(np.clip(explained_var, -1, 1))
+        
         # Add timing and token statistics
         stats["training/update_time"] = update_time
         stats["training/total_tokens_processed"] = total_training_tokens
@@ -2455,16 +3014,8 @@ class MAPPOTrainer:
             print(f"{'='*80}")
             self._print_vram_summary("Start of iteration")
             
-            # Collect trajectories via self-play OR load from disk (debug)
-            if self.config.load_trajectories_from_disk:
-                print(f"\n⚠️  DEBUG MODE: Loading trajectories from disk instead of collecting\n")
-                trajectories, collection_stats = self._load_recent_trajectories_from_disk(
-                    self.config.load_trajectories_from_disk
-                )
-                # Only load once, then disable for subsequent iterations
-                self.config.load_trajectories_from_disk = None
-            else:
-                trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
+            # Collect trajectories via self-play (auto-loads existing if available)
+            trajectories, collection_stats = self.collect_trajectories(self.config.trajectories_per_iteration)
 
             self._print_vram_summary("After trajectory collection")
             if torch.cuda.is_available():
@@ -2560,8 +3111,14 @@ class MAPPOTrainer:
                     "trajectory/tokens_per_second_std": np.std(all_traj_tok_per_sec),
                 })
                 
-                # Log all stats
-                wandb.log(stats, step=iteration + wandb_step_offset)
+                # Log all stats with explicit step
+                wandb_step = iteration + wandb_step_offset
+                if self.config.debug:
+                    print(f"\n📊 WandB Logging:")
+                    print(f"  iteration={iteration}, wandb_step_offset={wandb_step_offset}, final_step={wandb_step}")
+                    print(f"  Logging {len(stats)} metrics to step {wandb_step}")
+                
+                wandb.log(stats, step=wandb_step)
             
             # Save checkpoint
             if (iteration + 1) % self.config.save_every_n_iterations == 0:
@@ -2589,8 +3146,10 @@ class MAPPOTrainer:
         torch.save(self.value_head.state_dict(), checkpoint_path / "value_head.pt")
         
         # Save optimizer states and iteration number for resume
+        # 'iteration' stores the checkpoint folder number (1-indexed)
+        # When resuming, we'll use this to determine the next loop iteration
         training_state = {
-            'iteration': iteration,
+            'iteration': iteration,  # Checkpoint folder number (e.g., 3 for iteration_3/)
             'optimizer_actor_state': self.actor_optimizer.state_dict(),
             'optimizer_critic_state': self.critic_optimizer.state_dict(),
             'training_stats': self.training_stats,
@@ -2616,12 +3175,23 @@ class MAPPOTrainer:
         
         # Find the checkpoint path
         if checkpoint_id == "latest":
-            # Find the latest checkpoint
+            # Find the latest VALID checkpoint (one with actual model weights)
+            # Iteration folders may exist from trajectory saving without checkpoint being saved
             checkpoints = sorted(checkpoint_dir.glob("iteration_*"))
-            if not checkpoints:
-                raise FileNotFoundError(f"No checkpoints found in {checkpoint_dir}")
-            checkpoint_path = checkpoints[-1]
-            print(f"📥 Found latest checkpoint: {checkpoint_path.name}")
+            valid_checkpoints = []
+            for cp in checkpoints:
+                # Check if this directory has actual checkpoint files
+                has_adapter = (cp / "adapter_model.safetensors").exists() or (cp / "adapter_model.bin").exists()
+                has_value_head = (cp / "value_head.pt").exists()
+                if has_adapter and has_value_head:
+                    valid_checkpoints.append(cp)
+            
+            if not valid_checkpoints:
+                raise FileNotFoundError(f"No valid checkpoints found in {checkpoint_dir}. "
+                                       f"Found {len(checkpoints)} iteration folders but none contain saved weights.")
+            
+            checkpoint_path = valid_checkpoints[-1]
+            print(f"📥 Found latest valid checkpoint: {checkpoint_path.name} (out of {len(checkpoints)} iteration folders)")
         else:
             checkpoint_path = checkpoint_dir / f"iteration_{checkpoint_id}"
         
@@ -2634,20 +3204,39 @@ class MAPPOTrainer:
         print(f"Checkpoint: {checkpoint_path}")
         
         # Load model (LoRA adapters)
-        print("Loading model LoRA adapters...")
-        from peft import PeftModel
-        self.model = PeftModel.from_pretrained(
-            self.model,
-            str(checkpoint_path),
-            is_trainable=True
-        )
-        print("✅ Model loaded")
+        # NOTE: self.model already has LoRA applied via get_peft_model() in __init__
+        # We need to load the saved adapter weights, not apply PEFT again
+        print("Loading model LoRA adapter weights...")
+        from peft import set_peft_model_state_dict
+        import safetensors
+        
+        # Load the adapter weights from the checkpoint
+        adapter_path = checkpoint_path / "adapter_model.safetensors"
+        if adapter_path.exists():
+            # Load safetensors file
+            from safetensors.torch import load_file
+            adapter_weights = load_file(str(adapter_path))
+            # Set the weights directly on the existing PEFT model
+            set_peft_model_state_dict(self.model, adapter_weights)
+            del adapter_weights  # Free memory
+            print("✅ Model adapter weights loaded")
+        else:
+            # Fallback: try loading from adapter_model.bin
+            adapter_bin_path = checkpoint_path / "adapter_model.bin"
+            if adapter_bin_path.exists():
+                adapter_weights = torch.load(adapter_bin_path, map_location=self.model.device, weights_only=True)
+                set_peft_model_state_dict(self.model, adapter_weights)
+                del adapter_weights  # Free memory
+                print("✅ Model adapter weights loaded (from .bin)")
+            else:
+                raise FileNotFoundError(f"No adapter weights found in {checkpoint_path}")
         
         # Load value head
         print("Loading value head...")
         value_head_path = checkpoint_path / "value_head.pt"
         state_dict = torch.load(value_head_path, map_location=self.model.device, weights_only=True)
         self.value_head.load_state_dict(state_dict)
+        del state_dict  # Free memory
         print("✅ Value head loaded")
         
         # Load training state (optimizers, iteration, stats)
@@ -2663,14 +3252,25 @@ class MAPPOTrainer:
             # Restore training stats
             self.training_stats = training_state['training_stats']
             
-            # Get saved iteration
+            # Get saved iteration (this is the checkpoint folder number, 1-indexed)
+            # Example: checkpoint iteration_3/ has saved_iteration=3
+            # This means: completed loop iterations 0,1,2 (displayed as ITERATION 1,2,3)
+            # Next loop iteration should be: 3 (displayed as ITERATION 4)
+            # Folder for next iteration: iteration_4/
             saved_iteration = training_state['iteration']
             
-            print(f"✅ Training state loaded (was at iteration {saved_iteration})")
+            del training_state  # Free memory
+            
+            # The checkpoint folder number equals the next loop iteration (0-indexed)
+            next_loop_iteration = saved_iteration
+            
+            print(f"✅ Training state loaded from checkpoint: iteration_{saved_iteration}/")
+            print(f"   Completed: loop iterations 0-{saved_iteration-1} (displayed as ITERATION 1-{saved_iteration})")
+            print(f"   Will resume: loop iteration {next_loop_iteration} (displayed as ITERATION {next_loop_iteration + 1})")
+            print(f"   Folder: iteration_{next_loop_iteration + 1}/")
             print(f"{'='*80}\n")
             
-            # Return next iteration to start from
-            return saved_iteration + 1
+            return next_loop_iteration
         else:
             print("⚠️  Warning: training_state.pt not found, only model weights loaded")
             print(f"{'='*80}\n")
@@ -2713,11 +3313,12 @@ class MAPPOTrainer:
         print(f"📥 Loading model from: {checkpoint_path}")
         print(f"{'='*60}")
         
-        # Load LoRA adapters onto base model
-        # This should be called BEFORE get_peft_model() is applied
+        # Load LoRA adapters
+        # NOTE: This is called INSTEAD of get_peft_model() when loading from checkpoint
+        print("Loading LoRA adapters from checkpoint...")
         from peft import PeftModel
         self.model = PeftModel.from_pretrained(
-            self.model, 
+            self.model,
             str(checkpoint_path),
             is_trainable=True
         )
@@ -2751,8 +3352,9 @@ class MAPPOTrainer:
         print(f"{'='*60}")
         
         # Load value head state dict
-        state_dict = torch.load(value_head_path, map_location=self.model.device)
+        state_dict = torch.load(value_head_path, map_location=self.model.device, weights_only=True)
         self.value_head.load_state_dict(state_dict)
+        del state_dict  # Free memory
         print("✅ Value head loaded")
 
 
@@ -2782,15 +3384,17 @@ def main():
         
         # Training configuration
         num_policy_iterations=200,
-        trajectories_per_iteration=6,
-        max_missing_trajectories=5,
+        trajectories_per_iteration=32,
+        inference_batch_size=32,  # Number of environments to batch during inference
         actor_lr=1e-5,
         critic_lr=1e-4,
         gradient_accumulation_steps=1,
-        max_parallel_workers=10,  # Requires loky: pip install loky
         
         # PPO-specific
         ppo_epochs=4,
+        ppo_minibatch_size=256,
+        logprob_batch_size=8,  # Small batch - full sequences are very long
+        value_batch_size=8,
         clip_epsilon=0.2,
         gamma=1.0,
         gae_lambda=0.95,
@@ -2801,31 +3405,31 @@ def main():
         
         # Value head pretraining
         pretrain_value_head=True,
-        pretrain_epochs=10,
+        pretrain_epochs=0,
         pretrain_examples=100,
         pretrain_lr=1e-4,
-        data_dir="/content/among_them/data", # TODO change them
+        data_dir=os.environ.get("MAPPO_DATA_DIR", "/content/among_them/data"), # TODO change them
         
         # Output paths
-        output_dir="/content/drive/MyDrive/among_them/outputs/mappo_training",
-        checkpoint_dir="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints",
+        output_dir=os.environ.get("MAPPO_OUTPUT_DIR", "/content/drive/MyDrive/among_them/outputs/mappo_training"),
+        checkpoint_dir=os.environ.get("MAPPO_CHECKPOINT_DIR", "/content/drive/MyDrive/among_them/outputs/mappo_checkpoints"),
         
         # Checkpoint loading (for transfer learning - starts training from iteration 0)
         # load_model="50",                                                                     # Load model from iteration 50
         # load_model="final",                                                                   # Load final saved model 
-        load_model="/content/drive/MyDrive/among_them/sft_sampled",  # Direct path to checkpoint dir
+        load_model=os.environ.get("MAPPO_LOAD_MODEL", os.path.expanduser("/content/drive/MyDrive/among_them/sft_unsampled")),  # Direct path to checkpoint dir
         # load_head="50",                                                                      # Load value head from iteration 50
         # load_head="final",                                                                   # Load final saved value head
-        load_head="/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt",  # Direct path to .pt file
+        load_head=os.environ.get("MAPPO_LOAD_HEAD", os.path.expanduser("/content/drive/MyDrive/among_them/outputs/mappo_checkpoints/pretrain/value_head_epoch_10.pt")),  # Direct path to .pt file
         
         # Resume training (restores full state: weights + optimizers + iteration)
         # resume_from="50",                                                                    # Resume from iteration 50
         # resume_from="latest",                                                                # Resume from latest checkpoint
-        resume_from=None,                                                                      # No resume (fresh training)
+        resume_from=None,                                                                      # Resume from latest checkpoint
         
         # Logging
         wandb_project="among-them-mappo",
-        wandb_run_name="mappo-5players",
+        wandb_run_name="mappo-5players-batch-without-think",
         log_every_n_iterations=1,
         save_every_n_iterations=1,
         save_trajectories=True,
@@ -2833,16 +3437,22 @@ def main():
         # Debug
         debug=True,
         seed=42,
-        load_trajectories_from_disk=14,  # Load last 8 trajectories from disk and skip collection (debug only)
+        load_trajectories_from_disk=None,  # Load last 8 trajectories from disk and skip collection (debug only)
     )
     
+    if os.environ.get("WANDB_API_KEY"):
+        wandb.login()
+    else:
+        raise ValueError("WANDB_API_KEY environment variable not set")
+        
+    print("WANDB login successful")
     trainer = MAPPOTrainer(config)
     
     # Catch all errors and save stacktrace to file
     try:
         trainer.train()
     except Exception as e:
-        error_file = "/content/drive/MyDrive/among_them/outputs/error_log.txt"
+        error_file = "/home/ai155842/among_them/outputs/error_log.txt"
         with open(error_file, "w") as f:
             f.write(f"{'='*80}\n")
             f.write(f"TRAINING ERROR - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")

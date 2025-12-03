@@ -120,8 +120,9 @@ def get_observations_at_history_point(
     state_at_point = history[history_index]
     
     if phase == GamePhase.DISCUSS:
-        observations = ["Given the situation, the best message to send is (Strict output requirement: Respond with exactly ONE message and NOTHING else. No explanations, no additional sentences, no future planning, no markdown)."]
-        return " ".join(observations)
+        # During discussion, LLM should just continue the conversation naturally
+        # No environment info or action prompts needed
+        return ""
     
     observations = []
 
@@ -215,7 +216,7 @@ def get_initial_turn_prompt(
     all_players: List[Player],
     game_config: GameConfig,
     history_index: int,
-    phase: GamePhase = None
+    phase: GamePhase | None = None
 ) -> str:
     """
     Generate the first turn prompt for a player, including system context and initial observations.
@@ -226,10 +227,18 @@ def get_initial_turn_prompt(
         all_players: All players in the game
         game_config: Game configuration
         history_index: Index in history where this player's first turn occurs
+        phase: Current game phase (if None, inferred from history)
         
     Returns:
         Initial prompt with system context and first observations
     """
+    if phase is None:
+        phase = history[history_index].phase if history_index < len(history) else GamePhase.TASKS
+    
+    # During discussion, LLM should just continue the conversation naturally
+    if phase == GamePhase.DISCUSS:
+        return ""
+    
     prompt_parts = []
     
     # System context (static)
@@ -253,9 +262,25 @@ def get_initial_turn_prompt(
     prompt_parts.append(get_player_context(player, history, all_players, game_config))
     prompt_parts.append("")
     
+    # Add observations of what happened before this player's first turn
+    # (e.g., player 2 should see what player 1 did)
+    observations_since_start = []
+    for i in range(0, history_index):
+        hist_entry = history[i]
+        observation = generate_action_observations(
+            hist_entry.action_taken,
+            player.name,
+            hist_entry.spectators_who_saw
+        )
+        if observation.strip():
+            observations_since_start.append(observation)
+    
+    if observations_since_start:
+        prompt_parts.append("Since the start of the game:")
+        prompt_parts.extend(observations_since_start)
+        prompt_parts.append("")
+    
     # Add initial observations
-    if phase is None:
-        phase = history[history_index].phase if history_index < len(history) else GamePhase.TASKS
     prompt_parts.append(get_observations_at_history_point(
         player, history, all_players, game_config, history_index - 1, phase
     ))
@@ -270,7 +295,7 @@ def get_incremental_observations(
     game_config: GameConfig,
     last_turn_index: int,
     current_turn_index: int,
-    phase: GamePhase = None
+    phase: GamePhase | None = None
 ) -> str:
     """
     Generate observations for a player's turn, including only what happened since their last turn.
@@ -282,10 +307,55 @@ def get_incremental_observations(
         game_config: Game configuration
         last_turn_index: Index of the player's previous turn
         current_turn_index: Index of the player's current turn
+        phase: Current game phase (if None, inferred from history)
         
     Returns:
         Observations of what happened since last turn + current state
     """
+    if phase is None:
+        phase = history[current_turn_index].phase if current_turn_index < len(history) else GamePhase.TASKS
+    
+    # During discussion, only show what others said - no environment info
+    if phase == GamePhase.DISCUSS:
+        prompt_parts = []
+        
+        # Check if this is the first discussion turn for this player (transition from task phase)
+        # Look for the report action - could be at last_turn_index (if this player reported) or after
+        is_first_discussion_turn = False
+        reporter_name = None
+        victim_name = None
+        
+        # Check from last_turn_index (inclusive) to current_turn_index
+        for i in range(last_turn_index, current_turn_index):
+            hist_entry = history[i]
+            action = hist_entry.action_taken
+            if action.type == ActionType.REPORT:
+                is_first_discussion_turn = True
+                reporter_name = action.player_name
+                victim_name = action.target_player_name
+                break
+        
+        if is_first_discussion_turn and reporter_name and victim_name:
+            prompt_parts.append(f"{reporter_name} reported {victim_name}'s body. Discussion started.")
+            prompt_parts.append("System said: It is discussion phase now. Discuss who to eject from the game.")
+        
+        # Collect discussion messages from other players
+        discussion_messages = []
+        for i in range(last_turn_index + 1, current_turn_index):
+            hist_entry = history[i]
+            action = hist_entry.action_taken
+            if action.type == ActionType.SPEAK and action.player_name != "System":
+                discussion_messages.append(f"{action.player_name} said: {getattr(action, 'target_message', '')}")
+        
+        if discussion_messages:
+            prompt_parts.extend(discussion_messages)
+        
+        # Add final prompt for discussion
+        prompt_parts.append("")
+        prompt_parts.append("Given the situation, the best message to send is (Strict output requirement: Respond with exactly ONE message and NOTHING else. No explanations, no additional sentences, no future planning, no markdown).")
+        
+        return "\n".join(prompt_parts)
+    
     prompt_parts = []
     
     # Add observations of what happened between turns
@@ -306,8 +376,6 @@ def get_incremental_observations(
         prompt_parts.append("")
     
     # Add current state observations
-    if phase is None:
-        phase = history[current_turn_index].phase if current_turn_index < len(history) else GamePhase.TASKS
     prompt_parts.append(get_observations_at_history_point(
         player, history, all_players, game_config, current_turn_index - 1, phase
     ))

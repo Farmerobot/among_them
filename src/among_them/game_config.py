@@ -10,5 +10,3 @@ class GameConfig:
     num_task_phase_actions_per_player: int = 7 # resets after report
     num_discuss_phase_actions_per_player: int = 2 # resets after vote
     impostor_cooldown: int = 0 # resets after kill
-
-
