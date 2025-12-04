@@ -13,7 +13,7 @@ Key components:
 
 # Environment setup BEFORE importing torch
 import os
-from typing import Callable
+from typing import Callable, Union
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # Uncomment for debugging CUDA errors - forces synchronous execution
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -91,6 +91,7 @@ class MAPPOConfig:
     precompute_batch_size: int = 16  # DEPRECATED: use logprob_batch_size instead
     logprob_batch_size: int = 4  # Batch size for log-prob computation (small - full sequences are very long)
     value_batch_size: int = 4  # Batch size for value computation (small - global states are long)
+    train_micro_batch_size: int = 1  # Turns per backward pass during training (1-2 for long seqs with gradients)
     clip_epsilon: float = 0.2
     gamma: float = 1.0
     gae_lambda: float = 0.95
@@ -1630,17 +1631,21 @@ class MAPPOTrainer:
     def _compute_value_batch(
         self,
         global_state_reprs: List[str],
-        batch_size: int = 16
-    ) -> List[float]:  # MARK: .      VALUE BATCH
+        batch_size: int = 16,
+        with_grad: bool = False
+    ) -> Union[List[float], torch.Tensor]:  # MARK: .      VALUE BATCH
         """
-        Batched value computation for efficient GAE.
+        Batched value computation for efficient GAE or PPO update.
         
         Args:
             global_state_reprs: List of global state strings
             batch_size: Number of states to process in parallel
+            with_grad: If True, returns tensor with gradients for value_head (for PPO update)
+                      If False, returns list of floats (for GAE pre-computation)
             
         Returns:
-            List of value estimates (floats)
+            If with_grad=False: List of value estimates (floats)
+            If with_grad=True: Tensor of shape [N] with requires_grad through value_head
         """
         device = self.model.device
         all_values = []
@@ -1650,8 +1655,8 @@ class MAPPOTrainer:
         for batch_idx, batch_start in enumerate(range(0, len(global_state_reprs), batch_size)):
             batch_states = global_state_reprs[batch_start:batch_start + batch_size]
             
-            # Progress print every 5 batches or on last batch
-            if batch_idx % 5 == 0 or batch_idx == total_batches - 1:
+            # Progress print every 5 batches or on last batch (only for pre-computation)
+            if not with_grad and (batch_idx % 5 == 0 or batch_idx == total_batches - 1):
                 elapsed = time.time() - start_time
                 if batch_idx > 0:
                     eta = elapsed / (batch_idx + 1) * (total_batches - batch_idx - 1)
@@ -1668,29 +1673,34 @@ class MAPPOTrainer:
                 max_length=self.config.max_seq_length
             ).to(device)
             
+            # LLM forward always without gradients (we only train value_head, not LLM for critic)
             with torch.no_grad():
                 outputs = self.model(**encoded, output_hidden_states=True)
-                # Get last hidden state for each sequence (last non-padded position)
                 hidden_states = outputs.hidden_states[-1]  # [B, seq_len, hidden]
-                
-                # For left-padded sequences, the last token is always the last position
-                last_hidden = hidden_states[:, -1, :]  # [B, hidden]
-                
+                last_hidden = hidden_states[:, -1, :].detach()  # [B, hidden]
                 del outputs, hidden_states
             
-            # Compute values (no gradients needed for GAE)
-            with torch.no_grad():
-                values = self.value_head(last_hidden).squeeze(-1)  # [B]
-                
-            batch_values = values.cpu().tolist()
-            if isinstance(batch_values, float):
-                batch_values = [batch_values]
-            all_values.extend(batch_values)
+            # Value head: with or without gradients
+            if with_grad:
+                values = self.value_head(last_hidden).squeeze(-1)  # [B] with grad
+                all_values.append(values)
+            else:
+                with torch.no_grad():
+                    values = self.value_head(last_hidden).squeeze(-1)  # [B]
+                batch_values = values.cpu().tolist()
+                if isinstance(batch_values, float):
+                    batch_values = [batch_values]
+                all_values.extend(batch_values)
             
             del encoded, last_hidden, values
         
-        print()  # Newline after progress
-        return all_values
+        if not with_grad:
+            print()  # Newline after progress
+        
+        # Return concatenated tensor for grad mode, list for no_grad mode
+        if with_grad:
+            return torch.cat(all_values, dim=0)  # [N] tensor
+        return all_values  # List[float]
     
     def _compute_log_prob(
         self,
@@ -1800,7 +1810,8 @@ class MAPPOTrainer:
         self,
         turns: List[TurnData],
         use_reference_model: bool = False,
-        batch_size: int = 4
+        batch_size: int = 4,
+        silent: bool = False
     ) -> List[torch.Tensor]:  # MARK: .      LOGPROB BATCH
         """
         Batched version of _compute_log_prob for efficient pre-computation.
@@ -1811,6 +1822,7 @@ class MAPPOTrainer:
             turns: List of TurnData objects
             use_reference_model: If True, use base model without LoRA
             batch_size: Number of turns to process in each batch
+            silent: If True, suppress progress printing (for training loop)
             
         Returns:
             List of tensors, each of shape [G_i] where G_i = generated tokens for turn i
@@ -1823,8 +1835,8 @@ class MAPPOTrainer:
         for batch_idx, batch_start in enumerate(range(0, len(turns), batch_size)):
             batch_turns = turns[batch_start:batch_start + batch_size]
             
-            # Progress print every 5 batches or on last batch
-            if batch_idx % 5 == 0 or batch_idx == total_batches - 1:
+            # Progress print every 5 batches or on last batch (unless silent)
+            if not silent and (batch_idx % 5 == 0 or batch_idx == total_batches - 1):
                 elapsed = time.time() - start_time
                 if batch_idx > 0:
                     eta = elapsed / (batch_idx + 1) * (total_batches - batch_idx - 1)
@@ -1921,7 +1933,8 @@ class MAPPOTrainer:
             
             del logits, input_ids, attention_mask
         
-        print()  # Newline after progress
+        if not silent:
+            print()  # Newline after progress
         return results
     
     def _load_recent_trajectories_from_disk(self, num_trajectories: int, iteration: int = None) -> tuple[List[Trajectory], dict]: # MARK: .      LOAD RECENT
@@ -2651,242 +2664,224 @@ class MAPPOTrainer:
                 minibatch_num = minibatch_idx // minibatch_size + 1
                 total_minibatches = math.ceil(len(all_turns) / minibatch_size)
                 
-                # Accumulate gradients within the minibatch
+                # ============================================================
+                # GRADIENT ACCUMULATION PPO UPDATE
+                # Split minibatch into micro-batches to bound memory:
+                # - Process micro_batch_size turns at a time
+                # - backward() after each micro-batch (accumulates gradients)
+                # - optimizer.step() after all micro-batches
+                # ============================================================
+                
+                device = self.model.device
+                
+                # Initialize timing variables
                 minibatch_logprob_time = 0.0
                 minibatch_value_time = 0.0
                 minibatch_backward_time = 0.0
                 
+                # Filter out turns with failed pre-computation
+                valid_turns = [t for t in minibatch 
+                              if t.precomputed_old_log_probs is not None 
+                              and t.precomputed_ref_log_probs is not None]
+                
+                if len(valid_turns) == 0:
+                    print(f"  ⚠️ Minibatch {minibatch_num}: All turns failed pre-computation, skipping")
+                    continue
+                
+                if len(valid_turns) < len(minibatch):
+                    print(f"  ⚠️ Minibatch {minibatch_num}: {len(minibatch) - len(valid_turns)} turns skipped (failed pre-computation)")
+                
                 if self.config.debug:
-                    print(f"\n  🔄 Minibatch {minibatch_num}/{total_minibatches}")
+                    num_micro = math.ceil(len(valid_turns) / self.config.train_micro_batch_size)
+                    print(f"\n  🔄 Minibatch {minibatch_num}/{total_minibatches} ({len(valid_turns)} turns, {num_micro} micro-batches of {self.config.train_micro_batch_size})")
                     self._print_vram_summary(f"Minibatch {minibatch_num} - START")
                 
-                for i, turn in enumerate(minibatch):
-                    # Explicitly control model state for each computation step
-                    # to ensure gradient checkpointing works correctly
-                    device = self.model.device
+                # Accumulate metrics across micro-batches
+                minibatch_policy_loss = 0.0
+                minibatch_value_loss = 0.0
+                minibatch_kl_loss = 0.0
+                minibatch_entropy = 0.0
+                minibatch_ratio_sum = 0.0
+                minibatch_clipped_sum = 0.0
+                minibatch_turns_processed = 0
+                
+                try:
+                    # ============================================================
+                    # MICRO-BATCH GRADIENT ACCUMULATION
+                    # Process train_micro_batch_size turns at a time: forward → loss → backward
+                    # This bounds memory to N turns' activations at any time
+                    # train_micro_batch_size=1: safest, fits any GPU
+                    # train_micro_batch_size=2: ~2x faster, needs ~2x more VRAM
+                    # ============================================================
+                    n_valid = len(valid_turns)
+                    micro_size = self.config.train_micro_batch_size
+                    num_micro_batches = math.ceil(n_valid / micro_size)
                     
-                    # Create turn identifier for debugging
-                    turn_idx = minibatch_idx + i
-                    turn_identifier = f"Turn {turn_idx}/{len(all_turns)}: {turn.player_name} ({turn.player_role.name})"
-                    
-                    # Print progress every 10 turns
-                    if (turn_idx + 1) % 10 == 0:
-                        print(f"  📊 Progress: {turn_idx + 1}/{len(all_turns)} turns processed", flush=True)
-                    
-                    try:
+                    for micro_idx in range(0, n_valid, micro_size):
+                        micro_batch = valid_turns[micro_idx:micro_idx + micro_size]
+                        micro_num = micro_idx // micro_size + 1
+                        
+                        # Print progress
+                        if micro_num % 20 == 0 or micro_num == num_micro_batches:
+                            print(f"    Micro-batch {micro_num}/{num_micro_batches}", end="\r", flush=True)
+                        
                         # =======================================================
-                        # Step 1: Get current_log_prob (ACTOR)
+                        # Step 1: Compute log_probs for micro-batch (with grad)
                         # =======================================================
-                        # Model already in .train() mode (set once per minibatch)
                         logprob_start = time.time()
-                        # if self.config.debug:
-                        #     self._print_vram_summary(f"{turn_identifier} - Before LogProb")
-                        current_log_prob = self._compute_log_prob(
-                            turn.conversation,
-                            turn.actions,
-                            turn.chosen_action_idx,
-                            turn.reasoning,
-                            use_reference_model=False
-                        )
-                        logprob_time = time.time() - logprob_start
-                        minibatch_logprob_time += logprob_time
+                        if micro_size == 1:
+                            # Single turn - use unbatched method
+                            turn = micro_batch[0]
+                            current_log_probs = [self._compute_log_prob(
+                                turn.conversation,
+                                turn.actions,
+                                turn.chosen_action_idx,
+                                turn.reasoning,
+                                use_reference_model=False
+                            )]
+                        else:
+                            # Multiple turns - use batched method
+                            current_log_probs = self._compute_log_prob_batch(
+                                micro_batch,
+                                use_reference_model=False,
+                                batch_size=micro_size,  # Process all at once
+                                silent=True  # Suppress progress (we have our own)
+                            )
+                        minibatch_logprob_time += time.time() - logprob_start
                         
-                        # if self.config.debug:
-                        #     self._print_vram_summary(f"{turn_identifier} - After LogProb")
+                        # =======================================================
+                        # Step 2: Compute values for micro-batch (with grad on value_head)
+                        # =======================================================
+                        value_start = time.time()
+                        if micro_size == 1:
+                            value_preds = self._compute_value(micro_batch[0].global_state_repr).unsqueeze(0)
+                        else:
+                            global_states = [t.global_state_repr for t in micro_batch]
+                            value_preds = self._compute_value_batch(
+                                global_states,
+                                batch_size=micro_size,
+                                with_grad=True
+                            )
+                        minibatch_value_time += time.time() - value_start
                         
-                        # Step 2: Use pre-computed ref_log_prob and old_log_prob
-                        # Move from CPU back to GPU for computation
-                        ref_log_prob = turn.precomputed_ref_log_probs.to(device)
-                        old_log_prob_tensor = turn.precomputed_old_log_probs.to(device)
+                        # =======================================================
+                        # Step 3: Compute losses for micro-batch
+                        # =======================================================
+                        micro_policy_loss = torch.tensor(0.0, device=device)
+                        micro_kl_loss = torch.tensor(0.0, device=device)
+                        micro_entropy = 0.0
                         
-                        if old_log_prob_tensor is None or ref_log_prob is None:
-                            if self.config.debug:
-                                print(f"      ⚠️ Skipping turn {i} (failed pre-computation)")
+                        for i, turn in enumerate(micro_batch):
+                            current_log_prob = current_log_probs[i]
+                            old_log_prob = turn.precomputed_old_log_probs.to(device)
+                            ref_log_prob = turn.precomputed_ref_log_probs.to(device)
+                            
+                            # Ensure lengths match
+                            T = min(old_log_prob.shape[0], current_log_prob.shape[0], ref_log_prob.shape[0])
+                            current_log_prob = current_log_prob[:T]
+                            old_log_prob = old_log_prob[:T]
+                            ref_log_prob = ref_log_prob[:T]
+                            
+                            # Per-token importance sampling ratio
+                            log_ratio = current_log_prob - old_log_prob
+                            log_ratio = torch.clamp(log_ratio, min=-2.0, max=2.0)
+                            ratio = torch.exp(log_ratio)
+                            
+                            # Track ratio and clipping
+                            minibatch_ratio_sum += ratio.mean().item()
+                            ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
+                            minibatch_clipped_sum += ratio_clipped_mask.float().mean().item()
+                            
+                            # Clipped surrogate objective
+                            adv = turn.advantage_tensor if turn.advantage_tensor is not None else torch.tensor([turn.advantage], device=device)
+                            surr1 = ratio * adv
+                            surr2 = torch.clamp(ratio, 1 - self.config.clip_epsilon, 1 + self.config.clip_epsilon) * adv
+                            turn_policy_loss = -torch.min(surr1, surr2).mean()
+                            
+                            # KL divergence penalty
+                            kl_div_per_token = torch.clamp(current_log_prob - ref_log_prob, min=-10.0, max=10.0)
+                            turn_kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
+                            
+                            # Entropy
+                            if turn.action_probs is not None and len(turn.action_probs) > 1:
+                                action_probs_tensor = torch.tensor(turn.action_probs, device=device)
+                                action_probs_tensor = torch.clamp(action_probs_tensor, min=1e-10)
+                                turn_entropy = -(action_probs_tensor * torch.log(action_probs_tensor)).sum().item()
+                            else:
+                                turn_entropy = -current_log_prob.mean().item()
+                            
+                            micro_policy_loss = micro_policy_loss + turn_policy_loss
+                            micro_kl_loss = micro_kl_loss + turn_kl_loss
+                            micro_entropy += turn_entropy
+                            total_training_tokens += turn.input_tokens + turn.output_tokens
+                        
+                        # Average over micro-batch
+                        n_micro = len(micro_batch)
+                        avg_policy_loss = micro_policy_loss / n_micro
+                        avg_kl_loss = micro_kl_loss / n_micro
+                        avg_entropy = micro_entropy / n_micro
+                        
+                        # Value loss for micro-batch
+                        returns_tensor = torch.stack([
+                            t.returns_tensor.squeeze() if t.returns_tensor is not None 
+                            else torch.tensor(t.returns, device=device)
+                            for t in micro_batch
+                        ])
+                        value_loss = F.mse_loss(value_preds, returns_tensor)
+                        
+                        # =======================================================
+                        # Step 4: Backward pass (releases activations)
+                        # Scale by 1/num_micro_batches for gradient accumulation
+                        # =======================================================
+                        actor_loss = (avg_policy_loss + avg_kl_loss - self.config.entropy_coef * avg_entropy) / num_micro_batches
+                        critic_loss = (self.config.value_loss_coef * value_loss) / num_micro_batches
+                        
+                        # NaN/Inf check
+                        if torch.isnan(actor_loss) or torch.isnan(critic_loss) or torch.isinf(actor_loss) or torch.isinf(critic_loss):
                             continue
                         
-                        # Ensure lengths match (in case of rare truncation)
-                        T = min(old_log_prob_tensor.shape[0], current_log_prob.shape[0])
-                        old_log_prob_tensor = old_log_prob_tensor[:T]
-                        current_log_prob = current_log_prob[:T]
-                        ref_log_prob = ref_log_prob[:T]
-                        
-                        # Track tokens (only 1 forward pass per turn now: current)
-                        total_training_tokens += turn.input_tokens + turn.output_tokens
-                        
-                        epoch_turns_processed += 1
-                        
-                        # =======================================================
-                        # Step 3: Get value_pred (CRITIC)
-                        # =======================================================
-                        # Model and value_head already in .train() mode (set once per minibatch)
-                        value_start = time.time()
-                        value_pred = self._compute_value(turn.global_state_repr)
-                        value_time = time.time() - value_start
-                        minibatch_value_time += value_time
-                        
-                        # if self.config.debug:
-                        #     self._print_vram_summary(f"{turn_identifier} - After Value")
-                        
-                        # =======================================================
-                        # Step 4: Compute Losses
-                        # =======================================================
-                        
-                        # PER-TOKEN Importance sampling ratio
-                        # Clamp log-ratio BEFORE exp to prevent numerical explosion
-                        # Max ratio of ~7.4 (exp(2)) is reasonable for stability
-                        log_ratio = current_log_prob - old_log_prob_tensor
-                        log_ratio = torch.clamp(log_ratio, min=-2.0, max=2.0)
-                        ratio = torch.exp(log_ratio)
-                        
-                        # Track ratio and clipping (use mean for tracking)
-                        total_ratio += ratio.mean().item()
-                        ratio_clipped_mask = (ratio < (1 - self.config.clip_epsilon)) | (ratio > (1 + self.config.clip_epsilon))
-                        total_clipped += ratio_clipped_mask.float().mean().item()
-                        
-                        # PER-TOKEN Clipped surrogate objective
-                        # Use pre-converted tensor if available, otherwise create
-                        adv = turn.advantage_tensor if turn.advantage_tensor is not None else torch.tensor([turn.advantage], device=self.model.device)
-                        surr1 = ratio * adv
-                        surr2 = torch.clamp(
-                            ratio,
-                            1 - self.config.clip_epsilon,
-                            1 + self.config.clip_epsilon
-                        ) * adv
-                        # Average per-token losses
-                        policy_loss = -torch.min(surr1, surr2).mean()
-                        
-                        # PER-TOKEN KL divergence penalty (also clamp to prevent explosion)
-                        kl_div_per_token = torch.clamp(current_log_prob - ref_log_prob, min=-10.0, max=10.0)
-                        kl_loss = self.config.kl_penalty_coef * kl_div_per_token.mean()
-                        
-                        # Value loss
-                        value_target = turn.returns_tensor if turn.returns_tensor is not None else torch.tensor([turn.returns], device=self.model.device, dtype=value_pred.dtype)
-                        value_loss = F.mse_loss(value_pred, value_target)
-                        
-                        # Entropy bonus: compute from action distribution (discrete actions)
-                        # H(π) = -Σ p(a) * log(p(a))
-                        if turn.action_probs is not None and len(turn.action_probs) > 1:
-                            # Proper entropy from discrete action distribution
-                            action_probs_tensor = torch.tensor(turn.action_probs, device=device)
-                            # Avoid log(0) by clamping
-                            action_probs_tensor = torch.clamp(action_probs_tensor, min=1e-10)
-                            entropy = -(action_probs_tensor * torch.log(action_probs_tensor)).sum().item()
-                        else:
-                            # Generative turn (single action) or missing probs: use token-level proxy
-                            entropy = -current_log_prob.mean().item()
-                        
-                        # =======================================================
-                        # Step 5: Backward Passes
-                        # =======================================================
-                        
-                        # 1. Actor Loss (backprops only to model/LoRA)
-                        actor_loss = (policy_loss + kl_loss - self.config.entropy_coef * entropy)
-                        actor_loss = actor_loss / len(minibatch)  # Average over minibatch
-                        
-                        # 2. Critic Loss (backprops only to value_head)
-                        critic_loss = self.config.value_loss_coef * value_loss
-                        critic_loss = critic_loss / len(minibatch)  # Average over minibatch
-                        
-                        # NaN/Inf check - skip this turn if loss is invalid
-                        if torch.isnan(actor_loss) or torch.isnan(critic_loss) or torch.isinf(actor_loss) or torch.isinf(critic_loss):
-                            if self.config.debug:
-                                print(f"      ⚠️ Skipping update for turn {i} due to NaN/Inf loss.")
-                                print(f"         Policy Loss: {policy_loss.item()}, KL Loss: {kl_loss.item()}, Value Loss: {value_loss.item()}")
-                            continue  # Skip this turn, do not backpropagate
-                        
-                        # Explicitly delete intermediate tensors to free VRAM *before* backward()
-                        try:
-                            del current_log_prob, value_pred, ratio, log_ratio
-                            del surr1, surr2, kl_div_per_token, adv, value_target
-                        except NameError:
-                            pass  # In case a tensor wasn't created
-                        
-                        # Model already in .train() mode (set once per minibatch)
                         backward_start = time.time()
-                        actor_loss.backward()
-                        # if self.config.debug:
-                        #     self._print_vram_summary(f"{turn_identifier} - After Actor Backward")
-                        critic_loss.backward()
-                        # if self.config.debug:
-                        #     self._print_vram_summary(f"{turn_identifier} - After Critic Backward")
-                        backward_time = time.time() - backward_start
-                        minibatch_backward_time += backward_time
+                        total_loss = actor_loss + critic_loss
+                        total_loss.backward()
+                        minibatch_backward_time += time.time() - backward_start
                         
+                        # Track metrics (unscaled)
+                        minibatch_policy_loss += avg_policy_loss.item()
+                        minibatch_value_loss += value_loss.item()
+                        minibatch_kl_loss += avg_kl_loss.item()
+                        minibatch_entropy += avg_entropy
+                        minibatch_turns_processed += n_micro
                         
-                        total_policy_loss += policy_loss.item()
-                        total_value_loss += value_loss.item()
-                        total_kl_loss += kl_loss.item()
-                        total_entropy += entropy
-                        num_updates += 1
+                        # Cleanup - activations are freed after backward()
+                        del current_log_probs, value_preds, returns_tensor
+                        del micro_policy_loss, micro_kl_loss, avg_policy_loss, avg_kl_loss
+                        del actor_loss, critic_loss, total_loss, value_loss
                     
-                    except torch.cuda.OutOfMemoryError as oom_error:
-                        print(f"\n{'='*80}")
-                        print(f"❌❌ CAUGHT OOM on: {turn_identifier} ❌❌")
-                        print(f"Error: {oom_error}")
-                        
-                        # CRITICAL: Delete any tensors that were created before the OOM
-                        # These are the massive tensors holding VRAM hostage
-                        try:
-                            del current_log_prob
-                        except NameError:
-                            pass
-                        try:
-                            del ref_log_prob, old_log_prob_tensor
-                        except NameError:
-                            pass
-                        try:
-                            del value_pred
-                        except NameError:
-                            pass
-                        try:
-                            del ratio, surr1, surr2, kl_div_per_token, adv, value_target
-                        except NameError:
-                            pass
-                        try:
-                            del actor_loss, critic_loss, policy_loss, value_loss, kl_loss
-                        except NameError:
-                            pass
-                        
-                        # Tokenize and get exact lengths
-                        actor_seq_len = "N/A"
-                        try:
-                            # Re-run _compute_log_prob logic to get length
-                            input_text = self.tokenizer.apply_chat_template(turn.conversation, tokenize=False, add_generation_prompt=True)
-                            context_ids = self.tokenizer(input_text, return_tensors="pt").to(device).input_ids
-                            reasoning_tokens = self.tokenizer.encode(turn.reasoning, add_special_tokens=False)
-                            end_think_tokens = self.tokenizer.encode("\n</think>", add_special_tokens=False)
-                            chosen_action = turn.actions[turn.chosen_action_idx]
-                            action_prefix_tokens = self.tokenizer.encode("\n\nTell:" if chosen_action.type == ActionType.SPEAK else "\n\nAction:", add_special_tokens=False)
-                            action_tokens = self.tokenizer.encode(chosen_action.command_perspective, add_special_tokens=False)
-                            generated_ids_list = reasoning_tokens + end_think_tokens + action_prefix_tokens + action_tokens
-                            generated_ids = torch.tensor([generated_ids_list], device=device)
-                            full_input_ids = torch.cat([context_ids, generated_ids], dim=1)
-                            actor_seq_len = full_input_ids.shape[1]
-                            # Clean up these debug tensors too
-                            del context_ids, generated_ids, full_input_ids
-                        except Exception as e_len:
-                            actor_seq_len = f"Error getting length: {e_len}"
-
-                        critic_seq_len = "N/A"
-                        try:
-                            critic_inputs = self.tokenizer(turn.global_state_repr, return_tensors="pt")
-                            critic_seq_len = critic_inputs.input_ids.shape[1]
-                            del critic_inputs
-                        except Exception as e_len:
-                            critic_seq_len = f"Error getting length: {e_len}"
-
-                        print(f"\n  Problematic Turn Details:")
-                        print(f"  Actor Seq Len (LogProb):  {actor_seq_len}")
-                        print(f"  Critic Seq Len (Value): {critic_seq_len}")
-                        print(f"  (Config max_seq_length is {self.config.max_seq_length})")
-                        print(f"{'='*80}\n")
-                        
-                        # CRITICAL: Empty cache to recover from OOM and continue loop
-                        torch.cuda.empty_cache()
-                        
-                        if self.config.debug:
-                            self._print_vram_summary(f"After OOM cleanup")
-                        raise oom_error
+                    print()  # Newline after progress
+                    
+                    # Average metrics over turns
+                    if minibatch_turns_processed > 0:
+                        total_policy_loss += minibatch_policy_loss / minibatch_turns_processed
+                        total_value_loss += minibatch_value_loss / minibatch_turns_processed
+                        total_kl_loss += minibatch_kl_loss / minibatch_turns_processed
+                        total_entropy += minibatch_entropy / minibatch_turns_processed
+                        total_ratio += minibatch_ratio_sum / minibatch_turns_processed
+                        total_clipped += minibatch_clipped_sum / minibatch_turns_processed
+                        num_updates += 1
+                        epoch_turns_processed += minibatch_turns_processed
+                
+                except torch.cuda.OutOfMemoryError as oom_error:
+                    print(f"\n{'='*80}")
+                    print(f"❌❌ CAUGHT OOM on Minibatch {minibatch_num} ❌❌")
+                    print(f"Error: {oom_error}")
+                    print(f"train_micro_batch_size: {self.config.train_micro_batch_size}")
+                    print(f"Suggestion: Reduce train_micro_batch_size (try 1 if currently higher)")
+                    print(f"{'='*80}\n")
+                    
+                    torch.cuda.empty_cache()
+                    if self.config.debug:
+                        self._print_vram_summary(f"After OOM cleanup")
+                    raise oom_error
                 
                 # End of minibatch: clip gradients and step optimizers
                 optimizer_start = time.time()
@@ -3388,13 +3383,14 @@ def main():
         inference_batch_size=32,  # Number of environments to batch during inference
         actor_lr=1e-5,
         critic_lr=1e-4,
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=1,  # DEPRECATED: use train_micro_batch_size instead
         
         # PPO-specific
         ppo_epochs=4,
-        ppo_minibatch_size=256,
-        logprob_batch_size=8,  # Small batch - full sequences are very long
-        value_batch_size=8,
+        ppo_minibatch_size=256,  # Turns per optimizer step
+        logprob_batch_size=8,    # Internal batching for forward pass efficiency (pre-computation)
+        value_batch_size=8,      # Internal batching for value computation (pre-computation)
+        train_micro_batch_size=3,  # Turns per backward during training (1=safe, 2=faster, 8=OOM)
         clip_epsilon=0.2,
         gamma=1.0,
         gae_lambda=0.95,
@@ -3425,7 +3421,7 @@ def main():
         # Resume training (restores full state: weights + optimizers + iteration)
         # resume_from="50",                                                                    # Resume from iteration 50
         # resume_from="latest",                                                                # Resume from latest checkpoint
-        resume_from=None,                                                                      # Resume from latest checkpoint
+        resume_from="latest",                                                                      # Resume from latest checkpoint
         
         # Logging
         wandb_project="among-them-mappo",
