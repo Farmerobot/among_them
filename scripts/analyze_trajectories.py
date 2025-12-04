@@ -15,20 +15,84 @@ import os
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import statistics
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from among_them.game_jsonencoder import game_object_hook
-from among_them.models.action_type import ActionType
-from among_them.models.end_game import EndGameReason
-from among_them.models.history import History
-from among_them.models.phase import GamePhase
-from among_them.models.player import Player
-from among_them.models.player_role import PlayerRole
+# ============================================================================
+# Standalone enum/class definitions to avoid importing from among_them
+# (which has dependencies on dotenv, etc.)
+# ============================================================================
+
+class ActionType(Enum):
+    VOTE = "Vote"
+    SPEAK = "Speak"
+    WAIT = "Wait"
+    MOVE = "Move"
+    TASK = "Task"
+    KILL = "Kill"
+    REPORT = "Report"
+    PRETEND = "Pretend"
+
+
+class GamePhase(Enum):
+    TASKS = "Tasks"
+    DISCUSS = "Discuss"
+    VOTING = "Voting"
+
+
+class PlayerRole(Enum):
+    CREWMATE = "Crewmate"
+    IMPOSTOR = "Impostor"
+
+
+class EndGameReason(Enum):
+    NO_ACTIONS_LEFT = "No actions left"
+    NO_IMPOSTORS_LEFT = "No impostors left"
+    ALL_TASKS_DONE = "All tasks done"
+    TOO_SMALL_NUMBER_OF_CREWMATES_LEFT = "Too small number of crewmates left"
+
+
+class Location(Enum):
+    CAFETERIA = "Cafeteria"
+    REACTOR = "Reactor"
+    UPPER_ENGINE = "Upper Engine"
+    LOWER_ENGINE = "Lower Engine"
+    SECURITY = "Security"
+    MEDBAY = "Medbay"
+    ELECTRICAL = "Electrical"
+    STORAGE = "Storage"
+    ADMIN = "Admin"
+    COMMUNICATIONS = "Communications"
+    O2 = "O2"
+    WEAPONS = "Weapons"
+    SHIELDS = "Shields"
+    NAVIGATION = "Navigation"
+
+
+def game_object_hook(obj_dict: Dict[str, Any]) -> Any:
+    """Custom JSON decoder hook to handle deserialization of game objects."""
+    if "__enum__" in obj_dict:
+        # Handle enums
+        for enum_cls in [Location, PlayerRole, GamePhase, ActionType]:
+            try:
+                return enum_cls(obj_dict["__enum__"])
+            except (ValueError, TypeError):
+                continue
+        return obj_dict
+    
+    # Handle enum fields directly in objects - return as SimpleNamespace-like dict
+    if "__class__" in obj_dict and "__module__" in obj_dict:
+        class_name = obj_dict.pop("__class__")
+        obj_dict.pop("__module__")
+        
+        # Create a simple object with attribute access
+        obj = type(class_name, (), obj_dict)()
+        return obj
+    
+    return obj_dict
 
 
 @dataclass
@@ -122,7 +186,7 @@ class IterationStats:
     avg_turns_until_report: List[float] = field(default_factory=list)
 
 
-def load_game(filepath: str) -> Tuple[List[History], List[Player], Optional[dict]]:
+def load_game(filepath: str) -> Tuple[List, List, Optional[dict]]:
     """Load a game trajectory from JSON file."""
     with open(filepath, 'r') as f:
         json_str = f.read()
@@ -139,15 +203,15 @@ def load_game(filepath: str) -> Tuple[List[History], List[Player], Optional[dict
         return history, players, game_config
 
 
-def get_player_role(players: List[Player], player_name: str) -> Optional[PlayerRole]:
+def get_player_role(players: List, player_name: str) -> Optional[PlayerRole]:
     """Get the role of a player by name."""
     for p in players:
-        if p.name == player_name:
-            return p.role
+        if getattr(p, 'name', None) == player_name:
+            return getattr(p, 'role', None)
     return None
 
 
-def analyze_game(history: List[History], players: List[Player], iteration: int) -> GameStats:
+def analyze_game(history: List, players: List, iteration: int) -> GameStats:
     """Analyze a single game and extract statistics."""
     stats = GameStats(iteration=iteration)
     stats.num_turns = len(history)
@@ -159,50 +223,56 @@ def analyze_game(history: List[History], players: List[Player], iteration: int) 
     kills_this_round = 0
     impostor_had_cooldown = False
     
-    impostors = [p.name for p in players if p.role == PlayerRole.IMPOSTOR]
-    crewmates = [p.name for p in players if p.role == PlayerRole.CREWMATE]
+    impostors = [getattr(p, 'name', '') for p in players if getattr(p, 'role', None) == PlayerRole.IMPOSTOR]
+    crewmates = [getattr(p, 'name', '') for p in players if getattr(p, 'role', None) == PlayerRole.CREWMATE]
     
     for turn_idx, h in enumerate(history):
-        action = h.action_taken
-        player_name = action.player_name
-        action_type = action.type
+        action = getattr(h, 'action_taken', None)
+        if action is None:
+            continue
+            
+        player_name = getattr(action, 'player_name', '')
+        action_type = getattr(action, 'type', None)
         
         # Skip system messages for action counting
         if player_name == "System":
             # Check for end game
-            if hasattr(action, 'target_message') and action.target_message:
-                msg = action.target_message
-                if "The game ended" in msg:
-                    # Parse winner and reason
-                    if "IMPOSTOR" in msg:
-                        stats.winner_role = PlayerRole.IMPOSTOR
-                    elif "CREWMATE" in msg:
-                        stats.winner_role = PlayerRole.CREWMATE
-                    
-                    # Parse end reason
-                    for reason in EndGameReason:
-                        if reason.value in msg:
-                            stats.end_reason = reason
-                            break
+            target_msg = getattr(action, 'target_message', '')
+            if target_msg and "The game ended" in target_msg:
+                # Parse winner and reason
+                if "IMPOSTOR" in target_msg:
+                    stats.winner_role = PlayerRole.IMPOSTOR
+                elif "CREWMATE" in target_msg:
+                    stats.winner_role = PlayerRole.CREWMATE
+                
+                # Parse end reason
+                for reason in EndGameReason:
+                    if reason.value in target_msg:
+                        stats.end_reason = reason
+                        break
             continue
         
         # Track phase transitions for rounds
-        if last_phase == GamePhase.VOTING and h.phase == GamePhase.TASKS:
+        h_phase = getattr(h, 'phase', None)
+        if last_phase == GamePhase.VOTING and h_phase == GamePhase.TASKS:
             current_round += 1
             if kills_this_round > 0:
                 stats.kills_per_round.append(kills_this_round)
             kills_this_round = 0
-        last_phase = h.phase
+        last_phase = h_phase
+        
+        # Get player role for this action
+        player_role = get_player_role(players, player_name)
         
         # Count actions
-        action_name = action_type.name
-        stats.action_counts[action_name] += 1
-        
-        player_role = get_player_role(players, player_name)
-        if player_role == PlayerRole.IMPOSTOR:
-            stats.impostor_action_counts[action_name] += 1
-        elif player_role == PlayerRole.CREWMATE:
-            stats.crewmate_action_counts[action_name] += 1
+        if action_type:
+            action_name = action_type.name if hasattr(action_type, 'name') else str(action_type)
+            stats.action_counts[action_name] += 1
+            
+            if player_role == PlayerRole.IMPOSTOR:
+                stats.impostor_action_counts[action_name] += 1
+            elif player_role == PlayerRole.CREWMATE:
+                stats.crewmate_action_counts[action_name] += 1
         
         # Analyze specific actions
         if action_type == ActionType.KILL:
@@ -218,8 +288,10 @@ def analyze_game(history: List[History], players: List[Player], iteration: int) 
             last_kill_turn = turn_idx
             
             # Track kill location
-            if h.location:
-                stats.kill_locations.append(h.location.name if hasattr(h.location, 'name') else str(h.location))
+            h_location = getattr(h, 'location', None)
+            if h_location:
+                loc_name = h_location.name if hasattr(h_location, 'name') else str(h_location)
+                stats.kill_locations.append(loc_name)
         
         elif action_type == ActionType.REPORT:
             stats.num_discussions += 1
@@ -228,7 +300,7 @@ def analyze_game(history: List[History], players: List[Player], iteration: int) 
         
         elif action_type == ActionType.VOTE:
             stats.num_voting_phases += 1
-            target = action.target_player_name
+            target = getattr(action, 'target_player_name', '')
             
             if target == "nobody":
                 stats.votes_for_nobody += 1
@@ -250,7 +322,8 @@ def analyze_game(history: List[History], players: List[Player], iteration: int) 
                 stats.crewmate_moves += 1
         
         # Track cooldown state
-        if player_role == PlayerRole.IMPOSTOR and h.impostor_cooldown > 0:
+        h_cooldown = getattr(h, 'impostor_cooldown', 0)
+        if player_role == PlayerRole.IMPOSTOR and h_cooldown > 0:
             impostor_had_cooldown = True
     
     # Final round kills
@@ -265,10 +338,19 @@ def aggregate_iteration_stats(games: List[GameStats], iteration: int) -> Iterati
     stats = IterationStats(iteration=iteration, num_games=len(games))
     
     for game in games:
-        # Win tracking
-        if game.winner_role == PlayerRole.IMPOSTOR:
+        # Win tracking - infer from end_reason if winner_role not set
+        winner = game.winner_role
+        if winner is None and game.end_reason:
+            # Impostor wins: too few crewmates left, no actions left (usually impostor advantage)
+            if game.end_reason in [EndGameReason.TOO_SMALL_NUMBER_OF_CREWMATES_LEFT]:
+                winner = PlayerRole.IMPOSTOR
+            # Crewmate wins: all tasks done, no impostors left
+            elif game.end_reason in [EndGameReason.ALL_TASKS_DONE, EndGameReason.NO_IMPOSTORS_LEFT]:
+                winner = PlayerRole.CREWMATE
+        
+        if winner == PlayerRole.IMPOSTOR:
             stats.impostor_wins += 1
-        elif game.winner_role == PlayerRole.CREWMATE:
+        elif winner == PlayerRole.CREWMATE:
             stats.crewmate_wins += 1
         
         # End reasons
@@ -332,7 +414,7 @@ def find_trajectory_dirs(checkpoint_dir: str) -> Dict[int, str]:
     return dict(sorted(iterations.items()))
 
 
-def load_iteration_games(traj_dir: str, max_games: Optional[int] = None) -> List[Tuple[List[History], List[Player]]]:
+def load_iteration_games(traj_dir: str, max_games: Optional[int] = None) -> List[Tuple[List, List]]:
     """Load all games from a trajectory directory."""
     games = []
     
