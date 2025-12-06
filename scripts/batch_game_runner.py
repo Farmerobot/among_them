@@ -95,7 +95,7 @@ def main():
     
     # Configuration parameters
 
-    GAMES_PER_PLAYER_COUNT = 7
+    GAMES_PER_PLAYER_COUNT = 5
     PLAYER_COUNTS = [5, 6, 7]
     
     # Paths
