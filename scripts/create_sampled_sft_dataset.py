@@ -15,7 +15,7 @@ from create_sft_dataset import write_alpaca_json, format_num
 import random
 import os
 
-TRACE_QUALITY_THRESHOLD = 2
+TRACE_QUALITY_THRESHOLD = 3
 
 def main():
     # --- Configuration ---

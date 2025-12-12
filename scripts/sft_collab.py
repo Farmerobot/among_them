@@ -458,7 +458,7 @@ def train_model(model, tokenizer, train_dataset, eval_dataset, output_dir, max_s
         seed=42,
         report_to="none",
         dataset_num_proc=2,
-        packing=True,
+        packing=False,  # Must be False for custom label masking to work
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )

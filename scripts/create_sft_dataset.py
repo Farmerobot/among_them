@@ -51,17 +51,15 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
         if not player_turn_indices:
             continue  # Player never took a turn
         
-        # Build conversation turns
-        conversation = []
-        total_input_tokens = 0
-        total_output_tokens = 0
+        # Build turn data (prompts and actions) first
+        turn_data = []
+        skip_player = False
         
         for turn_idx, history_index in enumerate(player_turn_indices):
             event = engine.history[history_index]
             
             # Generate user prompt
             if turn_idx == 0:
-                # First turn: include system context
                 user_prompt = get_initial_turn_prompt(
                     player,
                     engine.history,
@@ -70,7 +68,6 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
                     history_index
                 )
             else:
-                # Subsequent turns: only incremental observations
                 last_turn_index = player_turn_indices[turn_idx - 1]
                 user_prompt = get_incremental_observations(
                     player,
@@ -81,58 +78,60 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
                     history_index
                 )
             
-            # Generate assistant response
-            # Only include think block on the last turn (matches in-game behavior)
             event.action_taken.set_stories()
-            is_last_turn = turn_idx == len(player_turn_indices) - 1
             action_text = event.action_taken.command_perspective.strip()
             
-            # Validate action_text is not empty
             if not action_text:
-                print(f"  Warning: Empty action_text for {player.name} turn {turn_idx} in {os.path.basename(file_path)}, skipping conversation")
-                conversation = None
+                print(f"  Warning: Empty action_text for {player.name} turn {turn_idx} in {os.path.basename(file_path)}, skipping player")
+                skip_player = True
                 break
             
-            if is_last_turn:
-                assistant_response = f"{event.llm_cot}{action_text}"
-            else:
-                assistant_response = action_text
-            
-            # Count tokens if tokenizer available
-            if tokenizer_for_counting:
-                input_tokens = len(tokenizer_for_counting.encode(user_prompt))
-                output_tokens = len(tokenizer_for_counting.encode(assistant_response))
-                total_input_tokens += input_tokens
-                total_output_tokens += output_tokens
-            
-            # Add turn to conversation
-            conversation.append({
-                "role": "user",
-                "content": user_prompt
-            })
-            conversation.append({
-                "role": "assistant",
-                "content": assistant_response
+            turn_data.append({
+                "user_prompt": user_prompt,
+                "action_text": action_text,
+                "llm_cot": event.llm_cot,
             })
         
-        # Skip this player if conversation was invalidated
-        if conversation is None:
+        if skip_player:
             continue
         
-        # Create result item for this player's conversation
-        item_data = {
-            "json_file_name": os.path.basename(file_path),
-            "player_name": player.name,
-            "player_role": player.role.value,
-            "num_turns": len(player_turn_indices),
-            "conversations": conversation,
-        }
-        
-        if tokenizer_for_counting:
-            item_data['total_input_tokens'] = total_input_tokens
-            item_data['total_output_tokens'] = total_output_tokens
-        
-        results.append(item_data)
+        # Create one training sample per turn
+        # Each sample includes all turns up to current, with COT only on current turn
+        for current_turn_idx in range(len(turn_data)):
+            conversation = []
+            total_input_tokens = 0
+            total_output_tokens = 0
+            
+            for t_idx in range(current_turn_idx + 1):
+                turn = turn_data[t_idx]
+                user_prompt = turn["user_prompt"]
+                
+                # Only current turn gets COT
+                if t_idx == current_turn_idx:
+                    assistant_response = f"{turn['llm_cot']}{turn['action_text']}"
+                else:
+                    assistant_response = turn["action_text"]
+                
+                if tokenizer_for_counting:
+                    total_input_tokens += len(tokenizer_for_counting.encode(user_prompt))
+                    total_output_tokens += len(tokenizer_for_counting.encode(assistant_response))
+                
+                conversation.append({"role": "user", "content": user_prompt})
+                conversation.append({"role": "assistant", "content": assistant_response})
+            
+            item_data = {
+                "json_file_name": os.path.basename(file_path),
+                "player_name": player.name,
+                "player_role": player.role.value,
+                "num_turns": current_turn_idx + 1,
+                "conversations": conversation,
+            }
+            
+            if tokenizer_for_counting:
+                item_data['total_input_tokens'] = total_input_tokens
+                item_data['total_output_tokens'] = total_output_tokens
+            
+            results.append(item_data)
     
     return results
 
