@@ -26,6 +26,14 @@ def get_next_random_player(
 
     # Remove any player who is not alive from players_to_play_next
     players_to_play_next = [p for p in players_to_play_next if p in history[-1].alive_player_names]
+
+    # If an ordered list is provided, consume it deterministically (preserves replay order)
+    if players_to_play_next:
+        next_player_name = players_to_play_next[0]
+        next_player = next(p for p in alive_players if p.name == next_player_name)
+        return next_player, players_to_play_next[1:]
+
+    # Existing behavior (random) when no list is provided or after a report
     if not players_to_play_next or history[-1].action_taken.type == ActionType.REPORT:
         players_to_play_next = [p.name for p in alive_players]
 

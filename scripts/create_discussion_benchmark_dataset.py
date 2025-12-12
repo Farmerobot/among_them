@@ -195,7 +195,7 @@ def main() -> None:
     if args.seed is not None:
         random.seed(args.seed)
 
-    data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+    data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'data', 'evaluation_games'))
     pattern = os.path.join(data_dir, 'game_state_*.json')
     files = sorted(glob.glob(pattern))
     if not files:

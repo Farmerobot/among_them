@@ -16,6 +16,7 @@ import json
 import sys
 from time import sleep
 from pathlib import Path
+from among_them.llm_prompts import UNIVERSAL_SYSTEM_PROMPT
 
 # Import centralized configuration
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -63,10 +64,12 @@ print(f"Loaded {len(all_conversations)} conversations for evaluation")
 def get_trace_evaluation(conversation_item):
     """Evaluate a multi-turn conversation."""
     conversations = conversation_item["conversations"]
-    
-    # Format the conversation for evaluation
+
+    # New prompt format: prepend the universal system prompt used by live/manual play
+    messages = [{"role": "system", "content": UNIVERSAL_SYSTEM_PROMPT}] + conversations
+
     conversation_text = ""
-    for msg in conversations:
+    for msg in messages:
         role = msg["role"].capitalize()
         content = msg["content"]
         conversation_text += f"\n{role}: {content}\n"
@@ -105,19 +108,11 @@ def get_trace_evaluation(conversation_item):
     </output_format>
     """
 
-    # with open("prompt.txt", "w") as file:
-    #     file.write(prompt)
+    print(prompt)
 
     messages = [
         {"role": "user", "content": prompt},
     ]
-
-    # response = chat(model="deepseek-r1:1.5b", messages=messages)
-
-    # response = openai.ChatCompletion.create(
-    #     model="gpt-4o-mini",
-    #     messages=messages
-    # )
 
     if USE_OPENROUTER:
         client = openai.OpenAI(
@@ -140,9 +135,6 @@ def get_trace_evaluation(conversation_item):
         )
 
     return completion.choices[0].message.content
-
-    # print(response)
-    # print(response.message["content"])
 
 
 # Ensure generated directory exists

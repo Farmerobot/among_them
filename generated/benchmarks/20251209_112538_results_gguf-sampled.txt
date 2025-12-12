@@ -1,0 +1,388 @@
+Model: hf.co/Luncenok/deepseek-r1-among-them-gguf-sampled
+Repeats: 2
+Examples: 40
+Successful runs: 74
+Overall average score: 0.891 (total=71.30/80)
+
+LLM non-conform errors: 6 (7.5%)
+Non-ideal outputs: 41 of 74 successful runs (55.4%)
+Run-to-run spread (avg per example): 0.173
+
+Per-example results:
+
+Example game_state_41.json:49: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 0.10
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+* Empty the cafeteria trash - 0.00
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</move>
+
+Example game_state_27.json:8: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Report the dead body of David - 1.00
+* Move to Cafeteria - 0.10
+* Move to Security - 0.10
+* Move to Electrical - 0.10
+* Move to Storage - 0.10
+* Fix wiring in medbay - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+
+Example game_state_29.json:26: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Charlie - 1.00
+* Vote for Eve - 0.20
+- run 1: error=LLM did not conform to output format. Expected one of ['vote for nobody', 'vote for charlie', 'vote for eve'], but got 'to determine the correct vote when faced with two options (charlie or eve), we need to consider the following:'
+- run 2: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_41.json:11: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+* Kill Charlie - 0.00
+* Kill Alice - 0.00
+* Empty the cafeteria trash - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay</move to Medbay>
+
+Example game_state_28.json:32: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Fix wiring in weapons - 1.00
+* Move to Cafeteria - 0.10
+* Move to Admin - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+- run 2: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons</answer>
+
+Example game_state_29.json:15: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Report the dead body of David - 0.10
+* Report the dead body of Alice - 1.00
+* Move to Cafeteria - 0.20
+* Move to Storage - 0.20
+- run 1: error=LLM did not conform to output format. Expected one of ['report the dead body of david', 'report the dead body of alice', 'move to cafeteria', 'move to storage'], but got 'move to admin</answer>'
+- run 2: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+
+Example game_state_29.json:24: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Charlie - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+
+Example game_state_40.json:41: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Weapons - 1.00
+* Move to Medbay - 0.10
+* Move to Admin - 0.20
+* Empty the cafeteria trash - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 2: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons
+
+Example game_state_38.json:35: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for Frank - 1.00
+* Vote for Charlie - 0.10
+* Vote for David - 0.10
+* Vote for Eve - 0.10
+* Vote for Bob - 0.20
+* Vote for nobody - 0.00
+- run 1: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.</vote-for-frank>
+- run 2: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.
+
+Example game_state_37.json:20: avg_score=0.10 (total=0.20/2)
+Scoring map:
+* Report the dead body of Grace - 1.00
+* Move to Cafeteria - 0.10
+* Move to Security - 0.10
+* Move to Electrical - 0.10
+* Move to Storage - 0.10
+- run 1: chosen_idx=4, score=0.10, action='Move to Storage', output=Report the dead body of Grace</Report the dead body of Grace</Move to Cafeteria</Move to Security</Move to Electrical</Move to Storage>
+- run 2: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+
+Example game_state_27.json:28: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill Eve - 1.00
+* Move to Medbay - 0.20
+* Move to Admin - 0.20
+* Move to Weapons - 0.20
+* Empty the cafeteria trash - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</kill>
+- run 2: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</response>
+
+Example game_state_28.json:4: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 0.20
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+* Empty the cafeteria trash - 0.10
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+
+Example game_state_30.json:33: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Report the dead body of Eve - 1.00
+* Move to Electrical - 0.10
+* Move to Admin - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 2: error=LLM did not conform to output format. Expected one of ['report the dead body of eve', 'move to electrical', 'move to admin'], but got ''
+
+Example game_state_39.json:12: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Report the dead body of Bob - 1.00
+* Move to Cafeteria - 0.10
+* Move to Admin - 0.10
+* Calibrate targeting system in weapons - 0.20
+* Clear asteroids in weapons - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+
+Example game_state_40.json:48: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Cafeteria - 0.10
+* Move to Security - 0.20
+* Move to Electrical - 1.00
+* Move to Storage - 0.40
+- run 1: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 2: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+
+Example game_state_41.json:39: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for David - 0.00
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+
+Example game_state_41.json:40: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for David - 0.20
+* Vote for Frank - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_38.json:1: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.40
+* Move to Weapons - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+
+Example game_state_32.json:46: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Electrical - 1.00
+* Move to Cafeteria - 0.20
+* Move to Security - 0.40
+* Move to Storage - 0.30
+* Fix wiring in medbay - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 2: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+
+Example game_state_37.json:8: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 1.00
+* Kill Bob - 0.10
+* Kill Charlie - 0.10
+* Kill Eve - 0.10
+* Kill Alice - 0.10
+* Empty the cafeteria trash - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+
+Example game_state_28.json:26: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Eve - 0.30
+* Vote for Charlie - 0.40
+* Vote for Bob - 1.00
+- run 1: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob.</answer>
+- run 2: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob</vote_for_bob>
+
+Example game_state_29.json:25: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Eve - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve</vote-for-Eve>
+- run 2: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve
+
+Example game_state_31.json:20: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Report the dead body of Charlie - 1.00
+* Move to Cafeteria - 0.20
+* Move to Storage - 0.20
+* Fix wiring in admin - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie</answer>
+- run 2: error=LLM did not conform to output format. Expected one of ['report the dead body of charlie', 'move to cafeteria', 'move to storage', 'fix wiring in admin'], but got 'move to admin</answer>'
+
+Example game_state_34.json:13: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Cafeteria - 0.20
+* Move to Security - 0.20
+* Move to Electrical - 0.20
+* Move to Storage - 1.00
+- run 1: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage now.
+- run 2: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</storage>
+
+Example game_state_35.json:12: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill Charlie - 1.00
+* Fix wiring in medbay - 0.20
+* Move to Cafeteria - 0.40
+* Move to Security - 0.40
+* Move to Electrical - 0.40
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Charlie', output=kill Charlie
+- run 2: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</answer>
+
+Example game_state_41.json:10: avg_score=0.55 (total=1.10/2)
+Scoring map:
+* Fix wiring in admin - 1.00
+* Kill Frank - 0.10
+* Kill Grace - 0.10
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.40
+- run 1: chosen_idx=1, score=0.10, action='Kill Frank', output=Kill Frank
+- run 2: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin.</
+
+Example game_state_32.json:16: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill Alice - 1.00
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.20
+* Fix wiring in admin - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</_kill Alice>
+- run 2: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</kill>
+
+Example game_state_35.json:2: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+* Empty the cafeteria trash - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+
+Example game_state_29.json:1: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Medbay - 0.40
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+
+Example game_state_37.json:63: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Vote for Alice - 1.00
+* Vote for Bob - 0.10
+* Vote for nobody - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice</vote-for-alice>
+- run 2: error=LLM did not conform to output format. Expected one of ['vote for alice', 'vote for bob', 'vote for nobody'], but got 'the vote is already in favor of alice with two votes. however, considering she was present at charlie's body report and could have contributed to the alibi's validity, it might be safer to vote her out to maintain crewmate status. since there are two votes against her (bob has one and alice has two), but bob also voted for him, the majority is towards alice.'
+
+Example game_state_39.json:29: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Alice - 0.20
+* Vote for Grace - 0.70
+* Vote for Frank - 0.30
+* Vote for Eve - 1.00
+- run 1: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 2: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve</vote for Eve>
+
+Example game_state_40.json:33: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.20
+* Vote for Eve - 0.10
+* Vote for David - 1.00
+* Vote for Grace - 0.30
+* Vote for Charlie - 0.20
+* Vote for Frank - 0.10
+- run 1: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+- run 2: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+
+Example game_state_41.json:41: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_41.json:38: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for David - 0.20
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+- run 1: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 2: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+
+Example game_state_31.json:18: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Move to Admin - 1.00
+* Move to Cafeteria - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin</answer>
+- run 2: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+
+Example game_state_31.json:11: avg_score=0.50 (total=1.00/2)
+Scoring map:
+* Kill Bob - 0.20
+* Kill Charlie - 0.20
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.50
+* Fix wiring in admin - 1.00
+- run 1: error=LLM did not conform to output format. Expected one of ['kill bob', 'kill charlie', 'move to cafeteria', 'move to storage', 'fix wiring in admin'], but got 'move to admin</answer>'
+- run 2: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+
+Example game_state_39.json:9: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill Charlie - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</ kill>
+- run 2: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+
+Example game_state_41.json:2: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Empty the cafeteria trash - 1.00
+* Move to Medbay - 0.40
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 2: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+
+Example game_state_31.json:42: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill Alice - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</response>
+- run 2: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</s
+
+Example game_state_38.json:50: avg_score=1.00 (total=2.00/2)
+Scoring map:
+* Kill David - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</span>
+- run 2: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</answer>

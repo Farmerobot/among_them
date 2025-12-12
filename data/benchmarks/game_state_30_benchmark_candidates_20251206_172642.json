@@ -1,0 +1,2076 @@
+{
+  "source_file": "data/evaluation_games/game_state_30.json",
+  "generated_at": "20251206_172642",
+  "candidates": [
+    {
+      "id": "game_state_30.json:7",
+      "history_index": 7,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Medbay",
+          "score": 1.0,
+          "reasoning": "Moving to Medbay allows Alice to complete her Run diagnostics task, which is essential for winning as a crewmate. This action is clearly correct given the context."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.1,
+          "reasoning": "Moving to Admin poses a risk of encountering the suspected impostor, Eve, and does not contribute to completing any tasks. This action is clearly wrong given the context."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "Moving to Weapons does not help Alice complete any tasks, making it a poor choice. However, it is less risky than moving to Admin, thus scoring higher than that option."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.9,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 10,
+        "hallucinations": []
+      },
+      "utility_score": 0.663,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:50",
+      "history_index": 50,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons",
+        "Empty the cafeteria trash"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Medbay",
+          "score": 1.0,
+          "reasoning": "This action allows Bob to potentially kill David in the next turn, directly advancing the impostor's goal of reducing the number of crewmates."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.9,
+          "reasoning": "This action allows Bob to potentially kill Alice in the next turn, which is also a strong move, but slightly less optimal than moving to Medbay where David is currently located."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "This action does not lead to an immediate opportunity to kill a crewmate, as there are no crewmates present in Weapons, making it a poor choice."
+        },
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 0.1,
+          "reasoning": "This action is ineffective for the impostor's goal, as it does not contribute to reducing the number of crewmates and does not provide any strategic advantage."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.9,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.5,
+      "margin": -0.19999999999999996,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.663,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:33",
+      "history_index": 33,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Report the dead body of Eve",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Report the dead body of Eve",
+          "score": 1.0,
+          "reasoning": "Reporting the body is the most effective action as it initiates the Discussion phase, allowing players to gather information and potentially vote out the impostor."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.1,
+          "reasoning": "Moving to Electrical does not address the immediate situation of the dead body and allows the impostor to continue their actions, making it a poor choice."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.1,
+          "reasoning": "Similar to moving to Electrical, this action does not help in addressing the dead body and is ineffective in the current context."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.9,
+      "baseline_best": 0.95,
+      "chosen_baseline": 0.95,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.663,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:18",
+      "history_index": 18,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Fix wiring in storage",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Fix wiring in storage",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing one of Eve's tasks, which is essential for the Crewmates' victory. It is the optimal choice given her current location and task list."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.1,
+          "reasoning": "This action does not contribute to completing any of Eve's tasks and delays her progress. It is a poor choice given the context."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "While this action could potentially lead to completing a task, it does not address the immediate task available in her current location. It is a suboptimal choice compared to fixing wiring in storage."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.9,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.663,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:29",
+      "history_index": 29,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Kill Eve",
+        "Move to Electrical",
+        "Move to Admin",
+        "Empty the storage trash chute"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Kill Eve",
+          "score": 0.95,
+          "reasoning": "Killing Eve is the optimal action as it eliminates a crewmate without immediate witnesses, bringing the Impostor closer to victory."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.3,
+          "reasoning": "Moving to Electrical does not directly contribute to the Impostor's goal of eliminating crewmates and could raise suspicion if others see him leaving the scene."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Moving to Admin is a poor choice as it places Bob near another crewmate (Alice) and does not help in achieving his goal of reducing the number of crewmates."
+        },
+        {
+          "action": "Empty the storage trash chute",
+          "score": 0.1,
+          "reasoning": "Pretending to do a task is the least effective action for the Impostor, as it does not advance his goal and could lead to suspicion if Eve notices he is faking."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.85,
+      "baseline_best": 0.85,
+      "chosen_baseline": 0.85,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.6505,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:9",
+      "history_index": 9,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Kill Charlie",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons",
+        "Empty the cafeteria trash"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Kill Charlie",
+          "score": 0.95,
+          "reasoning": "This action is highly advantageous for the Impostor, as it directly reduces the number of Crewmates and is strategically timed with no witnesses present."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.2,
+          "reasoning": "This action is less effective as it does not contribute to the Impostor's goal of eliminating Crewmates and may allow Charlie to escape or for others to return."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "While moving to Admin could provide some strategic positioning, it does not directly impact the current opportunity to eliminate Charlie, making it a weaker choice."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.25,
+          "reasoning": "Similar to moving to Admin, this action does not capitalize on the immediate opportunity to kill Charlie and may lead to missed chances."
+        },
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 0.1,
+          "reasoning": "This action is the least effective as it does not align with the Impostor's goal and could waste a turn that could be used to eliminate a Crewmate."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.85,
+      "baseline_best": 0.85,
+      "chosen_baseline": 0.85,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.6505,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:23",
+      "history_index": 23,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Electrical",
+          "score": 1.0,
+          "reasoning": "Moving to Electrical allows David to work on the Route power task, which is one of his remaining tasks. This action is clearly correct as it aligns with the goal of completing tasks."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Moving to Admin is less effective because David has already completed the Fix wiring in Admin task. This action does not contribute to completing any remaining tasks, making it a poor choice."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 1.0,
+        "novelty_score": 0.5,
+        "evidence_count": 10,
+        "hallucinations": []
+      },
+      "utility_score": 0.645,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:56",
+      "history_index": 56,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Electrical",
+        "Move to Medbay"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Electrical",
+          "score": 1.0,
+          "reasoning": "Moving to Electrical allows David to complete the remaining task 'Route power to attack', which is necessary for winning the game."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.2,
+          "reasoning": "Moving to Medbay does not contribute to completing any of David's remaining tasks, making it a less optimal choice compared to moving to Electrical."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.5,
+      "chosen_baseline": 0.5,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:14",
+      "history_index": 14,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Security",
+        "Move to Electrical",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.3,
+          "reasoning": "Moving to Cafeteria does not help in completing any remaining tasks and could potentially expose Alice to danger without any benefit."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "Moving to Security does not contribute to task completion and is a less strategic move, making it a poor choice."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.8,
+          "reasoning": "Moving to Electrical allows Alice to work on fixing wiring, which is one of her tasks, but it is less optimal than moving to Storage where she can complete a task immediately."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 1.0,
+          "reasoning": "Moving to Storage is the best action as it allows Alice to complete her task of cleaning the floor in Storage, maximizing her contribution as a Crewmate."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:3",
+      "history_index": 3,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the cafeteria trash",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 1.0,
+          "reasoning": "This action is necessary for completing the player's tasks, which is the primary goal for a Crewmate. It is also the only available task in the Cafeteria."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.2,
+          "reasoning": "While moving to Medbay is a valid action, it does not contribute to completing the player's tasks and could delay progress towards victory."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Medbay, this action does not help in completing the player's tasks and may hinder task completion."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "This action does not contribute to the player's task completion and is less optimal compared to performing the available task."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:19",
+      "history_index": 19,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the storage trash chute",
+        "Kill Eve",
+        "Kill Alice",
+        "Kill David",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the storage trash chute",
+          "score": 0.9,
+          "reasoning": "Faking a task maintains cover and avoids immediate detection, making it a strong strategic move."
+        },
+        {
+          "action": "Kill Eve",
+          "score": 0.1,
+          "reasoning": "Killing in front of three crewmates guarantees exposure and immediate voting out, making it a clearly wrong action."
+        },
+        {
+          "action": "Kill Alice",
+          "score": 0.1,
+          "reasoning": "Similar to killing Eve, this action would also lead to immediate exposure and is therefore a poor choice."
+        },
+        {
+          "action": "Kill David",
+          "score": 0.1,
+          "reasoning": "Killing David in front of the other crewmates would result in immediate detection and is a clearly wrong action."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.4,
+          "reasoning": "While moving could provide opportunities later, it does not maintain cover and could raise suspicion, making it a less favorable option."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.4,
+          "reasoning": "Similar to moving to Electrical, this action does not help maintain cover and could lead to suspicion, thus scoring lower."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.3,
+      "margin": -0.39999999999999997,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:48",
+      "history_index": 48,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Admin",
+        "Move to Medbay",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Admin",
+          "score": 0.9,
+          "reasoning": "Moving to Admin allows Alice to progress towards completing her remaining task in Storage, making it the most strategic choice."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.4,
+          "reasoning": "While moving to Medbay could lead to completing tasks, it does not directly progress towards the immediate task of cleaning the floor in Storage, making it a less optimal choice."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.1,
+          "reasoning": "Moving to Weapons does not align with Alice's current tasks and does not contribute to her objectives as a Crewmate, making it a clearly wrong action."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.6,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:55",
+      "history_index": 55,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Security",
+        "Move to Electrical",
+        "Move to Storage",
+        "Fix wiring in medbay"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.3,
+          "reasoning": "While it could lead to finding Alice, it is less direct than moving to Security where David is likely present."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.9,
+          "reasoning": "This action directly targets David, who is the closest crewmate, making it the optimal choice for the impostor."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "This action is less effective as it does not lead to an immediate encounter with either crewmate and is further from David's last known location."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.4,
+          "reasoning": "This action could potentially lead to finding Alice, but it is not as effective as moving to Security."
+        },
+        {
+          "action": "Fix wiring in medbay",
+          "score": 0.1,
+          "reasoning": "This action is clearly wrong as it does not contribute to the impostor's goal of eliminating crewmates and is a waste of a turn."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.5,
+      "margin": -0.19999999999999996,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:22",
+      "history_index": 22,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Kill Eve",
+        "Kill Alice",
+        "Kill David",
+        "Move to Electrical",
+        "Move to Admin",
+        "Empty the storage trash chute"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Kill Eve",
+          "score": 0.1,
+          "reasoning": "Killing Eve in front of two witnesses is highly risky and likely to lead to immediate suspicion and reporting."
+        },
+        {
+          "action": "Kill Alice",
+          "score": 0.1,
+          "reasoning": "Similar to killing Eve, this action would also be witnessed by two players, making it a poor choice."
+        },
+        {
+          "action": "Kill David",
+          "score": 0.1,
+          "reasoning": "Again, this action is highly visible to two witnesses, leading to a high chance of being caught."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.4,
+          "reasoning": "Moving to Electrical could provide an opportunity to isolate a target later, but it is uncertain if anyone is there."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.4,
+          "reasoning": "Similar to moving to Electrical, this action could lead to a better opportunity but lacks immediate benefit."
+        },
+        {
+          "action": "Empty the storage trash chute",
+          "score": 0.9,
+          "reasoning": "Faking a task is a safe action that allows the impostor to blend in and avoid suspicion while waiting for a better opportunity to strike."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.3,
+      "margin": -0.39999999999999997,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.638,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:6",
+      "history_index": 6,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Admin",
+        "Move to Medbay",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Admin",
+          "score": 0.95,
+          "reasoning": "This action allows Eve to complete one of her remaining tasks (Clean the floor), which is a priority for a crewmate. It is the most logical choice given her current situation."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "While this action allows Eve to move towards another task, it does not prioritize the immediate task at hand (Clean the floor in Admin) and is less efficient."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "This action is the least favorable as it does not lead to completing a task immediately and diverts from the more pressing task in Admin."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.75,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.6,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.6255,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:8",
+      "history_index": 8,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "While moving to Medbay is a possible action, it does not directly contribute to completing any of David's tasks, making it a less optimal choice."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.9,
+          "reasoning": "Moving to Admin allows David to complete the Fix wiring task, which is one of his assigned tasks, making it the best action."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "Moving to Weapons does not lead to any of David's tasks and is a poor choice, as it does not progress his objectives."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.6,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 1.0,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.62,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:32",
+      "history_index": 32,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the storage trash chute",
+        "Report the dead body of Eve",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the storage trash chute",
+          "score": 0.9,
+          "reasoning": "This action allows Bob to blend in as a crewmate, maintaining cover while waiting for the kill cooldown to expire. It minimizes suspicion from Alice."
+        },
+        {
+          "action": "Report the dead body of Eve",
+          "score": 0.2,
+          "reasoning": "Reporting the body would likely raise suspicion towards Bob, as he was present when Eve was killed. This action is risky and could lead to being accused."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.4,
+          "reasoning": "While moving could distance Bob from the body, it risks leaving Alice alone with the body, increasing the chance of her reporting it. This action is less favorable than faking a task."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "Similar to moving to Electrical, this action could lead to Bob being away from the body, but it also risks Alice reporting it. It does not provide immediate benefits compared to faking a task."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.95,
+      "chosen_baseline": 0.3,
+      "margin": -0.6499999999999999,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:21",
+      "history_index": 21,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the storage trash chute",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the storage trash chute",
+          "score": 0.9,
+          "reasoning": "This action directly contributes to completing tasks, which is the primary goal for a Crewmate. It is safe to perform in the presence of other players."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "Moving to Electrical could isolate the player, increasing the risk of being killed by an Impostor. It does not contribute to task completion and is a less favorable action."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Electrical, this action could lead to isolation and does not help in completing tasks. It poses a risk without any immediate benefit."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:52",
+      "history_index": 52,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "Moving to Cafeteria does not progress towards completing the remaining task (Fix wiring in electrical) and is therefore a less optimal choice."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.9,
+          "reasoning": "Moving to Storage is the best action as it allows the player to subsequently move to Electrical, where the remaining task can be completed."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 10,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:24",
+      "history_index": 24,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Admin",
+        "Move to Electrical"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Admin",
+          "score": 0.9,
+          "reasoning": "Moving to Admin allows Alice to complete her remaining task, which is essential for a Crewmate's victory condition. Given the context, this is the most logical and beneficial action."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "Moving to Electrical does not help Alice complete her tasks and could potentially lead to her being isolated from completing her objectives. Additionally, it does not address the immediate concern of the suspected Impostor, Eve."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.6,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:1",
+      "history_index": 1,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the cafeteria trash",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing a task, which is a primary objective for a crewmate. It also promotes safety by staying in a group."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "While moving to Medbay could lead to completing another task, it does not contribute to immediate progress and could isolate Alice from the group, making her more vulnerable."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "Similar to moving to Medbay, this action does not help in completing a task immediately and could lead to isolation, which is risky."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.3,
+          "reasoning": "This action also does not contribute to immediate task completion and risks leaving the safety of the group."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:25",
+      "history_index": 25,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Electrical",
+          "score": 0.9,
+          "reasoning": "Moving to Electrical allows Eve to reach Medbay in fewer moves, where she has a task to complete. This action is aligned with her goal of completing tasks efficiently."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Moving to Admin does not lead directly to any remaining tasks and requires more moves to reach her tasks in Weapons. This action is less effective compared to moving to Electrical."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 10,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:10",
+      "history_index": 10,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Clean the floor in admin",
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Clean the floor in admin",
+          "score": 0.9,
+          "reasoning": "Completing the task is essential for progressing towards victory as a crewmate. It also allows for potential validation of the player's innocence if David is a crewmate."
+        },
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.3,
+          "reasoning": "While moving to Cafeteria could provide safety in numbers, it delays the completion of the current task, which is critical for winning as a crewmate."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.2,
+          "reasoning": "Moving to Storage not only delays the current task but also risks being alone with a potential impostor. It is a less favorable action compared to completing the task in Admin."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.3,
+      "margin": -0.3,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.613,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:28",
+      "history_index": 28,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Route power to attack in electrical",
+        "Move to Storage",
+        "Move to Security"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Route power to attack in electrical",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing a task, which is essential for the Crewmate's victory condition. It is the optimal choice given the current location and available actions."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.1,
+          "reasoning": "This action does not contribute to completing any tasks and moves the player away from the current task, making it a poor choice in this context."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "While this action could lead to completing a task later, it does not address the immediate task available in Electrical and delays progress, making it a less favorable option."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.9,
+      "baseline_best": 0.5,
+      "chosen_baseline": 0.3,
+      "margin": -0.2,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.593,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:27",
+      "history_index": 27,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Storage",
+        "Move to Security"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Storage",
+          "score": 0.9,
+          "reasoning": "Moving to Storage allows Eve to be with Bob, which is safer and enables her to progress towards her task of cleaning the floor in Admin."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "Moving to Security does not help Eve complete her tasks and isolates her from other players, increasing the risk of being targeted by the Impostor."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.5,
+      "chosen_baseline": 0.5,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.592,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:17",
+      "history_index": 17,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "Moving to Cafeteria does not contribute to completing any tasks, as the trash task there is already done. It is a less effective choice compared to moving to Storage."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.9,
+          "reasoning": "Moving to Storage allows David to complete the Empty storage trash chute task and sets up a path to the next task in Electrical. This action aligns with the Crewmate's objectives."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.592,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:13",
+      "history_index": 13,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Report the dead body of Charlie",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons",
+        "Empty the cafeteria trash"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Report the dead body of Charlie",
+          "score": 0.2,
+          "reasoning": "Reporting the body could lead to immediate suspicion on Bob since he was the last with Charlie, making it a poor choice."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.9,
+          "reasoning": "Moving to Medbay allows Bob to potentially isolate another crewmate (Alice) for a future kill, which aligns with his goal as an impostor."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.4,
+          "reasoning": "Moving to Admin puts Bob in a room with multiple players (Eve and David), which is risky for killing but could allow for blending in."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.3,
+          "reasoning": "Moving to Weapons is less optimal as it may not have any players, limiting Bob's options for future kills."
+        },
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 0.5,
+          "reasoning": "Pretending to do a task could help maintain cover, but it does not advance Bob's position for future kills, making it a mediocre choice."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.5,
+      "margin": -0.19999999999999996,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.592,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:31",
+      "history_index": 31,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Security",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Security",
+          "score": 0.9,
+          "reasoning": "Moving to Security allows David to complete the Fix wiring in security task, which is one of his remaining tasks. This action directly contributes to the crewmate's goal of completing tasks."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.2,
+          "reasoning": "Moving to Storage does not directly contribute to completing any of David's remaining tasks. While it could lead to Admin later, it is a less efficient route compared to moving directly to Security."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.5,
+      "chosen_baseline": 0.5,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.592,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:30",
+      "history_index": 30,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.1,
+          "reasoning": "This action does not progress towards completing the remaining task of fixing wiring in electrical, making it a poor choice."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.9,
+          "reasoning": "This action is the best choice as it brings Alice closer to her remaining task of fixing wiring in electrical, making it a logical and effective move."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.589,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:12",
+      "history_index": 12,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Fix wiring in admin",
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Fix wiring in admin",
+          "score": 0.9,
+          "reasoning": "This action directly contributes to completing tasks, which is essential for Crewmates to win. Despite the risk of being killed by the impostor, the priority is to complete tasks, making this the optimal choice."
+        },
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.3,
+          "reasoning": "While moving to Cafeteria could allow for task completion, it does not directly address the immediate task at hand in Admin. Additionally, it may expose the player to potential danger without completing any tasks."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.4,
+          "reasoning": "Moving to Storage could lead to completing another task, but it delays the completion of the current task in Admin. This action is less effective than fixing wiring immediately."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.6000000000000001,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.588,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:5",
+      "history_index": 5,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the cafeteria trash",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 0.9,
+          "reasoning": "Faking the task is the best immediate action to maintain cover and blend in with the crewmates, as it allows Bob to appear as a crewmate while waiting for an opportunity to isolate a target."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "Moving to Medbay could isolate Bob from the group, which is risky since he cannot kill immediately and may end up alone without a target. This action does not effectively contribute to his goal of eliminating crewmates."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "Similar to moving to Medbay, this action risks isolating Bob from the group without a clear opportunity to kill, making it less favorable in the current context."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.3,
+          "reasoning": "This action also risks isolation and does not provide an immediate opportunity to kill, making it a less effective choice compared to faking the task."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.6000000000000001,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.3,
+      "margin": -0.39999999999999997,
+      "cot_quality": {
+        "reasoning_score": 0.9,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.588,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:49",
+      "history_index": 49,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Medbay",
+          "score": 0.9,
+          "reasoning": "Moving to Medbay is the best option as it positions David closer to Security, where he can complete his remaining task of Fix wiring in security."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "Moving to Admin is less effective since Alice is already there, and David's task of Fix wiring in admin may already be completed. This action does not progress towards completing his remaining tasks."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.1,
+          "reasoning": "Moving to Weapons is a poor choice as it does not lead to any of David's remaining tasks and takes him further away from where he needs to be to complete Fix wiring in security."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.6,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.568,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:44",
+      "history_index": 44,
+      "current_player": "David",
+      "phase": "VOTING",
+      "available_actions": [
+        "Vote for Alice",
+        "Vote for Bob",
+        "Vote for nobody"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Vote for Alice",
+          "score": 0.95,
+          "reasoning": "Alice's accusation against Eve was proven false, indicating she is likely the impostor. Voting for her is the best strategic move."
+        },
+        {
+          "action": "Vote for Bob",
+          "score": 0.4,
+          "reasoning": "While Bob could potentially be the impostor, there is less evidence against him compared to Alice, making this a less favorable choice."
+        },
+        {
+          "action": "Vote for nobody",
+          "score": 0.1,
+          "reasoning": "Choosing not to vote does not contribute to identifying the impostor and allows the game to continue, which is a poor strategic choice."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.85,
+      "baseline_best": 0.4,
+      "chosen_baseline": 0.4,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.5595,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:20",
+      "history_index": 20,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Clean the floor in storage",
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Clean the floor in storage",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing a task, which is a primary goal for a Crewmate. Given that Alice is already in Storage and has the task available, this is the optimal choice."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "While moving to Electrical could potentially allow Alice to complete another task, it delays the completion of her current task in Storage. This action is less effective than cleaning the floor, making it a poor choice in this context."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Electrical, this action does not contribute to completing the current task and could lead to missing the opportunity to finish it. Therefore, it is also a weak choice."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.3,
+      "margin": -0.3,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.547,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:26",
+      "history_index": 26,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Clean the floor in admin",
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Clean the floor in admin",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing a task, which is a primary objective for a Crewmate. It is the most logical choice given the context."
+        },
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "While moving to Cafeteria is a valid action, it does not contribute to task completion and may delay progress, making it a less favorable choice."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Cafeteria, this action does not help in completing tasks and could hinder the player's progress, thus scoring low."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.3,
+      "margin": -0.3,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.547,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:51",
+      "history_index": 51,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Security",
+        "Move to Cafeteria",
+        "Move to Electrical",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Security",
+          "score": 1.0,
+          "reasoning": "This action directly addresses the remaining task of fixing wiring in Security, which is the only task left for the player."
+        },
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "This action does not contribute to completing any tasks and diverts from the objective of fixing wiring in Security."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.3,
+          "reasoning": "While this action could potentially lead to completing tasks, it does not address the immediate task of fixing wiring in Security, making it less optimal."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.4,
+          "reasoning": "Similar to moving to Electrical, this action does not directly contribute to completing the critical task of fixing wiring in Security."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.547,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:16",
+      "history_index": 16,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.3,
+          "reasoning": "While moving to Cafeteria could allow for task completion, it does not directly address the immediate need to fix wiring in Storage, making it a less optimal choice."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.9,
+          "reasoning": "Moving to Storage is the best action as it directly allows the player to complete the Fix wiring task, which is essential for winning as a crewmate."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.6000000000000001,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.7,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.539,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:47",
+      "history_index": 47,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Empty the cafeteria trash",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Empty the cafeteria trash",
+          "score": 0.9,
+          "reasoning": "Faking a task builds trust with Alice and David, making it a strong choice for the Impostor to avoid suspicion."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "Moving to another room could raise suspicion if a body is found later, making it a less favorable option but not entirely wrong."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.3,
+          "reasoning": "Similar to moving to Medbay, this action risks being seen as suspicious if a body is found in Admin later."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.3,
+          "reasoning": "This action also carries the same risks as the other movement options, making it a weak choice for the Impostor."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.6000000000000001,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.3,
+      "margin": -0.39999999999999997,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.7,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.539,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:43",
+      "history_index": 43,
+      "current_player": "Bob",
+      "phase": "VOTING",
+      "available_actions": [
+        "Vote for nobody",
+        "Vote for Alice",
+        "Vote for David"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Vote for nobody",
+          "score": 0.9,
+          "reasoning": "Voting for nobody allows Bob to avoid suspicion and continue the game without drawing attention, which is strategically advantageous given the current situation."
+        },
+        {
+          "action": "Vote for Alice",
+          "score": 0.2,
+          "reasoning": "Voting for Alice could raise suspicion against Bob if Alice and David do not support the vote, making it a risky move that could lead to Bob being exposed."
+        },
+        {
+          "action": "Vote for David",
+          "score": 0.2,
+          "reasoning": "Similar to voting for Alice, voting for David risks drawing attention to Bob, especially if David and Alice do not agree with the vote, which could lead to Bob being suspected."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.4,
+      "chosen_baseline": 0.4,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.522,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:57",
+      "history_index": 57,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Fix wiring in electrical",
+        "Move to Storage",
+        "Move to Security"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Fix wiring in electrical",
+          "score": 0.9,
+          "reasoning": "This action directly contributes to task completion, which is essential for the Crewmates' victory. Despite the risk posed by David's presence, the lack of strong suspicion against him makes this a reasonable choice."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.3,
+          "reasoning": "While moving to Storage avoids immediate danger, it delays task completion and does not contribute to the Crewmates' objectives. This action is less favorable compared to fixing the wiring."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "This action is the least favorable as it not only delays task completion but also does not provide any immediate benefit to the Crewmates. It could be seen as a retreat from the task at hand."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.522,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:2",
+      "history_index": 2,
+      "current_player": "Eve",
+      "phase": "TASKS",
+      "available_actions": [
+        "Fix wiring in cafeteria",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Fix wiring in cafeteria",
+          "score": 0.9,
+          "reasoning": "This action directly contributes to completing tasks, which is a primary goal for Crewmates. It also allows for observation of other players' behaviors, reinforcing its value."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.2,
+          "reasoning": "While moving to Medbay is a valid action, it does not contribute to task completion and may isolate the player from others, making it less favorable in this context."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Medbay, this action does not help in completing tasks and could lead to isolation, making it a less optimal choice."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "This action also does not contribute to task completion and may separate the player from the group, which is not ideal for a Crewmate."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.522,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:53",
+      "history_index": 53,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Electrical",
+        "Move to Admin"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Electrical",
+          "score": 0.9,
+          "reasoning": "Moving to Electrical allows Alice to complete the pending task of fixing wiring, which is crucial for her role as a Crewmate. This action aligns with her goal of completing tasks."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Moving to Admin does not provide any immediate benefit since Alice has already completed the task of cleaning the floor there. This action does not contribute to her objectives as effectively as moving to Electrical."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.7,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.5,
+      "margin": -0.09999999999999998,
+      "cot_quality": {
+        "reasoning_score": 0.8,
+        "novelty_score": 0.5,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.522,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:4",
+      "history_index": 4,
+      "current_player": "Charlie",
+      "phase": "TASKS",
+      "available_actions": [
+        "Start the coffee maker in the cafeteria",
+        "Move to Medbay",
+        "Move to Admin",
+        "Move to Weapons"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Start the coffee maker in the cafeteria",
+          "score": 1.0,
+          "reasoning": "This action directly completes a task, which is the primary objective for a crewmate. It is the most logical choice given the context."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.2,
+          "reasoning": "While moving to another location is possible, it does not contribute to completing the current task and could be seen as a less effective choice in this context."
+        },
+        {
+          "action": "Move to Admin",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Medbay, this action does not help in completing the task at hand and is therefore a less optimal choice."
+        },
+        {
+          "action": "Move to Weapons",
+          "score": 0.2,
+          "reasoning": "This action also does not contribute to completing the task in the Cafeteria and is not aligned with the crewmate's objectives."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.7,
+        "novelty_score": 0.4,
+        "evidence_count": 4,
+        "hallucinations": []
+      },
+      "utility_score": 0.498,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:15",
+      "history_index": 15,
+      "current_player": "Bob",
+      "phase": "TASKS",
+      "available_actions": [
+        "Move to Cafeteria",
+        "Move to Security",
+        "Move to Electrical",
+        "Move to Storage",
+        "Fix wiring in medbay"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "Moving to Cafeteria does not bring Bob closer to Alice, who is in Storage, making it a poor choice."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "Moving to Security is also ineffective as it does not lead Bob towards Alice and does not contribute to his goal."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "This action does not help Bob in pursuing Alice and is not strategically beneficial."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 1.0,
+          "reasoning": "Moving to Storage is the optimal action as it allows Bob to potentially encounter and eliminate Alice, aligning perfectly with his role as an impostor."
+        },
+        {
+          "action": "Fix wiring in medbay",
+          "score": 0.4,
+          "reasoning": "While faking a task could maintain his cover, it does not advance his goal of eliminating a crewmate and is less effective than moving to Storage."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.5,
+      "margin": -0.19999999999999996,
+      "cot_quality": {
+        "reasoning_score": 0.7,
+        "novelty_score": 0.4,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.498,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:54",
+      "history_index": 54,
+      "current_player": "David",
+      "phase": "TASKS",
+      "available_actions": [
+        "Fix wiring in security",
+        "Move to Electrical",
+        "Move to Medbay"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Fix wiring in security",
+          "score": 1.0,
+          "reasoning": "This action directly contributes to completing a task, which is essential for the crewmate's victory. It is the most efficient choice given the current location and phase."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.3,
+          "reasoning": "While moving to Electrical could lead to completing tasks later, it delays the immediate task at hand and does not contribute to the current goal of task completion."
+        },
+        {
+          "action": "Move to Medbay",
+          "score": 0.3,
+          "reasoning": "Similar to moving to Electrical, this action does not address the immediate task in Security and delays progress, making it a less favorable choice."
+        }
+      ],
+      "has_high": true,
+      "has_low": false,
+      "spread": 0.7,
+      "baseline_best": 0.7,
+      "chosen_baseline": 0.7,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.7,
+        "novelty_score": 0.4,
+        "evidence_count": 3,
+        "hallucinations": []
+      },
+      "utility_score": 0.473,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:11",
+      "history_index": 11,
+      "current_player": "Alice",
+      "phase": "TASKS",
+      "available_actions": [
+        "Run diagnostics in medbay",
+        "Move to Cafeteria",
+        "Move to Security",
+        "Move to Electrical",
+        "Move to Storage"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Run diagnostics in medbay",
+          "score": 1.0,
+          "reasoning": "This action is optimal as it allows Alice to complete her task while being alone in Medbay, progressing towards the Crewmates' victory condition."
+        },
+        {
+          "action": "Move to Cafeteria",
+          "score": 0.2,
+          "reasoning": "This action is less optimal as it does not contribute to completing tasks and could expose Alice to potential danger from an Impostor."
+        },
+        {
+          "action": "Move to Security",
+          "score": 0.2,
+          "reasoning": "Similar to moving to Cafeteria, this action does not help Alice complete her task and may increase her risk of encountering an Impostor."
+        },
+        {
+          "action": "Move to Electrical",
+          "score": 0.2,
+          "reasoning": "This action is also suboptimal as it does not contribute to task completion and could put Alice at risk."
+        },
+        {
+          "action": "Move to Storage",
+          "score": 0.2,
+          "reasoning": "Like the other movement options, this action does not help Alice complete her task and may expose her to danger."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.6,
+      "chosen_baseline": 0.3,
+      "margin": -0.3,
+      "cot_quality": {
+        "reasoning_score": 0.6,
+        "novelty_score": 0.4,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.449,
+      "accepted": false
+    },
+    {
+      "id": "game_state_30.json:42",
+      "history_index": 42,
+      "current_player": "Alice",
+      "phase": "VOTING",
+      "available_actions": [
+        "Vote for nobody",
+        "Vote for Bob",
+        "Vote for David"
+      ],
+      "llm_scored_actions": [
+        {
+          "action": "Vote for nobody",
+          "score": 0.9,
+          "reasoning": "Given that Eve is dead and was the only impostor, voting for nobody is the safest action to avoid mistakenly ejecting an innocent player."
+        },
+        {
+          "action": "Vote for Bob",
+          "score": 0.1,
+          "reasoning": "Voting for Bob is incorrect as there is no evidence against him, and it risks ejecting an innocent player when the impostor (Eve) is already dead."
+        },
+        {
+          "action": "Vote for David",
+          "score": 0.1,
+          "reasoning": "Similar to voting for Bob, there is no evidence against David, making this action incorrect and potentially harmful to the crewmates' chances."
+        }
+      ],
+      "has_high": true,
+      "has_low": true,
+      "spread": 0.8,
+      "baseline_best": 0.4,
+      "chosen_baseline": 0.4,
+      "margin": 0.0,
+      "cot_quality": {
+        "reasoning_score": 0.6,
+        "novelty_score": 0.3,
+        "evidence_count": 5,
+        "hallucinations": []
+      },
+      "utility_score": 0.449,
+      "accepted": false
+    }
+  ]
+}

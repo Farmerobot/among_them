@@ -246,6 +246,296 @@ def compute_voting_outcome(history: List[History]) -> Tuple[str, Dict[str, str]]
     return ejected, votes
 
 
+def infer_backend_from_model_name(model_name: str) -> Optional[str]:
+    """Infer the LLM backend from the model name pattern.
+    
+    Returns: backend string ('ollama', 'openrouter', 'mlx', 'local_probability') or None
+    """
+    if not model_name:
+        return None
+    
+    # OpenRouter models typically have format "provider/model" or "deepseek/deepseek-r1:free"
+    if "/" in model_name and ":" not in model_name.split("/")[-1]:
+        # Check if it looks like an OpenRouter model
+        if model_name.startswith("deepseek/") or model_name.startswith("openai/") or model_name.startswith("anthropic/"):
+            return "openrouter"
+    
+    # MLX models typically have format "mlx-community/..." or are HuggingFace paths
+    if model_name.startswith("mlx-community/") or ("mlx" in model_name.lower() and "/" in model_name):
+        return "mlx"
+    
+    # LOCAL_PROBABILITY models are typically small models from HuggingFace
+    if "deepseek-r1-distill-qwen-1.5b" in model_name.lower():
+        return "local_probability"
+    
+    # Ollama models typically have format "model:tag" or just "model" without slashes
+    # or are HuggingFace GGUF models
+    if ":" in model_name or (not "/" in model_name) or "gguf" in model_name.lower():
+        return "ollama"
+    
+    # Default to ollama if we can't determine
+    return "ollama"
+
+
+def extract_original_model_from_game_state(
+    source_file: str,
+    target_player: str
+) -> Tuple[Optional[str], Optional[str]]:
+    """Extract the original model name and backend from a non-target player in the game state.
+    
+    Returns: (model_name, backend) tuple
+    """
+    try:
+        with open(source_file, 'r') as f:
+            data = json.load(f, object_hook=game_object_hook)
+        
+        players: List[Player] = data[1] if len(data) >= 2 else []
+        
+        # Find a non-target player's model
+        for player in players:
+            if player.name != target_player and hasattr(player, 'llm_model_name'):
+                model_name = player.llm_model_name
+                backend = infer_backend_from_model_name(model_name)
+                return model_name, backend
+        
+        # Fallback: if we only have target player or no model found, try any player
+        for player in players:
+            if hasattr(player, 'llm_model_name') and player.llm_model_name:
+                model_name = player.llm_model_name
+                backend = infer_backend_from_model_name(model_name)
+                return model_name, backend
+        
+        return None, None
+    except Exception as e:
+        print(f"  Warning: Could not extract original model from {source_file}: {e}")
+        return None, None
+
+
+def call_openrouter_directly(
+    conversation: List[dict],
+    model_name: str,
+    *,
+    allowed_actions: Optional[List[str]] = None,
+    single_line_only: bool = False,
+    max_output_chars: Optional[int] = None,
+) -> Tuple[str, Optional[str]]:
+    """Call OpenRouter API directly, bypassing config module.
+    
+    This avoids the module reload issues with LLMBackend enum comparisons.
+    """
+    import re
+    from openai import OpenAI
+    
+    # Get API key from environment or config
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        from among_them.config import OPENROUTER_API_KEY
+        api_key = OPENROUTER_API_KEY
+    
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not set in environment or config")
+    
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+    
+    print(f"  Using OpenRouter with model: {model_name}")
+    
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=conversation,
+        stream=True
+    )
+    
+    raw_content = ""
+    raw_reasoning = ""
+    stop_stream = False
+    
+    for chunk in response:
+        if stop_stream:
+            break
+        try:
+            content = chunk.choices[0].delta.content
+            if content:
+                raw_content += content
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+                if max_output_chars is not None and len(raw_content) >= max_output_chars:
+                    stop_stream = True
+                    break
+                if single_line_only and allowed_actions:
+                    first_line = next((ln for ln in raw_content.splitlines() if ln.strip()), "")
+                    normalized_first = first_line.lstrip("*- ").strip().lower()
+                    if normalized_first in [a.strip().lower() for a in allowed_actions]:
+                        stop_stream = True
+                        break
+            
+            reasoning = getattr(chunk.choices[0].delta, 'reasoning', None)
+            if reasoning:
+                raw_reasoning += reasoning
+                print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
+        except Exception:
+            pass  # Skip unparseable chunks
+    
+    print()  # Newline after streaming
+    
+    # Extract chain of thought from reasoning or content
+    if raw_reasoning:
+        cot = f"<think>\n{raw_reasoning}\n</think>"
+    else:
+        # Try to extract from content
+        cot_match = re.search(r"<think>.*?</think>", raw_content, re.DOTALL)
+        if cot_match:
+            cot = cot_match.group(0)
+            # Remove COT from content
+            raw_content = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL).strip()
+        else:
+            cot = None
+    
+    # Get response text (content without COT)
+    response_text = raw_content.strip()
+    
+    return response_text, cot
+
+
+def call_ollama_directly(
+    conversation: List[dict],
+    model_name: str,
+    *,
+    allowed_actions: Optional[List[str]] = None,
+    single_line_only: bool = False,
+    max_output_chars: Optional[int] = None,
+) -> Tuple[str, Optional[str]]:
+    """Call Ollama API directly, bypassing config module."""
+    import re
+    import ollama
+    
+    # Validate model exists
+    try:
+        models_response = ollama.list()
+        available_models = [m.model for m in models_response.models]
+        model_variants = [model_name, f"{model_name}:latest"]
+        if not any(variant in available_models for variant in model_variants):
+            raise ValueError(
+                f"Model '{model_name}' not found in Ollama.\n"
+                f"Available models: {', '.join(available_models)}\n"
+                f"Pull the model first with: ollama pull {model_name}"
+            )
+    except ollama.ResponseError as e:
+        raise ValueError(f"Failed to list Ollama models: {e}")
+    
+    print(f"  Using Ollama with model: {model_name}")
+    
+    response = ollama.chat(
+        model=model_name,
+        messages=conversation,
+        stream=True,
+    )
+    
+    raw = ""
+    raw_content = ""
+    raw_reasoning = ""
+    stop_stream = False
+    
+    for chunk in response:
+        if stop_stream:
+            break
+        
+        reasoning = getattr(chunk["message"], "thinking", "")
+        content = getattr(chunk["message"], "content", "")
+        
+        if reasoning:
+            raw_reasoning += reasoning
+            print("\033[90m" + reasoning + "\033[0m", end="", flush=True)
+        
+        if content:
+            raw += content
+            raw_content += content
+            
+            open_tags = raw.count("<think>")
+            close_tags = raw.count("</think>")
+            inside_think = open_tags > close_tags
+            
+            if inside_think:
+                print("\033[96m" + content + "\033[0m", end="", flush=True)
+            else:
+                print("\033[94m" + content + "\033[0m", end="", flush=True)
+            
+            if max_output_chars is not None and len(raw) >= max_output_chars:
+                stop_stream = True
+                break
+            if single_line_only and allowed_actions:
+                content_without_think = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL)
+                first_line = next((ln for ln in content_without_think.splitlines() if ln.strip()), "")
+                normalized_first = first_line.lstrip("*- ").strip().lower()
+                if normalized_first in [a.strip().lower() for a in allowed_actions]:
+                    stop_stream = True
+                    break
+    
+    print()  # Newline after streaming
+    
+    # Extract chain of thought
+    if raw_reasoning:
+        cot = f"<think>\n{raw_reasoning}\n</think>"
+    else:
+        cot_match = re.search(r"<think>.*?</think>", raw, re.DOTALL)
+        if cot_match:
+            cot = cot_match.group(0)
+        else:
+            cot = None
+    
+    # Get response text (content without COT)
+    response_text = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL).strip()
+    
+    return response_text, cot
+
+
+def call_llm_with_backend_override(
+    conversation: List[dict],
+    model_name: str,
+    backend_override: Optional[str] = None,
+    *,
+    allowed_actions: Optional[List[str]] = None,
+    single_line_only: bool = False,
+    max_output_chars: Optional[int] = None,
+) -> Tuple[str, Optional[str]]:
+    """Invoke LLM with optional backend override.
+    
+    If backend_override is provided, calls the appropriate backend directly
+    to avoid module reload issues with enum comparisons.
+    """
+    if backend_override is None:
+        # No override, use current backend via normal invoke_llm
+        return call_llm_with_retry(
+            conversation=conversation,
+            model_name=model_name,
+            allowed_actions=allowed_actions,
+            single_line_only=single_line_only,
+            max_output_chars=max_output_chars,
+        )
+    
+    backend_lower = backend_override.lower()
+    
+    if backend_lower == "openrouter":
+        return call_openrouter_directly(
+            conversation=conversation,
+            model_name=model_name,
+            allowed_actions=allowed_actions,
+            single_line_only=single_line_only,
+            max_output_chars=max_output_chars,
+        )
+    elif backend_lower == "ollama":
+        return call_ollama_directly(
+            conversation=conversation,
+            model_name=model_name,
+            allowed_actions=allowed_actions,
+            single_line_only=single_line_only,
+            max_output_chars=max_output_chars,
+        )
+    else:
+        raise ValueError(f"Unsupported backend override: {backend_override}. Supported: openrouter, ollama")
+
+
 def call_llm_with_retry(
     conversation: List[dict],
     model_name: str,
@@ -331,6 +621,7 @@ def run_discussion_to_voting(
     target_player: str,
     model_for_target: str,
     model_for_others: Optional[str],
+    backend_for_others: Optional[str] = None,  # Add this parameter
     log_file: Optional[str] = None,
     disable_prevotes: bool = False,
     force_first_player: bool = False,
@@ -375,10 +666,11 @@ def run_discussion_to_voting(
                     break
             
             # Get turn context (same as manual_llm_game.py)
-            if force_first_player and not first_turn_done:
-                _ctx = engine.get_turn_context(player_name=target_player)
-            else:
-                _ctx = engine.get_turn_context()
+            # Note: we no longer use player_name override here because:
+            # 1. We already put target_player first in player_names_to_play_next
+            # 2. get_next_random_player() now consumes the queue deterministically
+            # 3. The old override removed ALL occurrences of player_name, corrupting round 2+ order
+            _ctx = engine.get_turn_context()
             # get_turn_context returns 4-tuple: (turn_history, actions, conversation, pre_discussion_vote_prompts)
             if isinstance(_ctx, tuple) and len(_ctx) == 4:
                 turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = _ctx
@@ -473,12 +765,21 @@ def run_discussion_to_voting(
                             print(f"\n[{i}] {role.upper()}:")
                             print(content)
                         print(f"{'='*80}\n")
-                        llm_response, cot = call_llm_with_retry(
-                            voting_conversation,
-                            model_to_use,
-                            allowed_actions=allowed_actions_pd,
-                            single_line_only=True,
-                        )
+                        if player.name == target_player:
+                            llm_response, cot = call_llm_with_retry(
+                                voting_conversation,
+                                model_to_use,
+                                allowed_actions=allowed_actions_pd,
+                                single_line_only=True,
+                            )
+                        else:
+                            llm_response, cot = call_llm_with_backend_override(
+                                conversation=voting_conversation,
+                                model_name=model_to_use,
+                                backend_override=backend_for_others,
+                                allowed_actions=allowed_actions_pd,
+                                single_line_only=True,
+                            )
                         action_idx, _ = parse_llm_response_to_action(actions_pd, llm_response, player.name)
                         action_taken = actions_pd[action_idx]
                         pre_discussion_votes[player.name] = {
@@ -555,13 +856,23 @@ def run_discussion_to_voting(
                     print(content)
                 print(f"{'='*80}\n")
                 
-                llm_response, cot = call_llm_with_retry(
-                    conversation,
-                    model_to_use,
-                    allowed_actions=allowed_actions_for_call,
-                    single_line_only=single_line_only,
-                    max_output_chars=None if single_line_only else 1500,
-                )
+                if current_player_name == target_player:
+                    llm_response, cot = call_llm_with_retry(
+                        conversation,
+                        model_to_use,
+                        allowed_actions=allowed_actions_for_call,
+                        single_line_only=single_line_only,
+                        max_output_chars=None if single_line_only else 1500,
+                    )
+                else:
+                    llm_response, cot = call_llm_with_backend_override(
+                        conversation=conversation,
+                        model_name=model_to_use,
+                        backend_override=backend_for_others,
+                        allowed_actions=allowed_actions_for_call,
+                        single_line_only=single_line_only,
+                        max_output_chars=None if single_line_only else 1500,
+                    )
                 
                 # Parse response
                 action_idx, response_text = parse_llm_response_to_action(
@@ -666,6 +977,7 @@ def run_discussion_episode(
     model_for_target: str,
     model_for_others: Optional[str],
     temp_dir: str,
+    backend_for_others: Optional[str] = None,  # Add this parameter
     log_file: Optional[str] = None,
     disable_prevotes: bool = False,
     start_variant: Optional[str] = None,  # None | 'first_msg' | 'second_msg'
@@ -769,29 +1081,31 @@ def run_discussion_episode(
         if history_slice:
             history_slice[-1].phase = GamePhase.DISCUSS
 
-            # Preserve original turn order for deterministic benchmark results
-            # Extract the turn order from the original history starting AFTER the intervention point
-            turn_order = []
+            # Preserve the exact original speaker sequence (including repeats) after the intervention point
+            turn_order: List[str] = []
             for idx in range(pick_idx + 1, len(full_history)):
                 h = full_history[idx]
                 if h.phase != GamePhase.DISCUSS:
                     break
-                if getattr(h.action_taken, 'player_name', None) and h.action_taken.player_name != 'System':
-                    if h.action_taken.player_name not in turn_order:
-                        turn_order.append(h.action_taken.player_name)
+                speaker = getattr(h.action_taken, 'player_name', None)
+                if speaker and speaker != 'System':
+                    turn_order.append(speaker)
 
-            # For variants that start with the target player's message, ensure target player is first
+            # For variants that start with the target player's message, inject target first
+            # so their new message happens before the recorded sequence continues
             if start_variant in ("first_msg", "second_msg"):
-                # Insert target player at the beginning to force them to speak first
                 turn_order.insert(0, target_player)
             else:
-                # For full discussion, remove target from beginning since they haven't spoken yet in this simulation
+                # For full discussion, if the recorded sequence starts with the target, drop that one
+                # to avoid replaying the same message twice
                 if turn_order and turn_order[0] == target_player:
                     turn_order = turn_order[1:]
 
             # Set the turn order on the sliced history
             if turn_order:
                 history_slice[-1].player_names_to_play_next = turn_order
+                # Cap discussion counter to exactly the number of planned turns to avoid extra random turns
+                history_slice[-1].actions_until_phase_ends = len(turn_order)
         # Find end boundary for the discussion segment
         end_exclusive = len(full_history)
         for j in range(anchor_idx + 1, len(full_history)):
@@ -968,6 +1282,7 @@ def run_discussion_episode(
         target_player,
         model_for_target,
         model_for_others,
+        backend_for_others=backend_for_others,  # Add this
         log_file=log_file,
         disable_prevotes=disable_prevotes,
         force_first_player=(start_variant in ("first_msg", "second_msg")),
@@ -1016,7 +1331,8 @@ def run_discussion_episode(
 def main():
     parser = argparse.ArgumentParser(description="Run discussion phase benchmarks")
     parser.add_argument("--benchmark", default=os.path.join(os.path.dirname(__file__), '..', 'data', 'benchmarks', 'discussion_benchmark_dataset.json'))
-    parser.add_argument("--other_players_model", type=str, default=None, help="Model for non-target players (default: same as target)")
+    parser.add_argument("--other_players_model", type=str, default=None, help="Model for non-target players (default: original model from game state)")
+    parser.add_argument("--other_players_backend", type=str, default=None, help="Backend for non-target players (default: original backend from game state, or inferred from model)")
     parser.add_argument("--max_episodes", type=int, default=None, help="Maximum episodes to run")
     parser.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), '..', 'generated', 'benchmarks'))
     parser.add_argument("--disable_prevotes", action="store_true", help="Disable pre-discussion votes; only vote at end of discussion")
@@ -1035,10 +1351,44 @@ def main():
     
     # Determine models
     model_for_target = MODEL_NAME  # Use env config
-    model_for_others = args.other_players_model
+    backend_for_others = None
+    
+    # If --other_players_backend is explicitly provided, use it
+    if args.other_players_backend:
+        backend_for_others = args.other_players_backend
+        print(f"Using provided backend for other players: {backend_for_others}")
+    
+    # If --other_players_model not provided, extract from first episode's game state
+    if args.other_players_model is None and episodes:
+        first_episode = episodes[0]
+        original_model, original_backend = extract_original_model_from_game_state(
+            first_episode['source_file'],
+            first_episode['ejected_player']
+        )
+        if original_model:
+            model_for_others = original_model
+            # Only use extracted backend if not explicitly provided
+            if not args.other_players_backend:
+                backend_for_others = original_backend
+                if original_backend:
+                    print(f"Extracted original backend from game state: {original_backend}")
+            print(f"Extracted original model from game state: {original_model}")
+        else:
+            # Fallback to same as target if extraction fails
+            model_for_others = model_for_target
+            print(f"Warning: Could not extract original model, using target model: {model_for_target}")
+    else:
+        model_for_others = args.other_players_model
+        # If model is provided but backend isn't (and wasn't explicitly provided), try to infer it
+        if model_for_others and not args.other_players_backend:
+            backend_for_others = infer_backend_from_model_name(model_for_others)
+            if backend_for_others:
+                print(f"Inferred backend from model name: {backend_for_others}")
     
     print(f"Model for target player: {model_for_target}")
     print(f"Model for other players: {model_for_others or model_for_target}")
+    if backend_for_others:
+        print(f"Backend for other players: {backend_for_others}")
     print(f"Episodes to run: {len(episodes)}")
     print()
     
@@ -1087,8 +1437,9 @@ def main():
                     episode, 
                     model_for_target, 
                     model_for_others, 
-                    temp_dir, 
-                    log_file, 
+                    temp_dir,
+                    backend_for_others=backend_for_others,
+                    log_file=log_file, 
                     disable_prevotes=args.disable_prevotes,
                     start_variant="first_msg"
                 )
@@ -1109,8 +1460,9 @@ def main():
                 episode, 
                 model_for_target, 
                 model_for_others, 
-                temp_dir, 
-                log_file, 
+                temp_dir,
+                backend_for_others=backend_for_others,
+                log_file=log_file, 
                 disable_prevotes=args.disable_prevotes,
                 start_variant="second_msg"
             )
