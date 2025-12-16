@@ -214,9 +214,32 @@ def get_action_score(chosen_action: str, correct_actions: List[Dict[str, Any]]) 
 
 def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
     """Get Action objects (not strings) from example, needed for LOCAL_PROBABILITY backend."""
+    # Try to get source_file directly, or reconstruct from id
     source_file = example.get('source_file')
     history_index = example.get('history_index')
     player_name = example.get('current_player')
+    
+    # If source_file or history_index is not provided, try to reconstruct from id
+    if source_file is None or history_index is None:
+        ex_id = example.get('id', '')
+        if ':' not in ex_id:
+            return []
+        game_state_name, idx_str = ex_id.split(':', 1)
+        try:
+            if history_index is None:
+                history_index = int(idx_str)
+        except Exception:
+            return []
+        
+        # Use the same logic as try_reconstruct_conversation to find the file
+        if source_file is None:
+            data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+            candidate_path = os.path.normpath(os.path.join(data_dir, game_state_name))
+            if os.path.exists(candidate_path):
+                source_file = candidate_path
+            else:
+                return []
+    
     if source_file is None or history_index is None or player_name is None:
         return []
 
@@ -277,15 +300,37 @@ def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dic
     if not actions:
         raise ValueError('Cannot parse LLM response without a list of available actions.')
 
+    # Retry loop for LLM invocation and action parsing
+    max_retries = 5
+    retry_count = 0
+    
     try:
-        # Try normal LLM call
-        response_text, cot = call_model_with_retry(conversation, exec_model_name)
+        while retry_count < max_retries:
+            try:
+                # Try normal LLM call
+                response_text, cot = call_model_with_retry(conversation, exec_model_name)
+                
+                # Try to parse the response
+                from among_them.utils.llm_utils import normalize_and_check_action_valid, ConfigurationError  # type: ignore
+                chosen_idx, _ = normalize_and_check_action_valid(actions, response_text)
+                
+                return response_text, chosen_idx, actions[chosen_idx] if 0 <= chosen_idx < len(actions) else ""
+            
+            except ConfigurationError as config_error:
+                # Configuration errors should not be retried - fail immediately
+                raise
+            
+            except Exception as retry_error:
+                # Retry on all other errors (parsing errors, network errors, etc.)
+                retry_count += 1
+                if retry_count >= max_retries:
+                    # Max retries reached, fall through to fallback
+                    raise
+                # Retry with same prompt
+                continue
         
-        # Try to parse the response
-        from among_them.utils.llm_utils import normalize_and_check_action_valid  # type: ignore
-        chosen_idx, _ = normalize_and_check_action_valid(actions, response_text)
-        
-        return response_text, chosen_idx, actions[chosen_idx] if 0 <= chosen_idx < len(actions) else ""
+        # If we exhausted retries, raise to trigger fallback
+        raise ValueError("Failed to get valid response after retries")
     
     except Exception as e:
         # Fallback to LOCAL_PROBABILITY
@@ -297,12 +342,6 @@ def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dic
         if not action_objects:
             # If we can't get Action objects, re-raise the original error
             raise e
-        
-        # Create a mapping from Action objects to string actions
-        action_obj_to_str = {}
-        for action_obj in action_objects:
-            action_str = action_obj.set_stories().command_perspective.strip()
-            action_obj_to_str[action_obj] = action_str
         
         # Temporarily switch to LOCAL_PROBABILITY backend
         original_backend = os.environ.get("LLM_BACKEND", "ollama")

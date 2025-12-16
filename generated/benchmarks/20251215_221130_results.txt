@@ -1,0 +1,714 @@
+Model: hf.co/Luncenok/deepseek-r1-among-them-gguf-sampled
+Repeats: 10
+Examples: 40
+Successful runs: 397
+Overall average score: 0.962 (total=384.80/400)
+
+LLM non-conform errors: 0 (0.0%)
+Non-ideal outputs: 199 of 397 successful runs (50.1%)
+Run-to-run spread (avg per example): 0.052
+
+Per-example results:
+
+Example game_state_41.json:49: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Medbay - 0.10
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+* Empty the cafeteria trash - 0.00
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons to find David and Frank in Weapons.
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</move_to>
+- run 3: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 4: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 5: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 6: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 7: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 8: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 9: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 10: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+
+Example game_state_27.json:8: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Report the dead body of David - 1.00
+* Move to Cafeteria - 0.10
+* Move to Security - 0.10
+* Move to Electrical - 0.10
+* Move to Storage - 0.10
+* Fix wiring in medbay - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 3: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 4: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 5: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 6: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David</action>
+- run 7: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 8: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 9: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+- run 10: chosen_idx=0, score=1.00, action='Report the dead body of David', output=Report the dead body of David
+
+Example game_state_29.json:26: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Charlie - 1.00
+* Vote for Eve - 0.20
+- run 1: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie**
+- run 3: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 4: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 5: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 6: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 7: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 8: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie.</vote>
+- run 9: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 10: chosen_idx=1, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_41.json:11: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+* Kill Charlie - 0.00
+* Kill Alice - 0.00
+* Empty the cafeteria trash - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 3: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 4: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 5: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay</medbay>
+- run 6: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay</answer>
+- run 7: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 8: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 9: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 10: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay</medbay>
+
+Example game_state_28.json:32: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Fix wiring in weapons - 1.00
+* Move to Cafeteria - 0.10
+* Move to Admin - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons</ fixation_wiring_in_weApes>
+- run 2: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons</response>
+- run 3: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+- run 4: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+- run 5: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+- run 6: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Move to Weapons</Fix wiring in weapons>
+- run 7: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons</answer>
+- run 8: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+- run 9: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons</
+- run 10: chosen_idx=0, score=1.00, action='Fix wiring in weapons', output=Fix wiring in weapons
+
+Example game_state_29.json:15: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Report the dead body of David - 0.10
+* Report the dead body of Alice - 1.00
+* Move to Cafeteria - 0.20
+* Move to Storage - 0.20
+- run 1: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+- run 2: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+- run 3: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+- run 4: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice.
+- run 5: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice</response>
+- run 6: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+- run 7: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice</answer>
+- run 8: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice
+- run 9: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice.
+- run 10: chosen_idx=1, score=1.00, action='Report the dead body of Alice', output=Report the dead body of Alice.
+
+Example game_state_29.json:24: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Charlie - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 2: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 3: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 4: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 5: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 6: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 7: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 8: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Charlie killed Alice in Admin. The crewmates need to vote for Charlie, as he's clearly the impostor. This will eliminate him and secure victory against the remaining crewmate (Bob).
+- run 9: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 10: chosen_idx=2, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote_for_charlie>
+
+Example game_state_40.json:41: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Weapons - 1.00
+* Move to Medbay - 0.10
+* Move to Admin - 0.20
+* Empty the cafeteria trash - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons again.</strong>
+- run 2: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 3: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</move_to_weapons>
+- run 4: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</move>
+- run 5: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 6: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 7: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons</answer>
+- run 8: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 9: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons.</answer>
+- run 10: chosen_idx=0, score=1.00, action='Move to Weapons', output=Move to Weapons.</answer>
+
+Example game_state_38.json:35: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for Frank - 1.00
+* Vote for Charlie - 0.10
+* Vote for David - 0.10
+* Vote for Eve - 0.10
+* Vote for Bob - 0.20
+* Vote for nobody - 0.00
+- run 1: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank
+- run 2: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.</vote>
+- run 3: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.</vote>
+- run 4: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank
+- run 5: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank</vote>
+- run 6: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.
+- run 7: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank
+- run 8: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.</vote>
+- run 9: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank.
+- run 10: chosen_idx=0, score=1.00, action='Vote for Frank', output=Vote for Frank</vote_for_frank>
+
+Example game_state_37.json:20: avg_score=0.37 (total=3.70/10)
+Scoring map:
+* Report the dead body of Grace - 1.00
+* Move to Cafeteria - 0.10
+* Move to Security - 0.10
+* Move to Electrical - 0.10
+* Move to Storage - 0.10
+- run 1: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of Grace', output=Report the dead body of Grace.</answer>
+- run 3: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 4: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 5: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 6: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria
+- run 7: chosen_idx=0, score=1.00, action='Report the dead body of Grace', output=Report the dead body of Grace
+- run 8: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 9: chosen_idx=1, score=0.10, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 10: chosen_idx=0, score=1.00, action='Report the dead body of Grace', output=Report the dead body of Grace
+
+Example game_state_27.json:28: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Kill Eve - 1.00
+* Move to Medbay - 0.20
+* Move to Admin - 0.20
+* Move to Weapons - 0.20
+* Empty the cafeteria trash - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve
+- run 2: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</answer>
+- run 3: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</response>
+- run 4: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve
+- run 5: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve
+- run 6: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</ kill Eve in the cafeteria when she's alone, as no other actions are available.
+- run 7: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</kill>
+- run 8: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</response>
+- run 9: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</answer>
+- run 10: chosen_idx=0, score=1.00, action='Kill Eve', output=Kill Eve</answer>
+
+Example game_state_28.json:4: avg_score=0.91 (total=9.10/10)
+Scoring map:
+* Move to Medbay - 0.20
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+* Empty the cafeteria trash - 0.10
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 3: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 4: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 5: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 6: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 7: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 8: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 9: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 10: chosen_idx=3, score=0.10, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+
+Example game_state_30.json:33: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Report the dead body of Eve - 1.00
+* Move to Electrical - 0.10
+* Move to Admin - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 3: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 4: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 5: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 6: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve</action>
+- run 7: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve</response>
+- run 8: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+- run 9: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve</answer>
+
+Okay, so after moving to storage and reporting the corpse. Now, according to the mechanic for Reporting, if I report a corpse in the task phase, it triggers a discussion phase. Since there's a dead body here (Eve), she must be an Impostor because Crewmates can't kill. That leaves Bob and Charlie as possible impostors among those present.
+
+In the discussion phase, I'll inform others about Eve's corpse. Once someone reports it, the discussion starts to analyze if they're innocent or guilty. If no one is reported later, the discussion might move on but in this case, since Eve was killed by David (but he wasn't there), maybe she was an impostor.
+
+As a Crewmate, reporting her body will help eliminate her and possibly lead towards identifying Bob as the Impostor if he's present. Alternatively, moving to Electrical or Admin could be next steps, but given that I need to focus on reporting, I'll report Eve now.
+- run 10: chosen_idx=0, score=1.00, action='Report the dead body of Eve', output=Report the dead body of Eve
+
+Example game_state_39.json:12: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Report the dead body of Bob - 1.00
+* Move to Cafeteria - 0.10
+* Move to Admin - 0.10
+* Calibrate targeting system in weapons - 0.20
+* Clear asteroids in weapons - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 3: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob</actions available. The crewmate's objective is to complete tasks and identify impostors. Since Bob was killed here ( Weapons ), reporting him would allow immediate discussion and possibly eliminate him from the crew's list. This action aligns with completing tasks, which is a Crewmate's priority. There are no other possible actions that could contribute to task completion without knowing more about the others' roles.
+- run 4: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 5: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 6: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 7: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 8: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 9: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+- run 10: chosen_idx=0, score=1.00, action='Report the dead body of Bob', output=Report the dead body of Bob
+
+Example game_state_40.json:48: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Cafeteria - 0.10
+* Move to Security - 0.20
+* Move to Electrical - 1.00
+* Move to Storage - 0.40
+- run 1: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical now.</answer>
+- run 2: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 3: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 4: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 5: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 6: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 7: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 8: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 9: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 10: chosen_idx=2, score=1.00, action='Move to Electrical', output=Move to Electrical</s>
+
+Example game_state_41.json:39: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for David - 0.00
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 3: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.</vote>
+- run 4: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 5: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 6: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 7: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie or Grace.
+- run 8: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 9: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 10: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_41.json:40: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for David - 0.20
+* Vote for Frank - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 3: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 4: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 5: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 6: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 7: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.</answer>
+- run 8: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 9: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 10: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+
+Example game_state_38.json:1: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.40
+* Move to Weapons - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 3: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 4: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 5: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 6: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 7: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 8: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 9: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 10: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+
+Example game_state_32.json:46: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Electrical - 1.00
+* Move to Cafeteria - 0.20
+* Move to Security - 0.40
+* Move to Storage - 0.30
+* Fix wiring in medbay - 0.10
+- run 1: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 2: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 3: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 4: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 5: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 6: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 7: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 8: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 9: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+- run 10: chosen_idx=0, score=1.00, action='Move to Electrical', output=Move to Electrical</answer>
+
+Example game_state_37.json:8: avg_score=0.91 (total=9.10/10)
+Scoring map:
+* Move to Medbay - 1.00
+* Kill Bob - 0.10
+* Kill Charlie - 0.10
+* Kill Eve - 0.10
+* Kill Alice - 0.10
+* Empty the cafeteria trash - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay.
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 3: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 4: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay.
+- run 5: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 6: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 7: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 8: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 9: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 10: chosen_idx=1, score=0.10, action='Kill Bob', output=Kill Bob
+
+Example game_state_28.json:26: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Eve - 0.30
+* Vote for Charlie - 0.40
+* Vote for Bob - 1.00
+- run 1: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob</vote>
+- run 2: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob.</vote_for_bob>
+- run 3: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob</vote>
+- run 4: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob
+- run 5: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob
+- run 6: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob
+- run 7: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob.
+- run 8: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob
+- run 9: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob
+- run 10: chosen_idx=3, score=1.00, action='Vote for Bob', output=Vote for Bob</vote>
+
+Example game_state_29.json:25: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Eve - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve
+- run 2: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 3: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 4: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve</vote_for_eve>
+- run 5: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve</vote_for_eve>
+- run 6: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve. She killed me in Admin.
+- run 7: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 8: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve
+- run 9: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve
+- run 10: chosen_idx=2, score=1.00, action='Vote for Eve', output=Vote for Eve</vote>
+
+Example game_state_31.json:20: avg_score=0.84 (total=8.40/10)
+Scoring map:
+* Report the dead body of Charlie - 1.00
+* Move to Cafeteria - 0.20
+* Move to Storage - 0.20
+* Fix wiring in admin - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie
+- run 2: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie.
+- run 3: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie</answer>
+- run 4: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie
+- run 5: chosen_idx=1, score=0.20, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 6: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie</answer>
+- run 7: chosen_idx=1, score=0.20, action='Move to Cafeteria', output=Move to Cafeteria</answer>
+- run 8: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie
+- run 9: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie</response>
+- run 10: chosen_idx=0, score=1.00, action='Report the dead body of Charlie', output=Report the dead body of Charlie
+
+Example game_state_34.json:13: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Cafeteria - 0.20
+* Move to Security - 0.20
+* Move to Electrical - 0.20
+* Move to Storage - 1.00
+- run 1: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</
+- run 2: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage
+- run 3: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</move-to-storage>
+- run 4: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage
+- run 5: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</answer>
+- run 6: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</move_toStorage>
+- run 7: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</answer>
+- run 8: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</answer>
+- run 9: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</answer>
+- run 10: chosen_idx=3, score=1.00, action='Move to Storage', output=Move to Storage</storage>
+
+Example game_state_35.json:12: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Kill Charlie - 1.00
+* Fix wiring in medbay - 0.20
+* Move to Cafeteria - 0.40
+* Move to Security - 0.40
+* Move to Electrical - 0.40
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie.
+- run 2: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 3: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</ Kill Charlie>
+- run 4: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 5: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie
+- run 6: chosen_idx=0, score=1.00, action='Kill Charlie', output=The goal was to eliminate the crewmate Bob. Since Charlie completed his task and was killed by Alice, Bob's remaining tasks (including the emptying trash) need to be addressed. Alice should kill Charlie now to reduce the number of survivors.
+- run 7: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</answer>
+- run 8: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie.</answer>
+- run 9: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 10: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie.
+
+Example game_state_41.json:10: avg_score=0.81 (total=8.10/10)
+Scoring map:
+* Fix wiring in admin - 1.00
+* Kill Frank - 0.10
+* Kill Grace - 0.10
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 2: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin.</answer>
+- run 3: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 4: chosen_idx=1, score=0.10, action='Kill Frank', output=Kill Frank
+- run 5: error=cannot access local variable 'ConfigurationError' where it is not associated with a value
+- run 6: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin</response>
+- run 7: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin.
+- run 8: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 9: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 10: chosen_idx=0, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+
+Example game_state_32.json:16: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Kill Alice - 1.00
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.20
+* Fix wiring in admin - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</killAlice>
+- run 2: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice
+- run 3: chosen_idx=0, score=1.00, action='Kill Alice', output=The best action is to kill Alice. She's a crewmate in Admin with Charlie and I have no witnesses. This reduces the crewmates and sends me towards elimination.</kill>
+- run 4: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice
+- run 5: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</kill>
+- run 6: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</kill>
+- run 7: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</ Kill Alice</
+- run 8: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</kill>
+- run 9: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice
+- run 10: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</search>
+
+Example game_state_35.json:2: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Medbay - 1.00
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+* Empty the cafeteria trash - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay.
+- run 2: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 3: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 4: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 5: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 6: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 7: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 8: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 9: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+- run 10: chosen_idx=0, score=1.00, action='Move to Medbay', output=Move to Medbay
+
+Example game_state_29.json:1: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Medbay - 0.40
+* Move to Admin - 0.20
+* Move to Weapons - 1.00
+- run 1: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 2: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 3: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 4: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 5: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 6: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 7: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 8: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 9: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+- run 10: chosen_idx=2, score=1.00, action='Move to Weapons', output=Move to Weapons
+
+Example game_state_37.json:63: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for Alice - 1.00
+* Vote for Bob - 0.10
+* Vote for nobody - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 2: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 3: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 4: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 5: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice</vote>
+- run 6: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice</vote>
+- run 7: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice</vote>
+- run 8: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 9: chosen_idx=0, score=1.00, action='Vote for Alice', output=Vote for Alice
+- run 10: chosen_idx=0, score=1.00, action='Vote for Alice', output=Alice's defense against Frank's accusation about her Admin activity was unconvincing. She provided clear evidence of her completing tasks in Cafeteria and Storage before Charlie's death. This alibi has been verified by other crewmates like David and Bob. Therefore, it's safe to vote for Alice as the impostor who faked tasks to avoid detection.
+
+Example game_state_39.json:29: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Alice - 0.20
+* Vote for Grace - 0.70
+* Vote for Frank - 0.30
+* Vote for Eve - 1.00
+- run 1: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve</vote>
+- run 2: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.</vote-for-Eve>
+- run 3: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve
+- run 4: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve</vote_for_eve>
+- run 5: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve</vote>
+- run 6: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 7: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 8: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.
+- run 9: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve
+- run 10: chosen_idx=4, score=1.00, action='Vote for Eve', output=Vote for Eve.</vote>
+
+Example game_state_40.json:33: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.20
+* Vote for Eve - 0.10
+* Vote for David - 1.00
+* Vote for Grace - 0.30
+* Vote for Charlie - 0.20
+* Vote for Frank - 0.10
+- run 1: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David</vote_for_david>
+- run 2: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+- run 3: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+- run 4: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David**
+- run 5: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David</vote_for_david>
+- run 6: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David.
+- run 7: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David</vote-for-david>
+- run 8: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+- run 9: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+- run 10: chosen_idx=2, score=1.00, action='Vote for David', output=Vote for David
+
+Example game_state_41.json:41: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+* Vote for Grace - 0.20
+- run 1: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 2: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 3: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 4: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 5: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 6: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 7: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 8: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie because he's lying about where Alice was. He claimed to have seen Alice and Bob in Medbay before Bob arrived at Admin, but the Admin logs show that Charlie left Cafeteria heading to Medbay before David went to Admin. This contradiction makes Charlie an impostor.
+- run 9: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 10: chosen_idx=4, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+
+Example game_state_41.json:38: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Vote for nobody - 0.10
+* Vote for Bob - 0.20
+* Vote for David - 0.20
+* Vote for Frank - 0.20
+* Vote for Eve - 0.20
+* Vote for Charlie - 1.00
+- run 1: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 2: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 3: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 4: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 5: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie</vote>
+- run 6: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 7: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 8: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie
+- run 9: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie.
+- run 10: chosen_idx=5, score=1.00, action='Vote for Charlie', output=Vote for Charlie.</answer>
+
+Example game_state_31.json:18: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Move to Admin - 1.00
+* Move to Cafeteria - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin</move_to_admin>
+- run 2: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 3: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin</answer>
+- run 4: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 5: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 6: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 7: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin</answer>
+- run 8: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 9: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+- run 10: chosen_idx=0, score=1.00, action='Move to Admin', output=Move to Admin
+
+Example game_state_31.json:11: avg_score=0.84 (total=8.40/10)
+Scoring map:
+* Kill Bob - 0.20
+* Kill Charlie - 0.20
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.50
+* Fix wiring in admin - 1.00
+- run 1: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 2: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 3: chosen_idx=0, score=0.20, action='Kill Bob', output=Kill Bob
+- run 4: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 5: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Move to Admin</Fix wiring in admin>
+- run 6: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 7: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 8: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Fix wiring in admin
+- run 9: chosen_idx=4, score=1.00, action='Fix wiring in admin', output=Move to Admin</Fix wiring in admin>
+- run 10: chosen_idx=0, score=0.20, action='Kill Bob', output=Kill Bob</Kill Bob>
+
+Example game_state_39.json:9: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Kill Charlie - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie
+- run 2: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 3: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 4: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie
+- run 5: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</kill>
+- run 6: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie
+- run 7: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie
+- run 8: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie.</answer>
+- run 9: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie</answer>
+- run 10: chosen_idx=0, score=1.00, action='Kill Charlie', output=Kill Charlie.
+
+Example game_state_41.json:2: avg_score=1.00 (total=10.00/10)
+Scoring map:
+* Empty the cafeteria trash - 1.00
+* Move to Medbay - 0.40
+* Move to Admin - 0.30
+* Move to Weapons - 0.20
+- run 1: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 2: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 3: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 4: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 5: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 6: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 7: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 8: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 9: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+- run 10: chosen_idx=0, score=1.00, action='Empty the cafeteria trash', output=Empty the cafeteria trash
+
+Example game_state_31.json:42: avg_score=0.90 (total=9.00/10)
+Scoring map:
+* Kill Alice - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.40
+* Move to Storage - 0.30
+- run 1: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice.
+- run 2: chosen_idx=0, score=1.00, action='Kill Alice', output=Move to Admin and kill Alice.
+- run 3: error=cannot access local variable 'ConfigurationError' where it is not associated with a value
+- run 4: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</ kill Alice because she is alone and has no other options.
+- run 5: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</answer>
+- run 6: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice.
+- run 7: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice.</answer>
+- run 8: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</response>
+- run 9: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice</行动>
+- run 10: chosen_idx=0, score=1.00, action='Kill Alice', output=Kill Alice
+
+Example game_state_38.json:50: avg_score=0.90 (total=9.00/10)
+Scoring map:
+* Kill David - 1.00
+* Fix wiring in admin - 0.20
+* Move to Cafeteria - 0.30
+* Move to Storage - 0.40
+- run 1: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</action>
+- run 2: error=cannot access local variable 'ConfigurationError' where it is not associated with a value
+- run 3: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</answer>
+- run 4: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</answer>
+- run 5: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</kill>
+- run 6: chosen_idx=0, score=1.00, action='Kill David', output=Kill David.
+- run 7: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</kill>
+- run 8: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</ kill>
+- run 9: chosen_idx=0, score=1.00, action='Kill David', output=Kill David
+- run 10: chosen_idx=0, score=1.00, action='Kill David', output=Kill David</kill>
