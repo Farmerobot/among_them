@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=among_them_sft
 #SBATCH --partition=hgx              # or ngpu if you prefer 4080/4090
-#SBATCH --account=${SLURM_ACCOUNT:-inz_atllm}
+#SBATCH --account=inz_atllm
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
