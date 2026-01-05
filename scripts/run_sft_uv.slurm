@@ -47,7 +47,7 @@ export SFT_LORA_RANK="64"              # Higher rank for 80GB VRAM (was 16)
 export SFT_NUM_EPOCHS="5"
 export SFT_BATCH_SIZE="8"              # Larger batch for 80GB VRAM (was 3)
 export SFT_GRAD_ACCUM_STEPS="4"        # Effective batch = 32
-export SFT_LEARNING_RATE="2e-4"        # Standard LoRA LR
+export SFT_LEARNING_RATE="5e-5"        # Standard LoRA LR
 export SFT_LOAD_IN_4BIT="false"        # No quantization with 80GB VRAM
 export SFT_DEBUG="false"
 
