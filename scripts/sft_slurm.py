@@ -8,7 +8,6 @@ Uses environment variables for paths to work seamlessly on clusters.
 
 import json
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 

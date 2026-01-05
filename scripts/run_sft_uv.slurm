@@ -47,7 +47,7 @@ export SFT_LORA_RANK="16"
 export SFT_NUM_EPOCHS="5"
 export SFT_BATCH_SIZE="3"
 export SFT_GRAD_ACCUM_STEPS="1"
-export SFT_LEARNING_RATE="2e-4"
+export SFT_LEARNING_RATE="5e-5"
 export SFT_LOAD_IN_4BIT="true"
 export SFT_DEBUG="false"
 
