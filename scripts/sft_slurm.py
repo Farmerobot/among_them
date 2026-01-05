@@ -18,24 +18,32 @@ from datasets import load_dataset
 from peft import PeftModel
 import wandb
 
-# Configuration
-DEBUG = os.environ.get("SFT_DEBUG", "false").lower() == "true"
-BASE_MODEL_NAME = os.environ.get("SFT_BASE_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
-MAX_SEQ_LENGTH = int(os.environ.get("SFT_MAX_SEQ_LENGTH", "9000"))
-LORA_RANK = int(os.environ.get("SFT_LORA_RANK", "16"))
+def _require_env(name: str) -> str:
+    """Get required environment variable or fail fast."""
+    value = os.environ.get(name)
+    if value is None:
+        raise RuntimeError(f"Required environment variable {name} is not set")
+    return value
+
+
+# Configuration - all values must be set explicitly via environment
+DEBUG = _require_env("SFT_DEBUG").lower() == "true"
+BASE_MODEL_NAME = _require_env("SFT_BASE_MODEL")
+MAX_SEQ_LENGTH = int(_require_env("SFT_MAX_SEQ_LENGTH"))
+LORA_RANK = int(_require_env("SFT_LORA_RANK"))
 DTYPE = None
-LOAD_IN_4BIT = os.environ.get("SFT_LOAD_IN_4BIT", "true").lower() == "true"
-NUM_EPOCHS = int(os.environ.get("SFT_NUM_EPOCHS", "5"))
-BATCH_SIZE = int(os.environ.get("SFT_BATCH_SIZE", "1"))
-GRAD_ACCUM_STEPS = int(os.environ.get("SFT_GRAD_ACCUM_STEPS", "4"))
-LEARNING_RATE = float(os.environ.get("SFT_LEARNING_RATE", "2e-4"))
-WANDB_PROJECT = os.environ.get("SFT_WANDB_PROJECT", "among-them-sft")
-WANDB_RUN_NAME = os.environ.get("SFT_WANDB_RUN_NAME", "sft-deepseek-r1")
+LOAD_IN_4BIT = _require_env("SFT_LOAD_IN_4BIT").lower() == "true"
+NUM_EPOCHS = int(_require_env("SFT_NUM_EPOCHS"))
+BATCH_SIZE = int(_require_env("SFT_BATCH_SIZE"))
+GRAD_ACCUM_STEPS = int(_require_env("SFT_GRAD_ACCUM_STEPS"))
+LEARNING_RATE = float(_require_env("SFT_LEARNING_RATE"))
+WANDB_PROJECT = _require_env("SFT_WANDB_PROJECT")
+WANDB_RUN_NAME = _require_env("SFT_WANDB_RUN_NAME")
 
 # Paths from environment
-DATA_DIR = Path(os.environ.get("SFT_DATA_DIR", "data/alpaca"))
-OUTPUT_DIR = Path(os.environ.get("SFT_OUTPUT_DIR", "outputs/sft_checkpoints"))
-MERGED_MODEL_DIR = Path(os.environ.get("SFT_MERGED_MODEL_DIR", "outputs/sft_merged"))
+DATA_DIR = Path(_require_env("SFT_DATA_DIR"))
+OUTPUT_DIR = Path(_require_env("SFT_OUTPUT_DIR"))
+MERGED_MODEL_DIR = Path(_require_env("SFT_MERGED_MODEL_DIR"))
 
 
 def load_datasets(data_dir: Path):
@@ -67,8 +75,7 @@ def load_datasets(data_dir: Path):
 
 def validate_dataset(dataset, name: str):
     """Validate that last assistant message has <think> block, others don't."""
-    import re
-    
+
     print(f"\nValidating {name}...")
     errors = []
     
@@ -117,10 +124,12 @@ def prepare_model_and_tokenizer():
         gpu_memory_utilization=0.6,
     )
     
+    # LoRA alpha = 2*r is recommended for better learning dynamics
+    # Lower dropout (0.05) for small models per SOTA guidelines
     model = FastLanguageModel.get_peft_model(
         model,
         r=LORA_RANK,
-        lora_alpha=LORA_RANK,
+        lora_alpha=LORA_RANK * 2,
         lora_dropout=0.05,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
