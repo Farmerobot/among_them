@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=among_them_sft
+#SBATCH --job-name=sft_1.5B_att_r128
 #SBATCH --partition=hgx              # or ngpu if you prefer 4080/4090
 #SBATCH --account=inz_atllm
 #SBATCH --nodes=1
@@ -32,28 +32,28 @@ cd "${WORK_DIR}"
 
 mkdir -p logs
 mkdir -p data/alpaca
-mkdir -p outputs/sft_checkpoints
-mkdir -p outputs/sft_merged
-
 # SFT training paths (read by sft_slurm.py via environment variables)
 export SFT_DATA_DIR="${WORK_DIR}/data/alpaca"
-export SFT_OUTPUT_DIR="${WORK_DIR}/outputs/sft_checkpoints"
-export SFT_MERGED_MODEL_DIR="${WORK_DIR}/outputs/sft_merged"
+export SFT_OUTPUT_DIR="${WORK_DIR}/outputs/1.5B_attention_r128/checkpoints"
+export SFT_MERGED_MODEL_DIR="${WORK_DIR}/outputs/1.5B_attention_r128/merged"
+mkdir -p "${SFT_OUTPUT_DIR}"
+mkdir -p "${SFT_MERGED_MODEL_DIR}"
 
 # Training hyperparameters (all required - no defaults in sft_slurm.py)
 export SFT_BASE_MODEL="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
 export SFT_MAX_SEQ_LENGTH="9000"
-export SFT_LORA_RANK="64"              # Higher rank for 80GB VRAM (was 16)
+export SFT_LORA_RANK="128"
+export SFT_TARGET_MODULES="attention"  # attention (4 modules) or full (7 modules)
 export SFT_NUM_EPOCHS="5"
-export SFT_BATCH_SIZE="8"              # Larger batch for 80GB VRAM (was 3)
+export SFT_BATCH_SIZE="8"
 export SFT_GRAD_ACCUM_STEPS="4"        # Effective batch = 32
-export SFT_LEARNING_RATE="5e-5"        # Standard LoRA LR
-export SFT_LOAD_IN_4BIT="false"        # No quantization with 80GB VRAM
+export SFT_LEARNING_RATE="1e-4"        # Lower LR for higher rank
+export SFT_LOAD_IN_4BIT="false"
 export SFT_DEBUG="false"
 
 # WandB configuration
 export SFT_WANDB_PROJECT="among-them-sft"
-export SFT_WANDB_RUN_NAME="sft-deepseek-r1-${SLURM_JOB_ID:-local}"
+export SFT_WANDB_RUN_NAME="1.5B-attention-r128-${SLURM_JOB_ID:-local}"
 # WANDB_API_KEY should be set in your environment or ~/.bashrc
 
 # -----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ echo "========================================="
 echo "Starting SFT training..."
 echo "========================================="
 
-python scripts/sft_slurm.py
+python scripts/sft_slurm/sft_slurm.py
 
 EXIT_CODE=$?
 

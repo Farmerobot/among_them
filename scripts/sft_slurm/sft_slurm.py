@@ -37,6 +37,7 @@ NUM_EPOCHS = int(_require_env("SFT_NUM_EPOCHS"))
 BATCH_SIZE = int(_require_env("SFT_BATCH_SIZE"))
 GRAD_ACCUM_STEPS = int(_require_env("SFT_GRAD_ACCUM_STEPS"))
 LEARNING_RATE = float(_require_env("SFT_LEARNING_RATE"))
+TARGET_MODULES_MODE = _require_env("SFT_TARGET_MODULES")  # "attention" or "full"
 WANDB_PROJECT = _require_env("SFT_WANDB_PROJECT")
 WANDB_RUN_NAME = _require_env("SFT_WANDB_RUN_NAME")
 
@@ -124,6 +125,17 @@ def prepare_model_and_tokenizer():
         gpu_memory_utilization=0.6,
     )
     
+    # Select target modules based on config
+    if TARGET_MODULES_MODE == "attention":
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+    elif TARGET_MODULES_MODE == "full":
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                          "gate_proj", "up_proj", "down_proj"]
+    else:
+        raise ValueError(f"Invalid SFT_TARGET_MODULES: {TARGET_MODULES_MODE}. Use 'attention' or 'full'")
+    
+    print(f"  TARGET_MODULES: {TARGET_MODULES_MODE} ({len(target_modules)} modules)")
+    
     # LoRA alpha = 2*r is recommended for better learning dynamics
     # Lower dropout (0.05) for small models per SOTA guidelines
     model = FastLanguageModel.get_peft_model(
@@ -131,8 +143,7 @@ def prepare_model_and_tokenizer():
         r=LORA_RANK,
         lora_alpha=LORA_RANK * 2,
         lora_dropout=0.05,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj"],
+        target_modules=target_modules,
         use_gradient_checkpointing="unsloth",
         random_state=42,
     )
@@ -267,7 +278,7 @@ def train(model, tokenizer, train_dataset, eval_dataset):
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         args=training_args,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0)],
     )
     
     # Apply last-response-only masking
