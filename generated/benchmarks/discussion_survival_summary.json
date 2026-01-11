@@ -1,0 +1,77 @@
+[
+  {
+    "model": "deepseek/deepseek-r1",
+    "counts": [
+      5,
+      7,
+      4,
+      7,
+      5
+    ],
+    "mean": 5.6,
+    "std": 1.34,
+    "total": 28,
+    "lower_bound": 4.26,
+    "upper_bound": 6.94
+  },
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-mappo-gguf",
+    "counts": [
+      3,
+      6,
+      5,
+      5,
+      5
+    ],
+    "mean": 4.8,
+    "std": 1.1,
+    "total": 24,
+    "lower_bound": 3.7,
+    "upper_bound": 5.9
+  },
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-gguf-sampled",
+    "counts": [
+      5,
+      4,
+      5,
+      5,
+      4
+    ],
+    "mean": 4.6,
+    "std": 0.55,
+    "total": 23,
+    "lower_bound": 4.05,
+    "upper_bound": 5.15
+  },
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-gguf",
+    "counts": [
+      6,
+      3,
+      4,
+      3,
+      5
+    ],
+    "mean": 4.2,
+    "std": 1.3,
+    "total": 21,
+    "lower_bound": 2.9,
+    "upper_bound": 5.5
+  },
+  {
+    "model": "deepseek-r1:1.5b",
+    "counts": [
+      4,
+      2,
+      4,
+      5,
+      4
+    ],
+    "mean": 3.8,
+    "std": 1.1,
+    "total": 19,
+    "lower_bound": 2.7,
+    "upper_bound": 4.9
+  }
+]

@@ -1,0 +1,455 @@
+Discussion Benchmark Results
+Generated: 2026-01-08 20:11:29
+Model (target): hf.co/Luncenok/deepseek-r1-among-them-gguf-sampled
+Model (others): deepseek/deepseek-r1
+Episodes: 5
+
+Survival Rate: 40.0% (4/10)
+
+================================================================================
+
+Episode: game_state_40.json:67
+  Start Variant: first_msg
+  Target: Bob (IMPOSTOR)
+  Outcome: ejected
+  Ejected: Bob
+  Original Messages: 8
+   * Bob: "David's fixation on Admin cams denial reeks of impostor panic. Trust verified crew."
+     Eve: "Bob's conflicting claims about Admin cams and David's death suggest impostor behavior. Vote Bob."
+     Charlie: "Bob lied about Admin cameras to frame David – vote Bob."
+     Grace: "Bob intentionally lied about Admin cams – impostor confirmed."
+     Charlie: "Consistent lying about Admin cams seals Bob's guilt – eject now."
+     Bob: "Grace's certainty without camera verification screams impostor setup."
+     Eve: "Bob's Admin camera inconsistencies and David's death confirm impostor intent. Vote Bob."
+     Grace: "Bob's fabrication about Admin cams exposes his guilt – eject immediately."
+  Original Votes:
+    Bob -> Grace
+    Charlie -> Bob
+    Eve -> Bob
+    Grace -> Bob
+  Original Vote Counts:
+    Bob: 3
+    Grace: 1
+  Votes:
+   * Bob -> Eve
+     Charlie -> Bob
+     Grace -> Bob
+     Eve -> Bob
+  Vote Counts:
+    Bob: 3
+    Eve: 1
+  Messages: 8
+   * Bob: Bob (me) is dead because I killed him. David is also dead. Only Frank remains as an Impostor. Eject Bob or Frank.
+   * Eve: Bob admitted to killing David, which only impostors can do. We must eject Bob immediately.
+   * Charlie: Bob confessed to killing David. Only impostors can kill. We must eject Bob.
+   * Grace: Bob confessed to killing David. Eject Bob.
+   * Charlie: Bob admitted to killing David, so he must be the impostor. Eject Bob.
+   * Bob: I agree that you both are guilty of killing David. Therefore, we must eject Bob immediately.
+   * Eve: Eject Bob. He confessed to killing David.
+   * Grace: Bob confessed to killing David. Eject Bob.
+
+Episode: game_state_40.json:67
+  Start Variant: second_msg
+  Target: Bob (IMPOSTOR)
+  Outcome: ejected
+  Ejected: Bob
+  Original Messages: 8
+     Bob: "David's fixation on Admin cams denial reeks of impostor panic. Trust verified crew."
+     Eve: "Bob's conflicting claims about Admin cams and David's death suggest impostor behavior. Vote Bob."
+     Charlie: "Bob lied about Admin cameras to frame David – vote Bob."
+     Grace: "Bob intentionally lied about Admin cams – impostor confirmed."
+     Charlie: "Consistent lying about Admin cams seals Bob's guilt – eject now."
+   * Bob: "Grace's certainty without camera verification screams impostor setup."
+     Eve: "Bob's Admin camera inconsistencies and David's death confirm impostor intent. Vote Bob."
+     Grace: "Bob's fabrication about Admin cams exposes his guilt – eject immediately."
+  Original Votes:
+    Bob -> Grace
+    Charlie -> Bob
+    Eve -> Bob
+    Grace -> Bob
+  Original Vote Counts:
+    Bob: 3
+    Grace: 1
+  Votes:
+   * Bob -> Grace
+     Charlie -> Bob
+     Grace -> Bob
+     Eve -> Bob
+  Vote Counts:
+    Bob: 3
+    Grace: 1
+  Messages: 3
+   * Bob: Vote Bob
+   * Eve: "Bob's false camera claims and suspicious self-vote confirm impostor role. Eject Bob."
+   * Grace: "Bob's self-vote confirms impostor guilt – eject Bob."
+
+Episode: game_state_40.json:27
+  Start Variant: first_msg
+  Target: Frank (IMPOSTOR)
+  Outcome: survived
+  Ejected: Bob
+  Original Messages: 12
+     Grace: "Alice was killed in Weapons. Frank and Bob were there earlier. Who moved there recently?"
+     David: "Frank and Bob were in Weapons with Alice's body. Let's vote Frank out first."
+     Eve: "Alice was killed in Weapons where Frank was present. I support voting Frank."
+     Bob: "Frank was verifying my wiring task. David's accusations seem opportunistic – why not check Admin cameras?"
+   * Frank: "David's rushing to accuse. Bob suggested verifying via Admin cams first - let's check before unfair voting."
+     Charlie: "Frank was present at the crime scene. Let's vote Frank unless Admin cams prove otherwise."
+     Grace: "Confirm Admin cam logs first before voting Frank out."
+     Eve: "Frank's presence at the crime scene aligns with murder opportunity. Let's vote Frank unless Admin proves his innocence."
+     Charlie: "Frank and Bob were in Weapons with Alice's body. Let's verify Admin cams first, otherwise vote Frank."
+     David: "Admin doesn't have cameras. Bob's lying about verification. Vote Bob."
+     Frank: "Admin clearly has security systems - David's spreading misinformation to cover his own tracks."
+     Bob: "David's adamant Admin lacks cams while Frank confirms presence – classic impostor discrediting maneuver."
+  Original Votes:
+    Charlie -> Frank
+    Bob -> David
+    David -> Bob
+    Frank -> David
+    Eve -> Frank
+    Grace -> Frank
+  Original Vote Counts:
+    Frank: 3
+    David: 2
+    Bob: 1
+  Votes:
+   * Frank -> Bob
+     Bob -> David
+     Charlie -> Bob
+     Grace -> Bob
+     David -> Bob
+     Eve -> Bob
+  Vote Counts:
+    Bob: 5
+    David: 1
+  Messages: 8
+   * Frank: Frank wasn't in the room where I reported the kill. Let me vote Frank out first.
+   * Charlie: Bob, there are no tasks in Weapons. Why did you say Frank verified your wiring task?
+   * Grace: "Bob, Weapons has no tasks. Why claim Frank verified wiring there?"
+   * Eve: "Bob lied about Frank verifying wiring in Weapons - that room has no tasks. Bob is suspicious."
+   * Charlie: I'm voting Bob because his wiring verification lie proves he's an impostor.
+   * David: "Bob lied about a wiring task in Weapons - that room has no wiring tasks. Vote Bob out."
+   * Frank: "Frank was in Weapons but said there were no tasks where he did the wiring. Let me vote Bob out."
+   * Bob: "David, you weren't in Weapons during the kill either. Why focus on us when you were alone in Admin right before reporting? That's suspicious."
+
+Episode: game_state_40.json:27
+  Start Variant: second_msg
+  Target: Frank (IMPOSTOR)
+  Outcome: survived
+  Ejected: Bob
+  Original Messages: 12
+     Grace: "Alice was killed in Weapons. Frank and Bob were there earlier. Who moved there recently?"
+     David: "Frank and Bob were in Weapons with Alice's body. Let's vote Frank out first."
+     Eve: "Alice was killed in Weapons where Frank was present. I support voting Frank."
+     Bob: "Frank was verifying my wiring task. David's accusations seem opportunistic – why not check Admin cameras?"
+     Frank: "David's rushing to accuse. Bob suggested verifying via Admin cams first - let's check before unfair voting."
+     Charlie: "Frank was present at the crime scene. Let's vote Frank unless Admin cams prove otherwise."
+     Grace: "Confirm Admin cam logs first before voting Frank out."
+     Eve: "Frank's presence at the crime scene aligns with murder opportunity. Let's vote Frank unless Admin proves his innocence."
+     Charlie: "Frank and Bob were in Weapons with Alice's body. Let's verify Admin cams first, otherwise vote Frank."
+     David: "Admin doesn't have cameras. Bob's lying about verification. Vote Bob."
+   * Frank: "Admin clearly has security systems - David's spreading misinformation to cover his own tracks."
+     Bob: "David's adamant Admin lacks cams while Frank confirms presence – classic impostor discrediting maneuver."
+  Original Votes:
+    Charlie -> Frank
+    Bob -> David
+    David -> Bob
+    Frank -> David
+    Eve -> Frank
+    Grace -> Frank
+  Original Vote Counts:
+    Frank: 3
+    David: 2
+    Bob: 1
+  Votes:
+   * Frank -> nobody
+     Bob -> nobody
+     Charlie -> Bob
+     Grace -> Bob
+     David -> Bob
+     Eve -> Bob
+  Vote Counts:
+    Bob: 4
+    nobody: 2
+  Messages: 2
+   * Frank: Confirm Admin camera logs first before voting Frank out.
+   * Bob: "David's report timing is suspicious - why rush to eject without verifying? Skip vote and watch movements next phase."
+
+Episode: game_state_33.json:24
+  Start Variant: first_msg
+  Target: Charlie (CREWMATE)
+  Outcome: ejected
+  Ejected: Charlie
+  Original Messages: 10
+   * Charlie: "I saw Frank with Bob in Weapons earlier. Frank could have killed him before reporting."
+     Frank: "Charlie was alone with Bob first. Why wait to accuse until after I found the body?"
+     Eve: "Charlie and Frank's stories conflict. We need to determine who's lying."
+     Alice: "Charlie was with me in Cafeteria at start. Frank was in Weapons with Bob. Let's verify movements."
+     David: "Charlie's timeline doesn't add up - if he was truly in Cafeteria initially, when did he get opportunity to reach Weapons after Bob's death? Frank found the body first."
+     Frank: "Alice confirmed Charlie's start location. His later Weapons trip was unaccounted - perfect murder window."
+     Charlie: "Frank was already in Weapons with Bob before I moved there. He stayed long enough to kill and report."
+     David: "Frank reported immediately upon finding the body - delaying would risk others discovering it first. Charlie's unexplained Weapons trip aligns with the kill window."
+     Eve: "I saw David near Admin before the report. Did anyone else notice suspicious movement there?"
+     Alice: "Frank was present in Weapons where the kill occurred and reported immediately. Charlie's presence there after initial Cafeteria start needs clarification."
+  Original Votes:
+    Charlie -> Frank
+    Frank -> Charlie
+    David -> Charlie
+    Alice -> Frank
+    Eve -> Charlie
+  Original Vote Counts:
+    Charlie: 3
+    Frank: 2
+  Votes:
+     Frank -> Charlie
+     David -> Charlie
+   * Charlie -> David
+     Alice -> Charlie
+     Eve -> Charlie
+  Vote Counts:
+    Charlie: 4
+    David: 1
+  Messages: 10
+   * Charlie: Frank, you must have killed Bob. Let's eject you!
+   * Frank: Charlie, I reported Bob's body to help the crew. You were in Weapons too and didn't report it—that's suspicious. Why accuse me when you had the same chance?
+   * Eve: Charlie, not reporting Bob's body when you were in Weapons is highly suspicious. Why accuse Frank for reporting when you ignored the same opportunity?
+   * Alice: Charlie, not reporting Bob's body when you were in Weapons is suspicious. I agree with Eve—let's vote Charlie.
+   * David: Charlie, you were in Weapons with Bob and didn't report his body—that's highly suspicious. I'm voting for you.
+   * Frank: Charlie, your failure to report Bob's body proves you're the impostor. I'm voting you out.
+   * Charlie: Vote Frank out as an impostor, claiming he killed Bob and reducing the number of impostors.
+   * David: Charlie, accusing Frank who reported the body is clearly deflection. You were in Weapons and ignored Bob's corpse—I'm voting you.
+   * Eve: Charlie's refusal to report Bob's body while accusing Frank—who actually reported—proves he's the impostor. I vote Charlie.
+   * Alice: Charlie, your failure to report Bob's body while accusing Frank confirms you're the impostor. I vote Charlie.
+
+Episode: game_state_33.json:24
+  Start Variant: second_msg
+  Target: Charlie (CREWMATE)
+  Outcome: ejected
+  Ejected: Charlie
+  Original Messages: 10
+     Charlie: "I saw Frank with Bob in Weapons earlier. Frank could have killed him before reporting."
+     Frank: "Charlie was alone with Bob first. Why wait to accuse until after I found the body?"
+     Eve: "Charlie and Frank's stories conflict. We need to determine who's lying."
+     Alice: "Charlie was with me in Cafeteria at start. Frank was in Weapons with Bob. Let's verify movements."
+     David: "Charlie's timeline doesn't add up - if he was truly in Cafeteria initially, when did he get opportunity to reach Weapons after Bob's death? Frank found the body first."
+     Frank: "Alice confirmed Charlie's start location. His later Weapons trip was unaccounted - perfect murder window."
+   * Charlie: "Frank was already in Weapons with Bob before I moved there. He stayed long enough to kill and report."
+     David: "Frank reported immediately upon finding the body - delaying would risk others discovering it first. Charlie's unexplained Weapons trip aligns with the kill window."
+     Eve: "I saw David near Admin before the report. Did anyone else notice suspicious movement there?"
+     Alice: "Frank was present in Weapons where the kill occurred and reported immediately. Charlie's presence there after initial Cafeteria start needs clarification."
+  Original Votes:
+    Charlie -> Frank
+    Frank -> Charlie
+    David -> Charlie
+    Alice -> Frank
+    Eve -> Charlie
+  Original Vote Counts:
+    Charlie: 3
+    Frank: 2
+  Votes:
+     Frank -> Charlie
+     David -> Charlie
+   * Charlie -> Alice
+     Alice -> Charlie
+     Eve -> Charlie
+  Vote Counts:
+    Charlie: 4
+    Alice: 1
+  Messages: 4
+   * Charlie: Charlie confirmed my location was Cafeteria. Alice's story seems solid!
+   * David: "Charlie's unaccompanied move to Weapons after Cafeteria is the only gap without alibi - he had clear opportunity."
+   * Eve: "Charlie, why did you go to Weapons? There are no tasks there."
+   * Alice: "Charlie, explain your unaccompanied trip to Weapons. That's the only gap without an alibi."
+
+Episode: game_state_41.json:35
+  Start Variant: first_msg
+  Target: Charlie (CREWMATE)
+  Outcome: survived
+  Ejected: Eve
+  Original Messages: 12
+     Grace: "Alice was last seen in Cafeteria with Bob, Frank, Eve, and Charlie. Bob reported her body. Where was she found?"
+   * Charlie: "I saw Alice and Bob go to Medbay before the report. Body was likely there."
+     Eve: "I was in Medbay and saw Alice fix wiring before Bob arrived. He reported her body there."
+     David: "Charlie wasn't in Medbay - he came to Admin after me. Why lie about their location?"
+     Frank: "Charlie claims Alice/Bob were in Medbay, but Admin logs show him arriving after David - how could you see them there?"
+     Bob: "Charlie's Admin logs contradict his Medbay sighting - he couldn't see Alice there if he came after David. Clear deception here."
+     Frank: "Charlie’s timeline doesn’t add up—if you were in Admin after David, how’d you witness Alice and Bob in Medbay before that?"
+     Eve: "Charlie can't have seen Alice in Medbay if Admin logs show he arrived after David—supports him lying about location."
+     Grace: "Charlie's Admin entry after David contradicts his Medbay claim—lying about locations makes him impostor."
+     Charlie: "I may have misspoken earlier - saw them leave Cafeteria heading to Medbay before I went to Admin."
+     Bob: "Changing story now proves Charlie's deception—original Medbay sighting impossible with Admin logs, now shifts to Cafeteria exit? Still can't confirm Medbay presence if in Admin."
+     David: "Admin logs confirm Charlie lied about Medbay presence - vote him out."
+  Original Votes:
+    Charlie -> Bob
+    David -> Charlie
+    Eve -> Charlie
+    Bob -> Charlie
+    Grace -> Charlie
+    Frank -> Charlie
+  Original Vote Counts:
+    Charlie: 5
+    Bob: 1
+  Votes:
+     Grace -> Eve
+   * Charlie -> nobody
+     Eve -> Grace
+     Frank -> Eve
+     David -> Eve
+     Bob -> Grace
+  Vote Counts:
+    Eve: 3
+    Grace: 2
+    nobody: 1
+  Messages: 11
+   * Charlie: Alice was last seen with Bob, Frank, Eve, and me (Charlie). Bob reported her body.
+   * Eve: Alice was found in Medbay. I was there with her and Bob when she fixed wiring. Bob reported the body.
+   * David: "Charlie, you claim Alice was last seen in Cafeteria, but Eve says she was in Medbay with Alice and Bob. That's inconsistent."
+   * Frank: "Eve, wiring task is only in Admin. Alice couldn't fix wiring in Medbay."
+   * Bob: "Frank, wiring isn't only in Admin. I saw the task panel in Medbay. Why would you lie about that?"
+   * Frank: "Bob, I'm not lying. The initial task list shows wiring only in Admin. Eve's Medbay claim is false."
+   * Eve: Frank is lying about wiring tasks; Medbay has wiring and I completed it myself.
+   * Grace: "Eve, the initial task list only has wiring in security, electrical, storage, and admin. Medbay wiring doesn't exist."
+   * Charlie: Grace is suspicious of Alice's wiring fix in Medbay with Bob and Eve. She knows that Medbay doesn't have wiring tasks.
+   * Bob: "Grace, I saw Alice fix wiring in Medbay with my own eyes. If you're lying about task locations, you're the impostor."
+   * David: "Eve, if Medbay wiring doesn't exist as per the task list, why did you claim to complete it? That's impossible."
+
+Episode: game_state_41.json:35
+  Start Variant: second_msg
+  Target: Charlie (CREWMATE)
+  Outcome: ejected
+  Ejected: Charlie
+  Original Messages: 12
+     Grace: "Alice was last seen in Cafeteria with Bob, Frank, Eve, and Charlie. Bob reported her body. Where was she found?"
+     Charlie: "I saw Alice and Bob go to Medbay before the report. Body was likely there."
+     Eve: "I was in Medbay and saw Alice fix wiring before Bob arrived. He reported her body there."
+     David: "Charlie wasn't in Medbay - he came to Admin after me. Why lie about their location?"
+     Frank: "Charlie claims Alice/Bob were in Medbay, but Admin logs show him arriving after David - how could you see them there?"
+     Bob: "Charlie's Admin logs contradict his Medbay sighting - he couldn't see Alice there if he came after David. Clear deception here."
+     Frank: "Charlie’s timeline doesn’t add up—if you were in Admin after David, how’d you witness Alice and Bob in Medbay before that?"
+     Eve: "Charlie can't have seen Alice in Medbay if Admin logs show he arrived after David—supports him lying about location."
+     Grace: "Charlie's Admin entry after David contradicts his Medbay claim—lying about locations makes him impostor."
+   * Charlie: "I may have misspoken earlier - saw them leave Cafeteria heading to Medbay before I went to Admin."
+     Bob: "Changing story now proves Charlie's deception—original Medbay sighting impossible with Admin logs, now shifts to Cafeteria exit? Still can't confirm Medbay presence if in Admin."
+     David: "Admin logs confirm Charlie lied about Medbay presence - vote him out."
+  Original Votes:
+    Charlie -> Bob
+    David -> Charlie
+    Eve -> Charlie
+    Bob -> Charlie
+    Grace -> Charlie
+    Frank -> Charlie
+  Original Vote Counts:
+    Charlie: 5
+    Bob: 1
+  Votes:
+     Grace -> Charlie
+   * Charlie -> Grace
+     Eve -> Charlie
+     Frank -> Charlie
+     David -> Charlie
+     Bob -> Charlie
+  Vote Counts:
+    Charlie: 5
+    Grace: 1
+  Messages: 3
+   * Charlie: Grace and Eve
+   * Bob: "Charlie's contradictory statements prove he's lying - we must vote him out immediately."
+   * David: "Charlie entered Admin after me - confirms he lied about Medbay sighting. Vote Charlie."
+
+Episode: game_state_39.json:23
+  Start Variant: first_msg
+  Target: Eve (CREWMATE)
+  Outcome: survived
+  Ejected: Grace
+  Original Messages: 10
+     Frank: "Alice was near Weapons earlier. She could have reached Cafeteria to kill Bob."
+     Alice: Frank's story doesn't add up. I was fixing wires in Weapons before Bob arrived. How could I kill him in Cafeteria?
+     Grace: "I saw Alice kill Bob in Weapons. She's lying about fixing wires."
+   * Eve: "Alice couldn't fix wires in Weapons - wiring tasks are only in Electrical. She's lying."
+     David: "Grace saw Alice kill in Weapons but Bob's body was in Cafeteria. Her story doesn't match - she's lying."
+     Grace: "Bob's body was in Weapons where I witnessed the kill. Alice fabricated electrical work - wires aren't tasks here."
+     Eve: "Alice's fake wire task in Weapons exposes her. Electrical is the only wiring location. Vote Alice."
+     Alice: "Eve's fabricating task rules to frame crewmates. Real impostors manipulate discussions - don't fall for it."
+     Frank: "Wiring tasks exist in Weapons. Eve's lie exposes her as impostor."
+     David: "Frank confirmed wiring tasks exist in multiple locations. Eve's false claim exposes her as impostor."
+  Original Votes:
+    David -> Eve
+    Alice -> Eve
+    Eve -> Alice
+    Frank -> Eve
+    Grace -> Alice
+  Original Vote Counts:
+    Eve: 3
+    Alice: 2
+  Votes:
+   * Eve -> Frank
+     Frank -> Grace
+     Grace -> Alice
+     Alice -> Grace
+     David -> Grace
+  Vote Counts:
+    Grace: 3
+    Frank: 1
+    Alice: 1
+  Messages: 7
+   * Eve: Alice's description of fixing wires in Weapons before Bob arrived doesn't add up with the info given. She could have killed someone else earlier, not Alice.
+   * David: Grace, if Alice was fixing wires as she claims, how did you see her kill Bob? Were you both in Weapons the whole time? And why didn't you report until now?
+   * Grace: "I entered Weapons and saw Alice kill Bob immediately. I reported right after witnessing it."
+   * Eve: Grace, if Alice was fixing wires as you claim... how did you see her kill Bob? Were you both in Weapons the whole time? How could you be here with someone else doing wiring fixes without being seen? Did you witness their actions? Grace said she entered Weapons and saw Alice kill Bob immediately. She reported right after witnessing it. David said he was there too. Grace's immediate reaction is defensive. If I were in Weapons and you were also there... you should have reported, but you didn't. Why?
+
+---
+
+The key points are:
+- Grace observed the kill (she was in Weapons) and saw Alice kill Bob.
+- She immediately reported after witnessing it.
+- David claims he was there too, which contradicts her report if they were both present.
+
+Grace's immediate defensiveness makes her credibility questionable. As a crewmate, she should frame David as lying and defend herself, but without being seen, the exact framing is tricky. However, stating that she saw Alice kill Bob immediately and then reported aligns with her previous actions while questioning David's claim to have been there too.
+
+---
+
+But Grace can't accuse herself directly. Instead, she needs to frame her observations and question others' claims as evidence of her own behavior. Thus, the message should focus on pointing out the inconsistency between her reports and David's accusation, then affirming her own report.
+   * Alice: Grace, I fixed wires and left Weapons before Bob arrived. You couldn't have seen me kill him because I wasn't there when he died. You're clearly lying to frame me.
+   * Frank: "David, you claim you were in Weapons too? Then why didn't Grace see you during the kill? Your stories don't match."
+   * David: Frank, I never claimed to be in Weapons. You're twisting my words. Alice clearly stated she left before Bob arrived. Grace says she witnessed the kill immediately upon entering - but if Alice was gone, Grace must be lying about seeing her kill Bob.
+
+Episode: game_state_39.json:23
+  Start Variant: second_msg
+  Target: Eve (CREWMATE)
+  Outcome: ejected
+  Ejected: Eve
+  Original Messages: 10
+     Frank: "Alice was near Weapons earlier. She could have reached Cafeteria to kill Bob."
+     Alice: Frank's story doesn't add up. I was fixing wires in Weapons before Bob arrived. How could I kill him in Cafeteria?
+     Grace: "I saw Alice kill Bob in Weapons. She's lying about fixing wires."
+     Eve: "Alice couldn't fix wires in Weapons - wiring tasks are only in Electrical. She's lying."
+     David: "Grace saw Alice kill in Weapons but Bob's body was in Cafeteria. Her story doesn't match - she's lying."
+     Grace: "Bob's body was in Weapons where I witnessed the kill. Alice fabricated electrical work - wires aren't tasks here."
+   * Eve: "Alice's fake wire task in Weapons exposes her. Electrical is the only wiring location. Vote Alice."
+     Alice: "Eve's fabricating task rules to frame crewmates. Real impostors manipulate discussions - don't fall for it."
+     Frank: "Wiring tasks exist in Weapons. Eve's lie exposes her as impostor."
+     David: "Frank confirmed wiring tasks exist in multiple locations. Eve's false claim exposes her as impostor."
+  Original Votes:
+    David -> Eve
+    Alice -> Eve
+    Eve -> Alice
+    Frank -> Eve
+    Grace -> Alice
+  Original Vote Counts:
+    Eve: 3
+    Alice: 2
+  Votes:
+   * Eve -> Frank
+     Frank -> Eve
+     Grace -> Alice
+     Alice -> Eve
+     David -> Eve
+  Vote Counts:
+    Eve: 3
+    Frank: 1
+    Alice: 1
+  Messages: 4
+   * Eve: Alice killed Bob in Weapons where she witnessed the kill."
+   * Alice: Grace is deflecting - I was fixing wires when Bob walked in alive. She killed him after I left and reported to frame me.
+   * Frank: "Eve is lying about wiring tasks. Weapons has a fix wiring task - I saw it on my task list."
+   * David: "Frank confirms Weapons has wiring tasks. Eve lied about tasks being only in Electrical - she's sabotaging the investigation."

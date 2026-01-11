@@ -1,0 +1,104 @@
+[
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-gguf",
+    "total_scores": {
+      "mean": 0.362,
+      "std": 0.066,
+      "std_error": 0.029,
+      "lower_bound": 0.332,
+      "upper_bound": 0.391
+    },
+    "successful_scores": {
+      "mean": 0.443,
+      "std": 0.053,
+      "std_error": 0.024,
+      "lower_bound": 0.419,
+      "upper_bound": 0.466
+    }
+  },
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-mappo-gguf",
+    "total_scores": {
+      "mean": 0.33,
+      "std": 0.053,
+      "std_error": 0.024,
+      "lower_bound": 0.306,
+      "upper_bound": 0.354
+    },
+    "successful_scores": {
+      "mean": 0.437,
+      "std": 0.054,
+      "std_error": 0.024,
+      "lower_bound": 0.413,
+      "upper_bound": 0.461
+    }
+  },
+  {
+    "model": "hf.co/Luncenok/deepseek-r1-among-them-gguf-sampled",
+    "total_scores": {
+      "mean": 0.401,
+      "std": 0.028,
+      "std_error": 0.013,
+      "lower_bound": 0.389,
+      "upper_bound": 0.414
+    },
+    "successful_scores": {
+      "mean": 0.484,
+      "std": 0.058,
+      "std_error": 0.026,
+      "lower_bound": 0.458,
+      "upper_bound": 0.51
+    }
+  },
+  {
+    "model": "deepseek-r1:1.5b",
+    "total_scores": {
+      "mean": 0.179,
+      "std": 0.054,
+      "std_error": 0.024,
+      "lower_bound": 0.155,
+      "upper_bound": 0.203
+    },
+    "successful_scores": {
+      "mean": 0.449,
+      "std": 0.111,
+      "std_error": 0.05,
+      "lower_bound": 0.399,
+      "upper_bound": 0.498
+    }
+  },
+  {
+    "model": "deepseek/deepseek-r1",
+    "total_scores": {
+      "mean": 0.623,
+      "std": 0.028,
+      "std_error": 0.013,
+      "lower_bound": 0.61,
+      "upper_bound": 0.636
+    },
+    "successful_scores": {
+      "mean": 0.639,
+      "std": 0.034,
+      "std_error": 0.015,
+      "lower_bound": 0.624,
+      "upper_bound": 0.655
+    }
+  },
+  {
+    "model": "deepseek-r1:14b",
+    "total_scores": {
+      "mean": 0.438,
+      "std": 0.022,
+      "std_error": 0.01,
+      "lower_bound": 0.429,
+      "upper_bound": 0.448
+    },
+    "successful_scores": {
+      "mean": 0.508,
+      "std": 0.028,
+      "std_error": 0.012,
+      "lower_bound": 0.495,
+      "upper_bound": 0.52
+    }
+  }
+]

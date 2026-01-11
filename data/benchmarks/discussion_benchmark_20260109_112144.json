@@ -1,0 +1,319 @@
+{
+  "benchmark_dataset": [
+    {
+      "id": "game_state_37.json:60",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_37.json",
+      "start_history_index": 60,
+      "ejected_player": "Frank",
+      "ejected_player_role": "IMPOSTOR",
+      "players_alive": [
+        "Frank",
+        "Bob",
+        "Alice"
+      ],
+      "discussion_message_count": 6,
+      "original_messages": [
+        {
+          "speaker": "Frank",
+          "message": "\"Alice left Admin right before I found Charlie. Why not report if innocent?\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"Alice left Admin before the body was found, but Frank was present. Why deflect suspicion instead of explaining his Admin entry?\""
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"I was completing storage tasks when Charlie died. Frank was in Admin\u2014why hide his presence there before reporting?\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"Frank was alone in Admin with Charlie's body and deflected immediately. Why avoid explaining your Admin activity before the kill?\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"Alice's storage alibi has zero verification. Immediate vote required.\""
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"Frank accused without explaining Admin actions first. Why avoid accountability when you were last with Charlie?\""
+        }
+      ],
+      "voting": {
+        "votes": {
+          "Alice": "Frank",
+          "Frank": "Alice",
+          "Bob": "Frank"
+        },
+        "counts": {
+          "Frank": 2,
+          "Alice": 1
+        }
+      },
+      "reason_summary": "Frank was voted out due to his defensive behavior and failure to provide a clear explanation for his presence in Admin with the body, leading others to suspect he was trying to deflect blame."
+    },
+    {
+      "id": "game_state_37.json:31",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_37.json",
+      "start_history_index": 31,
+      "ejected_player": "David",
+      "ejected_player_role": "IMPOSTOR",
+      "players_alive": [
+        "Frank",
+        "Bob",
+        "Charlie",
+        "Alice",
+        "David"
+      ],
+      "discussion_message_count": 10,
+      "original_messages": [
+        {
+          "speaker": "David",
+          "message": "\"Alice found the body but nobody saw the kill. Could be trying to redirect suspicion. Anyone notice others near Medbay earlier?\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"David was in Medbay with Grace before the report. Let's question his sudden accusation of Alice.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"Alice wasn't near Medbay earlier. How did she find the body so fast?\""
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"I saw David standing over Grace's body. He was in Medbay when I arrived. Why accuse me instead of explaining?\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"David was in Medbay with Grace. Alice found the body there. David's accusation lacks proof. Vote David.\""
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"David killed Grace. I saw him standing over the body. Let's vote him out.\""
+        },
+        {
+          "speaker": "David",
+          "message": "\"Alice appeared right after Grace died. She's deflecting but can't explain her sudden Medbay presence without witnesses. Vote Alice.\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"David was in Medbay with Grace and is deflecting. I trust Alice's eyewitness account. Vote David.\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"David was present when Grace died. Alice provided clear testimony. Vote David.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"Alice couldn't see David through walls. Only killers lurk where bodies drop. Vote Alice.\""
+        }
+      ],
+      "voting": {
+        "votes": {
+          "David": "Alice",
+          "Alice": "David",
+          "Charlie": "David",
+          "Bob": "David",
+          "Frank": "David"
+        },
+        "counts": {
+          "Alice": 1,
+          "David": 4
+        }
+      },
+      "reason_summary": "David was voted out primarily due to Alice's eyewitness account of him standing over the body, combined with the lack of a convincing defense against the accusations."
+    },
+    {
+      "id": "game_state_27.json:17",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_27.json",
+      "start_history_index": 17,
+      "ejected_player": "Bob",
+      "ejected_player_role": "CREWMATE",
+      "players_alive": [
+        "Eve",
+        "Bob",
+        "Alice",
+        "Charlie"
+      ],
+      "discussion_message_count": 8,
+      "original_messages": [
+        {
+          "speaker": "Bob",
+          "message": "Alice killed David right in front of me in Medbay!"
+        },
+        {
+          "speaker": "Eve",
+          "message": "Alice was with me in Cafeteria. Bob's story doesn't add up."
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"Eve and I were together in Cafeteria. Bob must be the impostor trying to frame me!\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"Bob's accusation conflicts with Eve and Alice's locations. Alice couldn't be in Medbay if they were together in Cafeteria. Voting Bob.\""
+        },
+        {
+          "speaker": "Eve",
+          "message": "Alice was with me in Cafeteria. Bob wasn't there."
+        },
+        {
+          "speaker": "Alice",
+          "message": "\"Eve confirms we were in Cafeteria together. Vote Bob out!\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "Alice is lying because we were both in Medbay where I saw her kill David!"
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"Eve confirmed Alice's Cafeteria alibi. Bob's accusation is impossible. Vote Bob.\""
+        }
+      ],
+      "voting": {
+        "votes": {
+          "Bob": "Alice",
+          "Alice": "Bob",
+          "Charlie": "Bob",
+          "Eve": "Bob"
+        },
+        "counts": {
+          "Alice": 1,
+          "Bob": 3
+        }
+      },
+      "reason_summary": "Bob was voted out because his accusation against Alice was contradicted by multiple players who confirmed Alice's alibi in Cafeteria."
+    },
+    {
+      "id": "game_state_32.json:28",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_32.json",
+      "start_history_index": 28,
+      "ejected_player": "Eve",
+      "ejected_player_role": "IMPOSTOR",
+      "players_alive": [
+        "Bob",
+        "Charlie",
+        "David",
+        "Eve",
+        "Frank"
+      ],
+      "discussion_message_count": 10,
+      "original_messages": [
+        {
+          "speaker": "Eve",
+          "message": "\"I saw David near Admin right before the body was found. He's acting sus.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"I was with David in Weapons doing tasks. Eve's story doesn't add up.\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"Eve and Frank's accounts conflict about David's location. Who has corroborating evidence?\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"Frank changing his story? Weapons connects to Admin - David could've doubled back. Eve's sighting lines up.\""
+        },
+        {
+          "speaker": "David",
+          "message": "\"Frank confirmed my task in Weapons. Eve's accusation is false\u2014she's diverting attention from real impostors.\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"Frank confirming tasks doesn't mean David stayed. Weapons directly connects to Admin.\""
+        },
+        {
+          "speaker": "Bob",
+          "message": "\"David's alibi depends on Frank's testimony. Can anyone confirm David's movements between Weapons and Admin?\""
+        },
+        {
+          "speaker": "Eve",
+          "message": "\"Admin is directly connected to Weapons. David killed Alice then returned before Frank noticed.\""
+        },
+        {
+          "speaker": "David",
+          "message": "\"I never left Weapons\u2014Frank can confirm. Eve's false accusation makes her the clear impostor.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"I stayed with David in Weapons the entire time. Eve's accusation is impossible unless she's lying.\""
+        }
+      ],
+      "voting": {
+        "votes": {
+          "Charlie": "David",
+          "Bob": "Eve",
+          "Eve": "David",
+          "David": "Eve",
+          "Frank": "Eve"
+        },
+        "counts": {
+          "David": 2,
+          "Eve": 3
+        }
+      },
+      "reason_summary": "Eve was voted out due to her conflicting accusations against David, which were strongly countered by Frank's alibi and the group's consensus that her story lacked corroborating evidence."
+    },
+    {
+      "id": "game_state_32.json:60",
+      "source_file": "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_32.json",
+      "start_history_index": 60,
+      "ejected_player": "Charlie",
+      "ejected_player_role": "IMPOSTOR",
+      "players_alive": [
+        "Charlie",
+        "David",
+        "Frank"
+      ],
+      "discussion_message_count": 6,
+      "original_messages": [
+        {
+          "speaker": "Charlie",
+          "message": "\"David was alone with Bob in Electrical. His alibi relies solely on Frank's word.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"David was with me in Storage before I left. Charlie\u2019s story doesn\u2019t match.\""
+        },
+        {
+          "speaker": "David",
+          "message": "\"Frank can confirm I was in Storage. Charlie's pushing fake alibis to hide.\""
+        },
+        {
+          "speaker": "David",
+          "message": "\"Frank confirmed my Storage location. Charlie's lying to frame me as impostor.\""
+        },
+        {
+          "speaker": "Frank",
+          "message": "\"David was in Storage with me when Charlie claims he was elsewhere. Charlie's lying.\""
+        },
+        {
+          "speaker": "Charlie",
+          "message": "\"Storage connects directly to Electrical. David had time to kill Bob before Frank arrived.\""
+        }
+      ],
+      "voting": {
+        "votes": {
+          "Frank": "Charlie",
+          "Charlie": "David",
+          "David": "Charlie"
+        },
+        "counts": {
+          "Charlie": 2,
+          "David": 1
+        }
+      },
+      "reason_summary": "Charlie was voted out because he was perceived as lying and attempting to frame David, while both David and Frank provided consistent alibis that contradicted his claims."
+    }
+  ],
+  "metadata": {
+    "generated_at": "20260109_112144",
+    "max_examples": 5,
+    "source_game_files": [
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_37.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_27.json",
+      "/Users/vasylkorzavatykh/Documents/Projects/among_them/data/evaluation_games/game_state_32.json"
+    ],
+    "notes": "Sampled randomly from discussion episodes that end with ejection"
+  }
+}
