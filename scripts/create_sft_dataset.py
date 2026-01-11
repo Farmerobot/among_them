@@ -8,6 +8,7 @@ and outputs Alpaca-format JSON files for training.
 
 import json
 import os
+import re
 from pathlib import Path
 import traceback
 import sys
@@ -17,6 +18,22 @@ import matplotlib.pyplot as plt
 from transformers import AutoTokenizer
 
 from among_them.game_engine import GameEngine
+
+CHINESE_CHAR_PATTERN = re.compile(
+    r'[\u4e00-\u9fff'        # CJK Unified Ideographs
+    r'\u3400-\u4dbf'         # CJK Unified Ideographs Extension A
+    r'\uf900-\ufaff'         # CJK Compatibility Ideographs
+    r'\U00020000-\U0002a6df' # CJK Unified Ideographs Extension B
+    r'\U0002a700-\U0002b73f' # CJK Unified Ideographs Extension C
+    r'\U0002b740-\U0002b81f' # CJK Unified Ideographs Extension D
+    r'\U0002b820-\U0002ceaf' # CJK Unified Ideographs Extension E
+    r'\U0002f800-\U0002fa1f' # CJK Compatibility Ideographs Supplement
+    r']'
+)
+
+def contains_chinese(text: str) -> bool:
+    """Check if text contains any Chinese characters."""
+    return bool(CHINESE_CHAR_PATTERN.search(text))
 
 # Used as fallback to calculate token counts if actual tokenizer is not available
 CHARS_PER_TOKEN = 4
@@ -94,6 +111,22 @@ def process_game_file(file_path: str, tokenizer_for_counting=None) -> list:
         
         if skip_player:
             continue
+        
+        # Filter out turns with Chinese characters (and all subsequent turns)
+        first_chinese_turn = None
+        for turn_idx, turn in enumerate(turn_data):
+            if (contains_chinese(turn["user_prompt"]) or 
+                contains_chinese(turn["action_text"]) or 
+                contains_chinese(turn["llm_cot"] or "")):
+                first_chinese_turn = turn_idx
+                print(f"  Warning: Chinese characters found in {player.name} turn {turn_idx} in {os.path.basename(file_path)}, filtering this and subsequent turns")
+                break
+        
+        if first_chinese_turn == 0:
+            continue  # All turns contaminated, skip player entirely
+        
+        if first_chinese_turn is not None:
+            turn_data = turn_data[:first_chinese_turn]
         
         # Create one training sample per turn
         # Each sample includes all turns up to current, with COT only on current turn
