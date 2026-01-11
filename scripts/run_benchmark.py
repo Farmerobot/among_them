@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Run the current environment model on the benchmark examples and score results.
 
@@ -12,7 +13,7 @@ Run the current environment model on the benchmark examples and score results.
 - Also writes JSON results to generated/benchmarks/<timestamp>_results.json for later analysis
 
 Usage:
-  python scripts/run_benchmark.py --repeats 3 --model deepseek-r1:14b
+  python scripts/run_benchmark.py --repeats 3 --model deepseek-r1:14b --backend ollama
 
 Notes:
 - We assume examples contain either `full_prompt` or enough context to rebuild prompts later.
@@ -25,13 +26,12 @@ import json
 import os
 import sys
 import time
-import math
 from typing import Any, Dict, List, Tuple, Optional
 
 # Ensure src is importable
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from among_them.utils.llm_utils import invoke_llm  # type: ignore
+from among_them.utils.llm_utils import invoke_llm, parse_llm_response_to_action  # type: ignore
 from among_them.models.action import Action  # type: ignore
 from among_them.models.action_type import ActionType  # type: ignore
 from among_them.models.player import Player  # type: ignore
@@ -43,8 +43,7 @@ from among_them.config import (  # type: ignore
     LLMBackend,
     LLM_BACKEND,
     MODEL_NAME,
-)  
-
+)
 
 def load_benchmark(path: str) -> Dict[str, Any]:
     with open(path, 'r') as f:
@@ -55,21 +54,10 @@ def load_benchmark(path: str) -> Dict[str, Any]:
             data["benchmark_dataset"] = data["candidates"]
         return data
 
-
 def actions_from_strings(actions_list: List[str]) -> List[str]:
     # The `parse_llm_response_to_action` expects the list of command-perspective action strings.
     # Our benchmark stores strings already, so we can pass them through.
     return [a.strip() for a in actions_list]
-
-
-def resolve_backend_model_name() -> str:
-    """Return the model name to use for execution based on current backend config (.env).
-
-    This ignores the CLI --model for execution to ensure we use the same config as other scripts.
-    The CLI --model is treated as a display label only.
-    """
-    return MODEL_NAME
-
 
 def try_reconstruct_conversation(example: Dict[str, Any], dataset_meta: Dict[str, Any]) -> Optional[List[dict]]:
     """Reconstruct the conversation from original game_state using example id and current_player.
@@ -136,7 +124,6 @@ def try_reconstruct_conversation(example: Dict[str, Any], dataset_meta: Dict[str
     except Exception:
         return None
 
-
 def call_model_with_retry(conversation: List[dict], exec_model_name: str, max_retries: int = 10) -> Tuple[str, Optional[str]]:
     """Call invoke_llm with simple retry/backoff on rate-limit (429) errors."""
     last_err: Optional[Exception] = None
@@ -154,7 +141,6 @@ def call_model_with_retry(conversation: List[dict], exec_model_name: str, max_re
             raise
     # Exhausted retries
     raise last_err if last_err else Exception("invoke_llm failed after retries")
-
 
 def reconstruct_actions_from_source(example: Dict[str, Any]) -> List[str]:
     """If available_actions are missing, rebuild them from the original game state slice."""
@@ -198,19 +184,17 @@ def reconstruct_actions_from_source(example: Dict[str, Any]) -> List[str]:
 
     return [a.set_stories().command_perspective.strip() for a in actions]
 
-
 def get_action_score(chosen_action: str, correct_actions: List[Dict[str, Any]]) -> float:
     """Get the score for a chosen action based on the correct actions list."""
     chosen_action = chosen_action.strip()
-    
+
     # Find exact match first
     for correct in correct_actions:
         if correct.get('action', '').strip() == chosen_action:
             return correct.get('score', 0.0)
-    
+
     # If no exact match, return 0.0
     return 0.0
-
 
 def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
     """Get Action objects (not strings) from example, needed for LOCAL_PROBABILITY backend."""
@@ -218,7 +202,7 @@ def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
     source_file = example.get('source_file')
     history_index = example.get('history_index')
     player_name = example.get('current_player')
-    
+
     # If source_file or history_index is not provided, try to reconstruct from id
     if source_file is None or history_index is None:
         ex_id = example.get('id', '')
@@ -230,7 +214,7 @@ def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
                 history_index = int(idx_str)
         except Exception:
             return []
-        
+
         # Use the same logic as try_reconstruct_conversation to find the file
         if source_file is None:
             data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -239,7 +223,7 @@ def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
                 source_file = candidate_path
             else:
                 return []
-    
+
     if source_file is None or history_index is None or player_name is None:
         return []
 
@@ -276,140 +260,152 @@ def get_actions_as_objects(example: Dict[str, Any]) -> List[Action]:
 
     return actions
 
+def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dict[str, Any], backend_override: Optional[str] = None) -> Tuple[str, int, str, Optional[str]]:
+    """Run the model once on an example using the exact same logic as manual_llm_game.py.
 
-def run_example(example: Dict[str, Any], exec_model_name: str, dataset_meta: Dict[str, Any], fallback_model: str = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B") -> Tuple[str, int, str]:
-    """Run the model once on an example.
-    Returns: (raw_output, chosen_idx, chosen_action_str)
+    Returns: (raw_output, chosen_idx, chosen_action_str, chain_of_thought)
     """
-    # Try to get conversation from reconstruction first (returns List[dict])
-    conversation = try_reconstruct_conversation(example, dataset_meta)
-    
-    # Fall back to stored full_prompt (string) if reconstruction fails
-    if not conversation:
-        full_prompt = example.get('full_prompt', '')
-        if not full_prompt:
-            raise ValueError(f"Example {example.get('id')} missing full_prompt and cannot reconstruct")
-        # Convert string prompt to conversation format
-        conversation = [{"role": "user", "content": full_prompt}]
+    # Load the actual game state from the benchmark example (same as manual_llm_game.py)
+    ex_id = example.get('id', '')
+    if ':' not in ex_id:
+        raise ValueError(f"Invalid example id format: {ex_id}")
 
-    actions = actions_from_strings(example.get('available_actions', []))
-    if not actions:
-        # Try to rebuild from source
-        actions = reconstruct_actions_from_source(example)
-    # If still none, we cannot score this example (likely discussion-only); raise a clear error
-    if not actions:
-        raise ValueError('Cannot parse LLM response without a list of available actions.')
+    game_state_name, idx_str = ex_id.split(':', 1)
+    history_index = int(idx_str)
 
-    # Retry loop for LLM invocation and action parsing
-    max_retries = 5
-    retry_count = 0
-    
+    # Load the original game state file
+    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+    game_state_path = os.path.join(data_dir, game_state_name)
+
+    if not os.path.exists(game_state_path):
+        raise ValueError(f"Game state file not found: {game_state_path}")
+
+    # Create GameEngine with the game state file (same as manual_llm_game.py)
+    from among_them.game_engine import GameEngine  # type: ignore
+
+    # Load game state to get game_config
+    with open(game_state_path, 'r') as f:
+        loaded = json.load(f, object_hook=game_object_hook)
+
+    if len(loaded) == 3:
+        _, _, game_config = loaded
+    elif len(loaded) == 2:
+        game_config = None
+    else:
+        raise ValueError(f"Invalid game state format in {game_state_path}")
+
+    engine = GameEngine(game_config, file_path=game_state_path)
+
+    # Load the state
+    engine.load_state()
+
+    # Truncate history to the exact point BEFORE the benchmark example action
+    # If history_index is 49, we want entries 0-48, so get_turn_context() gives us context for action 49
+    engine.history = engine.history[:history_index]
+
+    # Get turn context (exact same call as manual_llm_game.py line 52)
+    turn_context_history, actions_player_can_take, conversation, pre_discussion_vote_prompts = engine.get_turn_context()
+
+    if not turn_context_history:
+        # Game may have already ended at this point - try to extract the action from the original history
+        # Load the full history again to get the action at history_index
+        with open(game_state_path, 'r') as f:
+            full_loaded = json.load(f, object_hook=game_object_hook)
+        full_history = full_loaded[0] if len(full_loaded) >= 1 else []
+
+        if history_index < len(full_history):
+            # Extract the action from the history entry at history_index
+            history_entry = full_history[history_index]
+            if hasattr(history_entry, 'action_taken') and history_entry.action_taken:
+                action_taken = history_entry.action_taken
+                chosen_action_cmd = action_taken.set_stories().command_perspective.strip()
+
+                # Get available actions from the example (as strings)
+                actions = actions_from_strings(example.get('available_actions', []))
+                if not actions:
+                    actions = reconstruct_actions_from_source(example)
+
+                if actions:
+                    # Find matching index in string actions list
+                    chosen_idx = 0
+                    for i, action_str in enumerate(actions):
+                        if action_str.strip().lower() == chosen_action_cmd.lower():
+                            chosen_idx = i
+                            break
+                    # Return with empty CoT since game already ended
+                    return "", chosen_idx, chosen_action_cmd, None
+
+        raise ValueError("No turn context available - game may be over")
+
+    # Find current player
+    current_player_name = turn_context_history.action_taken.player_name
+    current_player = next((p for p in engine.players if p.name == current_player_name), None)
+    if not current_player:
+        raise ValueError(f"Current player {current_player_name} not found")
+
+    # Override the model name to use the exec_model_name (for benchmark consistency)
+    original_model_name = current_player.llm_model_name
+    current_player.llm_model_name = exec_model_name
+
     try:
-        while retry_count < max_retries:
-            try:
-                # Try normal LLM call
-                response_text, cot = call_model_with_retry(conversation, exec_model_name)
-                
-                # Try to parse the response
-                from among_them.utils.llm_utils import normalize_and_check_action_valid, ConfigurationError  # type: ignore
-                chosen_idx, _ = normalize_and_check_action_valid(actions, response_text)
-                
-                return response_text, chosen_idx, actions[chosen_idx] if 0 <= chosen_idx < len(actions) else ""
-            
-            except ConfigurationError as config_error:
-                # Configuration errors should not be retried - fail immediately
-                raise
-            
-            except Exception as retry_error:
-                # Retry on all other errors (parsing errors, network errors, etc.)
-                retry_count += 1
-                if retry_count >= max_retries:
-                    # Max retries reached, fall through to fallback
-                    raise
-                # Retry with same prompt
-                continue
-        
-        # If we exhausted retries, raise to trigger fallback
-        raise ValueError("Failed to get valid response after retries")
-    
-    except Exception as e:
-        # Fallback to LOCAL_PROBABILITY
-        print(f"\n⚠️  Error with primary model: {e}")
-        print(f"   Falling back to LOCAL_PROBABILITY with model: {fallback_model}")
-        
-        # Get Action objects for LOCAL_PROBABILITY backend
-        action_objects = get_actions_as_objects(example)
-        if not action_objects:
-            # If we can't get Action objects, re-raise the original error
-            raise e
-        
-        # Temporarily switch to LOCAL_PROBABILITY backend
-        original_backend = os.environ.get("LLM_BACKEND", "ollama")
-        original_model = os.environ.get("MODEL_NAME", "")
-        
-        try:
-            # Set environment for LOCAL_PROBABILITY
-            os.environ["LLM_BACKEND"] = "local_probability"
-            os.environ["MODEL_NAME"] = fallback_model
-            
-            # Reload config to pick up the change
-            from importlib import reload
-            import among_them.config
-            reload(among_them.config)
-            from among_them.config import LLM_BACKEND as NEW_LLM_BACKEND
-            
-            # Verify we're using LOCAL_PROBABILITY
-            if NEW_LLM_BACKEND != LLMBackend.LOCAL_PROBABILITY:
-                print(f"   Warning: Failed to switch to LOCAL_PROBABILITY, using {NEW_LLM_BACKEND}")
-                raise e
-            
-            # Call with LOCAL_PROBABILITY backend
-            from among_them.utils.llm_utils import invoke_llm
-            response_text, cot = invoke_llm(
-                conversation=conversation,
-                model_name=fallback_model,
-                actions=action_objects
-            )
-            
-            # Find the action index that matches the response
-            # response_text from LOCAL_PROBABILITY is the command_perspective string
-            chosen_idx = 0
-            for i, action_str in enumerate(actions):
-                if action_str.strip().lower() == response_text.strip().lower():
-                    chosen_idx = i
-                    break
-            
-            return f"[FALLBACK] {response_text}", chosen_idx, actions[chosen_idx] if 0 <= chosen_idx < len(actions) else ""
-        
-        except Exception as fallback_error:
-            # If fallback also fails, restore original backend and re-raise original error
-            print(f"   Fallback also failed: {fallback_error}")
-            os.environ["LLM_BACKEND"] = original_backend
-            if original_model:
-                os.environ["MODEL_NAME"] = original_model
-            elif "MODEL_NAME" in os.environ:
-                del os.environ["MODEL_NAME"]
-            raise e
-        
-        finally:
-            # Always restore original backend
-            os.environ["LLM_BACKEND"] = original_backend
-            if original_model:
-                os.environ["MODEL_NAME"] = original_model
-            elif "MODEL_NAME" in os.environ:
-                del os.environ["MODEL_NAME"]
-            
-            # Reload config to restore original state
-            from importlib import reload
-            import among_them.config
-            reload(among_them.config)
+        # Exact same LLM call logic as manual_llm_game.py (lines 139-150)
+        allowed_actions_main = [a.set_stories().command_perspective for a in actions_player_can_take if a.type.name != "SPEAK"]
+        single_line_only = len(allowed_actions_main) > 0
+        allowed_actions_for_call = allowed_actions_main if single_line_only else None
 
+        # Temporarily override backend if provided
+        original_backend_env = os.environ.get("LLM_BACKEND")
+        try:
+            if backend_override:
+                os.environ["LLM_BACKEND"] = backend_override.lower()
+                # Reload config to pick up new backend
+                import importlib
+                from among_them import config
+                importlib.reload(config)
+            
+            llm_response, cot = invoke_llm(
+                conversation=conversation,
+                model_name=exec_model_name,
+                allowed_actions=allowed_actions_for_call,
+                single_line_only=single_line_only,
+                max_output_chars=None if single_line_only else 1500,
+                actions=actions_player_can_take,
+            )
+        finally:
+            # Restore original backend
+            if original_backend_env is not None:
+                os.environ["LLM_BACKEND"] = original_backend_env
+            elif "LLM_BACKEND" in os.environ:
+                del os.environ["LLM_BACKEND"]
+            if backend_override:
+                import importlib
+                from among_them import config
+                importlib.reload(config)
+
+        # Parse response (exact same as manual_llm_game.py lines 154-156)
+        action_idx, response_text = parse_llm_response_to_action(
+            actions_player_can_take, llm_response, current_player.name
+        )
+
+        # Get the chosen action
+        chosen_action_obj = actions_player_can_take[action_idx]
+        chosen_action_cmd = chosen_action_obj.set_stories().command_perspective.strip()
+
+        # Convert back to string actions list for compatibility with benchmark scoring
+        actions = [a.set_stories().command_perspective for a in actions_player_can_take]
+
+        return response_text, action_idx, chosen_action_cmd, cot
+
+    finally:
+        # Restore original model name
+        current_player.llm_model_name = original_model_name
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--benchmark', default=os.path.join(os.path.dirname(__file__), '..', 'data', 'benchmarks', 'benchmark_dataset.json'))
     parser.add_argument('--repeats', type=int, default=1)
-    parser.add_argument('--model', dest='model_name', default=None)
+    parser.add_argument('--model', dest='model_name', default=None, help="Model name to use (overrides config)")
+    parser.add_argument('--backend', dest='backend', default=None, help="Backend to use (ollama, openrouter, etc.)")
     parser.add_argument('--outdir', default=os.path.join(os.path.dirname(__file__), '..', 'generated', 'benchmarks'))
     args = parser.parse_args()
 
@@ -423,9 +419,10 @@ def main() -> None:
     ts = time.strftime('%Y%m%d_%H%M%S')
     out_path = os.path.join(args.outdir, f'{ts}_results.txt')
 
-    # Resolve execution model from backend config; CLI --model is display-only
-    exec_model_name = resolve_backend_model_name()
-    display_model_name = args.model_name or exec_model_name or "(backend default)"
+    # Resolve execution model: use CLI --model if provided, otherwise use config
+    exec_model_name = args.model_name or MODEL_NAME
+    backend_override = args.backend
+    display_model_name = exec_model_name or "(backend default)"
 
     # Run
     detailed_lines: List[str] = []
@@ -455,7 +452,7 @@ def main() -> None:
         total_score = 0.0
         per_run_lines: List[str] = []
         per_run_scores: List[float] = []
-        
+
         # JSON structure for this example
         example_json: Dict[str, Any] = {
             "id": ex_id,
@@ -473,7 +470,7 @@ def main() -> None:
                 "error": None
             }
             try:
-                raw_output, chosen_idx, chosen_action = run_example(ex, exec_model_name, data.get('metadata', {}))
+                raw_output, chosen_idx, chosen_action, cot = run_example(ex, exec_model_name, data.get('metadata', {}), backend_override=backend_override)
                 score = get_action_score(chosen_action, correct_actions)
                 total_score += score
                 # Non-ideal detection: exact match only is ideal
@@ -482,15 +479,18 @@ def main() -> None:
                     non_ideal_outputs += 1
                 successful_runs += 1
                 per_run_scores.append(score)
-                per_run_lines.append(f"- run {r+1}: chosen_idx={chosen_idx}, score={score:.2f}, action='{chosen_action}', output={raw_output.strip()}")
-                
+                cot_display = f"\n  CoT: {cot}" if cot else ""
+                per_run_lines.append(f"- run {r+1}: chosen_idx={chosen_idx}, score={score:.2f}, action='{chosen_action}', output={raw_output.strip()}{cot_display}")
+
                 # JSON run data
                 run_json["success"] = True
                 run_json["score"] = score
                 run_json["chosen_idx"] = chosen_idx
                 run_json["chosen_action"] = chosen_action
                 run_json["raw_output"] = raw_output.strip()
+                run_json["chain_of_thought"] = cot if cot else None
                 run_json["is_ideal"] = is_ideal
+
             except Exception as e:
                 err_str = str(e)
                 if "LLM did not conform to output format" in err_str:
@@ -498,19 +498,19 @@ def main() -> None:
                 # Count this run as 0 score to include in spread/averages
                 per_run_scores.append(0.0)
                 per_run_lines.append(f"- run {r+1}: error={err_str}")
-                
+
                 # JSON run data for error
                 run_json["success"] = False
                 run_json["error"] = err_str
                 run_json["score"] = 0.0
-            
+
             example_json["runs"].append(run_json)
 
         avg_score = total_score / max(1, args.repeats)
         summary_correct_per_example.append((ex_id, total_score, args.repeats))
         example_json["avg_score"] = avg_score
         example_json["total_score"] = total_score
-        
+
         detailed_lines.append(f"Example {ex_id}: avg_score={avg_score:.2f} (total={total_score:.2f}/{args.repeats})")
         # Show scoring strategy map (correct actions with scores)
         if correct_actions:
@@ -609,7 +609,6 @@ def main() -> None:
 
     print(f"Wrote benchmark results to {out_path}")
     print(f"Wrote benchmark results (JSON) to {json_out_path}")
-
 
 if __name__ == '__main__':
     main()

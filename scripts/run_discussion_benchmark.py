@@ -862,7 +862,7 @@ def run_discussion_to_voting(
                         model_to_use,
                         allowed_actions=allowed_actions_for_call,
                         single_line_only=single_line_only,
-                        max_output_chars=None if single_line_only else 1500,
+                        max_output_chars=None,
                     )
                 else:
                     llm_response, cot = call_llm_with_backend_override(
@@ -871,7 +871,7 @@ def run_discussion_to_voting(
                         backend_override=backend_for_others,
                         allowed_actions=allowed_actions_for_call,
                         single_line_only=single_line_only,
-                        max_output_chars=None if single_line_only else 1500,
+                        max_output_chars=None,
                     )
                 
                 # Parse response
@@ -880,11 +880,8 @@ def run_discussion_to_voting(
                 )
                 action_taken = actions_player_can_take[action_idx]
                 
-                # For SPEAK actions, take only the first line to avoid hallucinated content
-                if action_taken.type == ActionType.SPEAK:
-                    first_line = response_text.split('\n')[0].strip()
-                    if first_line:
-                        response_text = first_line
+                # For SPEAK actions, keep full response (including multi-line content)
+                # Removed first-line truncation to allow full LLM responses
                 
                 # Log full LLM response (COT + response) to file
                 if log_fp:
