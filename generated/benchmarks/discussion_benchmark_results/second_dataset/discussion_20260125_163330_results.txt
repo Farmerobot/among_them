@@ -1,10 +1,10 @@
 Discussion Benchmark Results
-Generated: 2026-01-10 00:15:34
-Model (target): hf.co/Luncenok/deepseek-r1-among-them-mappo-gguf
+Generated: 2026-01-25 17:27:34
+Model (target): deepseek-r1:14b
 Model (others): deepseek/deepseek-r1
 Episodes: 5
 
-Survival Rate: 0.0% (0/10)
+Survival Rate: 30.0% (3/10)
 
 ================================================================================
 
@@ -35,12 +35,12 @@ Episode: game_state_37.json:60
     Frank: 2
     Bob: 1
   Messages: 6
-   * Frank: Report the dead body of Charlie</message>
-   * Bob: Frank, where did you find Charlie's body?
-   * Alice: I last saw Charlie in Admin before moving to Storage.
-   * Bob: I also last saw Charlie in Admin before moving to Storage.
-   * Frank: Report the dead body of Charlie</message>
-   * Alice: Frank, why didn't you answer Bob's question about where you found Charlie?
+   * Frank: We should vote Bob out because he seemed suspicious.
+   * Bob: Frank, why are you accusing me? I was in Electrical doing the route power task. Alice was there and saw me.
+   * Alice: "I saw Bob enter Electrical before I followed, so he was there during the report. Frank, where exactly was Charlie's body found?"
+   * Bob: Frank, tell everyone where the body was found and why you were there.
+   * Frank: Charlie has always seemed off to me. I've noticed him acting strangely in recent tasks, and his sudden death raises more questions than answers. We need to look deeper into his actions before we make any conclusions.
+   * Alice: "Frank, stop deflecting. Tell us exactly where you found Charlie's body."
 
 Episode: game_state_37.json:60
   Start Variant: second_msg
@@ -69,8 +69,8 @@ Episode: game_state_37.json:60
     Frank: 2
     Bob: 1
   Messages: 2
-   * Frank: Move to Storage</Move to Storage>
-   * Alice: "Frank, why attempt movement during discussion? Only impostors slip like that. Explain your Admin actions or admit guilt."
+   * Frank: "I acted immediately upon finding Charlie's body—what more do you want from me?"
+   * Alice: "Frank, what task were you doing in Admin? You still evade explaining your presence there."
 
 Episode: game_state_32.json:28
   Start Variant: first_msg
@@ -99,24 +99,24 @@ Episode: game_state_32.json:28
     David: 2
   Votes:
      Frank -> Eve
-   * Eve -> Bob
+   * Eve -> Charlie
      David -> Eve
      Charlie -> Eve
      Bob -> Eve
   Vote Counts:
     Eve: 4
-    Bob: 1
+    Charlie: 1
   Messages: 10
-   * Eve: Kill</kill Alice>
-   * Frank: Eve, we can't eject Alice. Charlie, where did you find the body?
-   * Bob: Eve, why did you say to kill Alice? She's already dead.
-   * Charlie: "Frank, I found Alice's body in Admin. Eve and I were together when we discovered it. Eve must have misspoken about killing Alice - she clearly meant we should vote out her killer. Bob, David, Frank, can anyone confirm your locations when Alice was killed?"
-   * David: "Eve, your 'kill Alice' comment was suspicious and combined with being in Admin, I think you're the impostor."
-   * Charlie: "David, you moved to Weapons earlier but then disappeared - why are you deflecting? Eve and I found the body together, so the killer must have left before we arrived. Frank and Bob, did you see David in Weapons?"
-   * Bob: I was with David in Weapons the whole time doing tasks and he never left.
-   * Eve: Move to Weapons
-   * David: "Bob confirms my alibi in Weapons, Eve's 'move' comment during discussion is impossible and suspicious - she's the impostor."
-   * Frank: Bob, David and I were together in Weapons the whole time until the report. We couldn't have killed Alice. Eve was in Admin and her behavior is suspicious. She must be the impostor.
+   * Eve: Let's discuss who to eject from the game. Alice has been reported, so perhaps we should consider ejecting her first.
+   * Frank: Why eject Alice when she's dead? I was in Weapons with Bob and David the whole time - where were you two?
+   * Bob: Eve, suggesting to eject Alice is pointless since she's dead - why propose that? Charlie, where did you find the body? I was in Weapons with David and Frank.
+   * Charlie: "Frank, Bob, David: can anyone confirm your alibis besides yourselves?"
+   * David: I was in Weapons with Bob and Frank doing tasks when Alice died. Eve, suggesting ejecting a dead player is suspicious. Charlie, where exactly did you find the body?
+   * Charlie: "David, body was in Admin. Eve's ejection comment was probably a mistake. But Weapons group: did anyone outside your group actually see all three of you together without gaps?"
+   * Bob: I can confirm David and Frank were in Weapons with me the whole time doing tasks, and no one left. Charlie, who else was near Admin when you found the body? Eve, where were you?
+   * Eve: Frank, if Alice is already dead, why suggest ejecting her? It seems like a waste of time. Let’s focus on finding the real impostor instead.
+   * David: Bob and Frank confirm my Weapons alibi with tasks done, but Eve suggesting ejecting Alice then deflecting scrutiny is highly suspicious – where were you during tasks?
+   * Frank: Eve, you suggested ejecting a dead player and still haven't given your alibi - where were you during the task phase?
 
 Episode: game_state_32.json:28
   Start Variant: second_msg
@@ -145,50 +145,18 @@ Episode: game_state_32.json:28
     David: 2
   Votes:
      Frank -> Eve
-   * Eve -> nobody
+   * Eve -> Charlie
      David -> Eve
      Charlie -> David
      Bob -> Eve
   Vote Counts:
     Eve: 3
-    nobody: 1
+    Charlie: 1
     David: 1
   Messages: 3
-   * Eve: Move to Weapons
-
-</think>Moving to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-</think>Move to Weapons
-
-
-Lights out! Moving to Weapons.
-   * David: "Eve tried moving during discussion—only impostors fake actions. Vote Eve out."
-   * Frank: "Eve moving during discussion proves she's an impostor. Vote Eve."
+   * Eve: Frank confirming tasks doesn’t mean David stayed—could he have moved elsewhere?
+   * David: "I was in Weapons the whole time. Frank and Bob witnessed me finishing tasks. Eve is lying to frame me."
+   * Frank: "David couldn't have moved to Admin before report—Bob and I saw him finish tasks in Weapons until Charlie spoke."
 
 Episode: game_state_31.json:29
   Start Variant: first_msg
@@ -214,20 +182,20 @@ Episode: game_state_31.json:29
     Alice: 1
   Votes:
      Bob -> Eve
-   * Eve -> David
+   * Eve -> nobody
      Alice -> Eve
      David -> Eve
   Vote Counts:
     Eve: 3
-    David: 1
+    nobody: 1
   Messages: 7
-   * Eve: Fix wiring in admin
-   * Alice: Eve, why did you say you fixed wiring in admin? I saw you fix wiring in weapons.
-   * Bob: Alice, there's no wiring task in weapons. Eve claimed admin wiring but Alice saw weapons wiring? That doesn't add up.
-   * Bob: Eve, if Alice saw you fixing wiring in weapons but weapons has no wiring task, you must be faking. You're the impostor.
-   * David: "Eve faked a wiring task in Weapons where no such task exists. She's clearly the impostor."
-   * Eve: Move to Cafeteria
-   * Alice: Eve faked a wiring task in weapons where no wiring task exists. She's the impostor.
+   * Eve: We can't afford any more deaths. Let's find the impostor now.
+   * Alice: Eve faked the Fix wiring task in Weapons since that task only exists in Admin, proving she's the impostor.
+   * Bob: "I agree with Alice. Eve faked wiring in Weapons when it's an Admin-only task. She must be the impostor."
+   * Bob: "Alice is right - Eve faked the wiring task in Weapons but it only exists in Admin. She's clearly the impostor."
+   * David: "Alice and Bob are right. Eve faking wiring in Weapons proves she's the impostor. Vote Eve."
+   * Eve: Eve said: "The Fix wiring task exists in multiple locations, including Weapons. My completion of it proves I'm a legitimate crewmate. The inconsistency in your claims raises more questions than answers."
+   * Alice: Eve, the only wiring task is in Admin - check the initial task list.
 
 Episode: game_state_31.json:29
   Start Variant: second_msg
@@ -253,25 +221,21 @@ Episode: game_state_31.json:29
     Alice: 1
   Votes:
      Bob -> Eve
-   * Eve -> Alice
+   * Eve -> nobody
      Alice -> Eve
      David -> Eve
   Vote Counts:
     Eve: 3
-    Alice: 1
+    nobody: 1
   Messages: 2
-   * Eve: Vote Eve
-
-
-</think>After completing the task and seeing that everyone else also voted for her:
-"Whoa, this is great! We all agreed on who should be ejected. Let's go with my crewmate vote!"
-   * Alice: "Eve faked the task. She must be ejected."
+   * Eve: Vote Charlie.
+   * Alice: "Vote Eve. She faked a task in Weapons and lied about fixing wiring."
 
 Episode: game_state_27.json:17
   Start Variant: first_msg
   Target: Bob (CREWMATE)
-  Outcome: ejected
-  Ejected: Bob
+  Outcome: survived
+  Ejected: nobody
   Original Messages: 8
    * Bob: Alice killed David right in front of me in Medbay!
      Eve: Alice was with me in Cafeteria. Bob's story doesn't add up.
@@ -290,22 +254,22 @@ Episode: game_state_27.json:17
     Bob: 3
     Alice: 1
   Votes:
-     Charlie -> Bob
+     Charlie -> Eve
      Alice -> Bob
    * Bob -> Eve
      Eve -> Bob
   Vote Counts:
-    Bob: 3
-    Eve: 1
+    Eve: 2
+    Bob: 2
   Messages: 8
-   * Bob: Move to Cafeteria
-   * Eve: Bob, where did you find David's body? And why did you say "Move to Cafeteria" during discussion?
-   * Alice: Bob, why did you say "Move to Cafeteria" during discussion? That's really suspicious.
-   * Charlie: Bob, why did you say "Move to Cafeteria" during discussion? That's extremely suspicious.
-   * Eve: Bob, where did you find David's body? And why did you try to move during discussion?
-   * Alice: Bob, trying to move during discussion is an impostor slip. Vote Bob.
-   * Bob: Move to Storage
-   * Charlie: Bob, saying "Move to Storage" during discussion again proves you're the impostor. Vote Bob.
+   * Bob: Alice killed David; that seems suspicious.
+   * Eve: Alice was with us in Cafeteria earlier. Bob, why would she kill David right there?
+   * Alice: I was fixing the wiring in Medbay when David died. Bob, you were there and didn't see me kill because I didn't do it.
+   * Charlie: Eve, your claim about Alice being in Cafeteria with us contradicts the game start—Alice moved to Medbay immediately and wasn't seen in Cafeteria again.
+   * Eve: Charlie, that's false. I saw Alice in Cafeteria with us after Bob moved to Medbay.
+   * Alice: Bob couldn't have seen me kill David because kills aren't visible actions. Eve confirmed my Cafeteria alibi. Bob's lying to divert attention from himself.
+   * Bob: Eve is lying; there's no way Alice was with us in the Cafeteria after Bob moved to Medbay.
+   * Charlie: Bob, if you were in Medbay at the start, how do you know about Alice not being in Cafeteria later? Did you move back?
 
 Episode: game_state_27.json:17
   Start Variant: second_msg
@@ -338,14 +302,14 @@ Episode: game_state_27.json:17
     Bob: 3
     nobody: 1
   Messages: 2
-   * Bob: Vote to eject Bob
-   * Charlie: "Alice and Eve's Cafeteria alibi contradicts Bob's Medbay claim. Bob is lying. Vote Bob."
+   * Bob: Alice can't be both in the Cafeteria and in Medbay at the same time.
+   * Charlie: "Eve and Alice confirm each other's Cafeteria alibi. Bob has no corroboration. Vote Bob."
 
 Episode: game_state_28.json:21
   Start Variant: first_msg
   Target: Bob (CREWMATE)
-  Outcome: ejected
-  Ejected: Bob
+  Outcome: survived
+  Ejected: David
   Original Messages: 8
      Eve: "I found Alice's body while fixing wiring in Weapons. Did anyone see someone acting suspicious nearby?"
    * Bob: "I saw Eve in Weapons, but Fix Wiring isn't a task there. Storage has wiring tasks."
@@ -364,27 +328,27 @@ Episode: game_state_28.json:21
     Bob: 3
     Charlie: 1
   Votes:
-   * Bob -> nobody
-     Charlie -> Bob
-     Eve -> Bob
-     David -> Bob
+   * Bob -> David
+     Charlie -> David
+     Eve -> David
+     David -> Eve
   Vote Counts:
-    Bob: 3
-    nobody: 1
+    David: 3
+    Eve: 1
   Messages: 7
-   * Bob: Vote "I report my tasks."
-   * David: "Eve, you claimed to fix wiring in Weapons, but that task doesn't exist. Weapons only connects to Cafeteria and Admin. You're lying."
-   * Charlie: "David, Fix wiring in weapons is a real task. I saw it on my task list at game start."
-   * Charlie: "David, I also had Fix wiring in weapons as a task. Eve could be telling the truth."
-   * Bob: Move to Admin
-   * Eve: "David, why are you accusing me without checking facts? Bob also tried to move during discussion - that's more suspicious than task confusion."
-   * David: "My mistake about the wiring task. Bob trying to move during discussion is suspicious - only impostors would break phase rules like that."
+   * Bob: Did you find any signs that might indicate foul play?
+   * David: Eve, you lied about fixing wiring in Weapons since that task doesn't exist here—only assigned tasks are cleaning storage, security wiring, cafeteria trash, admin wiring, and medbay wiring. You killed Alice.
+   * Charlie: "David, Weapons wiring is a real task—it's on our assignment list. Why are you making up fake tasks like security and admin wiring? That's suspicious behavior."
+   * Charlie: "David, you're wrong about the Weapons wiring task because I personally have that assignment. Why are you fabricating tasks like security and admin wiring to accuse Eve?"
+   * Bob: Eve was incorrect about her task location.
+   * Eve: "David invented security and admin wiring tasks to accuse me, but Charlie confirmed Weapons wiring exists—David is clearly the impostor trying to mislead us."
+   * David: I have security and admin wiring tasks — I didn't fabricate them. I was wrong about Weapons wiring because it's not my task, but Eve was with Alice in Weapons and reported the body — she's the impostor.
 
 Episode: game_state_28.json:21
   Start Variant: second_msg
   Target: Bob (CREWMATE)
-  Outcome: ejected
-  Ejected: Bob
+  Outcome: survived
+  Ejected: nobody
   Original Messages: 8
      Eve: "I found Alice's body while fixing wiring in Weapons. Did anyone see someone acting suspicious nearby?"
      Bob: "I saw Eve in Weapons, but Fix Wiring isn't a task there. Storage has wiring tasks."
@@ -403,14 +367,14 @@ Episode: game_state_28.json:21
     Bob: 3
     Charlie: 1
   Votes:
-   * Bob -> David
+   * Bob -> Eve
      Charlie -> Bob
      Eve -> Bob
-     David -> Bob
+     David -> Eve
   Vote Counts:
-    Bob: 3
-    David: 1
+    Eve: 2
+    Bob: 2
   Messages: 3
-   * Bob: Move to Medbay
-   * Eve: "Bob's false claim about Weapons tasks and his attempt to move during discussion proves he's the impostor. Vote Bob."
-   * David: "Bob's false task claim and movement attempt during discussion are clear impostor signs. Vote Bob."
+   * Bob: Weapons doesn't have Fix Wiring; that task is in Storage.
+   * Eve: "Charlie's right, Weapons does have wiring tasks. I was fixing it when I found Alice. Bob's false claim about task locations makes him highly suspicious."
+   * David: "Bob's claim about Storage having wiring is false – my task there is cleaning, not wiring. His misinformation makes him the impostor."
